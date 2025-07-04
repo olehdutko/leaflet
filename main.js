@@ -252,10 +252,28 @@ function createLayerControl(layerObj) {
     if (layerObj.visible) {
       map.addLayer(layerObj.tileLayer);
       map.addLayer(layerObj.featureGroup);
-      // --- Показати всі overlay ---
+
+      // --- Видалити старі overlays ---
       if (featureGroup.overlays) {
-        featureGroup.overlays.forEach(ov => map.addLayer(ov));
+        featureGroup.overlays.forEach(ov => map.removeLayer(ov));
       }
+      featureGroup.overlays = [];
+
+      // --- Створити нові overlays з images ---
+      if (featureGroup.images) {
+        featureGroup.images.forEach(img => {
+          const overlay = L.distortableImageOverlay(img.url, { bounds: img.bounds, selected: false }).addTo(map);
+          featureGroup.overlays.push(overlay);
+          overlay.on('edit', () => {
+            const idx = featureGroup.images.findIndex(i => i.url === img.url);
+            if (idx !== -1) {
+              featureGroup.images[idx].bounds = overlay.getBounds();
+              saveLayersToStorage();
+            }
+          });
+        });
+      }
+
       eyeBtn.innerHTML = '<i class="fa fa-eye"></i>';
       eyeBtn.title = 'Приховати шар';
       div.classList.remove('layer-card-disabled');
@@ -266,9 +284,10 @@ function createLayerControl(layerObj) {
     } else {
       map.removeLayer(layerObj.tileLayer);
       map.removeLayer(layerObj.featureGroup);
-      // --- Приховати всі overlay ---
+      // --- Приховати всі overlay і очистити overlays ---
       if (featureGroup.overlays) {
         featureGroup.overlays.forEach(ov => map.removeLayer(ov));
+        featureGroup.overlays = [];
       }
       eyeBtn.innerHTML = '<i class="fa fa-eye-slash"></i>';
       eyeBtn.title = 'Показати шар';
