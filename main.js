@@ -128,9 +128,11 @@ function createLayerControl(layerObj) {
   exportBtn.onclick = (e) => {
     e.stopPropagation();
     const geojson = layerObj.featureGroup.toGeoJSON();
+    const images = layerObj.featureGroup.images || [];
     const exportData = {
       title: layerObj.title || `Шар ${id}`,
-      geojson
+      geojson,
+      images
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
@@ -177,9 +179,13 @@ function createLayerControl(layerObj) {
       const overlay = L.distortableImageOverlay(imgUrl, {
         bounds: bounds,
         selected: true
-      }).addTo(activeLayer);
+      }).addTo(map);
+      overlay.select(); // одразу показати тулбар
       if (!activeLayer.images) activeLayer.images = [];
       activeLayer.images.push({ url: imgUrl, bounds });
+      // --- Додаю збереження overlay у масив overlays ---
+      if (!activeLayer.overlays) activeLayer.overlays = [];
+      activeLayer.overlays.push(overlay);
       saveLayersToStorage();
       overlay.on('edit', () => {
         const idx = activeLayer.images.findIndex(img => img.url === imgUrl);
@@ -246,6 +252,10 @@ function createLayerControl(layerObj) {
     if (layerObj.visible) {
       map.addLayer(layerObj.tileLayer);
       map.addLayer(layerObj.featureGroup);
+      // --- Показати всі overlay ---
+      if (featureGroup.overlays) {
+        featureGroup.overlays.forEach(ov => map.addLayer(ov));
+      }
       eyeBtn.innerHTML = '<i class="fa fa-eye"></i>';
       eyeBtn.title = 'Приховати шар';
       div.classList.remove('layer-card-disabled');
@@ -256,6 +266,10 @@ function createLayerControl(layerObj) {
     } else {
       map.removeLayer(layerObj.tileLayer);
       map.removeLayer(layerObj.featureGroup);
+      // --- Приховати всі overlay ---
+      if (featureGroup.overlays) {
+        featureGroup.overlays.forEach(ov => map.removeLayer(ov));
+      }
       eyeBtn.innerHTML = '<i class="fa fa-eye-slash"></i>';
       eyeBtn.title = 'Показати шар';
       div.classList.add('layer-card-disabled');
@@ -460,6 +474,9 @@ function loadLayersFromStorage() {
           if (!bounds) return;
           const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(featureGroup);
           featureGroup.images.push({ url: img.url, bounds });
+          // --- Додаю overlay у масив overlays для відновлення ---
+          if (!featureGroup.overlays) featureGroup.overlays = [];
+          featureGroup.overlays.push(overlay);
           overlay.on('edit', () => {
             const idx = featureGroup.images.findIndex(i => i.url === img.url);
             if (idx !== -1) {
@@ -629,6 +646,9 @@ importAllInput.onchange = e => {
               if (!bounds) return;
               const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(featureGroup);
               featureGroup.images.push({ url: img.url, bounds });
+              // --- Додаю overlay у масив overlays для відновлення ---
+              if (!featureGroup.overlays) featureGroup.overlays = [];
+              featureGroup.overlays.push(overlay);
               overlay.on('edit', () => {
                 const idx = featureGroup.images.findIndex(i => i.url === img.url);
                 if (idx !== -1) {
@@ -664,6 +684,32 @@ importAllInput.onchange = e => {
         tileLayer.addTo(map);
         featureGroup.addTo(map);
         L.geoJSON(data.geojson).eachLayer(l => featureGroup.addLayer(l));
+        // --- Додаю імпорт зображень (images) ---
+        if (data.images && Array.isArray(data.images)) {
+          featureGroup.images = [];
+          data.images.forEach(img => {
+            let bounds = img.bounds;
+            if (!bounds && img.corners && img.corners.length === 4) {
+              const lats = img.corners.map(c => c[0]);
+              const lngs = img.corners.map(c => c[1]);
+              const southWest = [Math.min(...lats), Math.min(...lngs)];
+              const northEast = [Math.max(...lats), Math.max(...lngs)];
+              bounds = [southWest, northEast];
+            }
+            if (!bounds) return;
+            const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+            featureGroup.images.push({ url: img.url, bounds });
+            if (!featureGroup.overlays) featureGroup.overlays = [];
+            featureGroup.overlays.push(overlay);
+            overlay.on('edit', () => {
+              const idx = featureGroup.images.findIndex(i => i.url === img.url);
+              if (idx !== -1) {
+                featureGroup.images[idx].bounds = overlay.getBounds();
+                saveLayersToStorage();
+              }
+            });
+          });
+        }
         const layerObj = { id: layerId, tileLayer, featureGroup, tileType, title: data.title, visible: true };
         customLayers.push(layerObj);
         const control = createLayerControl(layerObj);
@@ -696,6 +742,32 @@ importAllInput.onchange = e => {
         tileLayer.addTo(map);
         featureGroup.addTo(map);
         L.geoJSON(data).eachLayer(l => featureGroup.addLayer(l));
+        // --- Додаю імпорт зображень (images) ---
+        if (data.images && Array.isArray(data.images)) {
+          featureGroup.images = [];
+          data.images.forEach(img => {
+            let bounds = img.bounds;
+            if (!bounds && img.corners && img.corners.length === 4) {
+              const lats = img.corners.map(c => c[0]);
+              const lngs = img.corners.map(c => c[1]);
+              const southWest = [Math.min(...lats), Math.min(...lngs)];
+              const northEast = [Math.max(...lats), Math.max(...lngs)];
+              bounds = [southWest, northEast];
+            }
+            if (!bounds) return;
+            const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+            featureGroup.images.push({ url: img.url, bounds });
+            if (!featureGroup.overlays) featureGroup.overlays = [];
+            featureGroup.overlays.push(overlay);
+            overlay.on('edit', () => {
+              const idx = featureGroup.images.findIndex(i => i.url === img.url);
+              if (idx !== -1) {
+                featureGroup.images[idx].bounds = overlay.getBounds();
+                saveLayersToStorage();
+              }
+            });
+          });
+        }
         const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true };
         customLayers.push(layerObj);
         const control = createLayerControl(layerObj);
