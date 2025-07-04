@@ -492,9 +492,7 @@ function loadLayersFromStorage() {
   }
 }
 
-const loaded = loadLayersFromStorage();
-
-addLayerBtn.onclick = () => {
+function addLayer() {
   const tileType = "План";
   const tileLayer = createTileLayer(tileType, 1);
   const featureGroup = new L.FeatureGroup();
@@ -531,7 +529,13 @@ addLayerBtn.onclick = () => {
   // Підняти малюнки над підкладкою
   featureGroup.bringToFront();
   saveLayersToStorage();
-};
+}
+addLayerBtn.onclick = addLayer;
+
+const loaded = loadLayersFromStorage();
+if (!loaded || customLayers.length === 0) {
+  addLayer();
+}
 
 map.on(L.Draw.Event.CREATED, function (e) {
   if (activeLayer) {
@@ -645,7 +649,7 @@ importAllInput.onchange = e => {
         });
         if (customLayers.length === 0) {
           layerId = 1;
-          addLayerBtn.onclick();
+          addLayer();
         }
         saveLayersToStorage();
       } else if (
