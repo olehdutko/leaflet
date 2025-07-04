@@ -334,4 +334,8 @@ body {
 .leaflet-draw-edit-edit,
 .leaflet-draw-edit-remove {
   display: none !important;
+}
+
+.distortable-image-overlay img {
+  pointer-events: auto !important;
 } 

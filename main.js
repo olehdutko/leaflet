@@ -180,6 +180,13 @@ function createLayerControl(layerObj) {
         bounds: bounds,
         selected: true
       }).addTo(map);
+      const el = overlay.getElement();
+      if (el) {
+        el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          overlay.select();
+        });
+      }
       overlay.select(); // одразу показати тулбар
       if (!activeLayer.images) activeLayer.images = [];
       activeLayer.images.push({ url: imgUrl, bounds });
@@ -263,6 +270,14 @@ function createLayerControl(layerObj) {
       if (featureGroup.images) {
         featureGroup.images.forEach(img => {
           const overlay = L.distortableImageOverlay(img.url, { bounds: img.bounds, selected: false }).addTo(map);
+          const el = overlay.getElement();
+          if (el) {
+            el.addEventListener('click', function(e) {
+              e.stopPropagation();
+              overlay.select();
+            });
+          }
+          overlay.select();
           featureGroup.overlays.push(overlay);
           overlay.on('edit', () => {
             const idx = featureGroup.images.findIndex(i => i.url === img.url);
@@ -491,7 +506,15 @@ function loadLayersFromStorage() {
             bounds = [southWest, northEast];
           }
           if (!bounds) return;
-          const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(featureGroup);
+          const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+          const el = overlay.getElement();
+          if (el) {
+            el.addEventListener('click', function(e) {
+              e.stopPropagation();
+              overlay.select();
+            });
+          }
+          overlay.select();
           featureGroup.images.push({ url: img.url, bounds });
           // --- Додаю overlay у масив overlays для відновлення ---
           if (!featureGroup.overlays) featureGroup.overlays = [];
@@ -663,7 +686,15 @@ importAllInput.onchange = e => {
                 bounds = [southWest, northEast];
               }
               if (!bounds) return;
-              const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(featureGroup);
+              const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+              const el = overlay.getElement();
+              if (el) {
+                el.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  overlay.select();
+                });
+              }
+              overlay.select();
               featureGroup.images.push({ url: img.url, bounds });
               // --- Додаю overlay у масив overlays для відновлення ---
               if (!featureGroup.overlays) featureGroup.overlays = [];
@@ -717,6 +748,14 @@ importAllInput.onchange = e => {
             }
             if (!bounds) return;
             const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+            const el = overlay.getElement();
+            if (el) {
+              el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                overlay.select();
+              });
+            }
+            overlay.select();
             featureGroup.images.push({ url: img.url, bounds });
             if (!featureGroup.overlays) featureGroup.overlays = [];
             featureGroup.overlays.push(overlay);
@@ -775,6 +814,14 @@ importAllInput.onchange = e => {
             }
             if (!bounds) return;
             const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+            const el = overlay.getElement();
+            if (el) {
+              el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                overlay.select();
+              });
+            }
+            overlay.select();
             featureGroup.images.push({ url: img.url, bounds });
             if (!featureGroup.overlays) featureGroup.overlays = [];
             featureGroup.overlays.push(overlay);
