@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <title>Мапа Львова на Leaflet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+</head>
+<body>
+  <!-- <div id="theme-toggle">
+    <button id="light-theme">Світла</button>
+    <button id="dark-theme">Темна</button>
+  </div> -->
+  <div id="layers-panel">
+    <div class="layers-panel-header">
+      <span class="layers-panel-title">Шари</span>
+      <span class="layers-panel-actions">
+        <button class="layers-panel-btn" id="export-all" title="Експортувати всі шари"><i class="fa fa-download"></i></button>
+        <input type="file" id="import-all-input" accept=".json,.geojson" style="display:none">
+        <button class="layers-panel-btn" id="import-all" title="Імпортувати шари"><i class="fa fa-upload"></i></button>
+        <button class="layers-panel-btn" id="add-layer" title="Новий шар"><i class="fa fa-plus"></i></button>
+      </span>
+    </div>
+    <div id="layer-controls"></div>
+  </div>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+  <script src="main.js"></script>
+</body>
+</html> 
