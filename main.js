@@ -149,6 +149,40 @@ function createLayerControl(layerObj) {
   removeBtn.title = 'Видалити';
   header.appendChild(removeBtn);
 
+  // --- Додаю кнопку "Додати зображення" у header панелі шарів ---
+  const addImageBtn = document.createElement('button');
+  addImageBtn.className = 'layers-panel-btn';
+  addImageBtn.id = 'add-image';
+  addImageBtn.title = 'Додати зображення';
+  addImageBtn.innerHTML = '<i class="fa fa-image"></i>';
+  header.appendChild(addImageBtn);
+
+  const addImageInput = document.createElement('input');
+  addImageInput.type = 'file';
+  addImageInput.accept = 'image/*';
+  addImageInput.style.display = 'none';
+  addImageBtn.onclick = () => addImageInput.click();
+  addImageInput.onchange = e => {
+    const file = addImageInput.files[0];
+    if (!file || !activeLayer) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const imgUrl = evt.target.result;
+      // Додаємо зображення у центр карти з дефолтними розмірами
+      const mapCenter = map.getCenter();
+      const bounds = [
+        [mapCenter.lat - 0.01, mapCenter.lng - 0.01],
+        [mapCenter.lat + 0.01, mapCenter.lng + 0.01]
+      ];
+      const overlay = L.imageOverlay(imgUrl, bounds).addTo(activeLayer);
+      // Зберігаємо info про зображення у activeLayer.images
+      if (!activeLayer.images) activeLayer.images = [];
+      activeLayer.images.push({ url: imgUrl, bounds });
+      saveLayersToStorage();
+    };
+    reader.readAsDataURL(file);
+  };
+
   div.appendChild(header);
 
   // --- Контент картки ---
@@ -363,19 +397,25 @@ function updateActiveLayerUI() {
   });
 }
 
+// --- Оновлюю saveLayersToStorage ---
 function saveLayersToStorage() {
-  const layersData = customLayers.map(l => ({
-    id: l.id,
-    tileType: l.tileType,
-    opacity: l.tileLayer.options.opacity,
-    showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
-    geojson: l.featureGroup.toGeoJSON(),
-    title: l.title || undefined,
-    visible: l.visible !== false
-  }));
+  const layersData = customLayers.map(l => {
+    const images = l.featureGroup.images || [];
+    return {
+      id: l.id,
+      tileType: l.tileType,
+      opacity: l.tileLayer.options.opacity,
+      showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
+      geojson: l.featureGroup.toGeoJSON(),
+      images,
+      title: l.title || undefined,
+      visible: l.visible !== false
+    };
+  });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
 }
 
+// --- Оновлюю loadLayersFromStorage ---
 function loadLayersFromStorage() {
   const data = localStorage.getItem('lefleat_layers');
   if (!data) return false;
@@ -394,6 +434,14 @@ function loadLayersFromStorage() {
       featureGroup.addTo(map);
       if (obj.geojson) {
         L.geoJSON(obj.geojson).eachLayer(l => featureGroup.addLayer(l));
+      }
+      // Відновлюємо зображення
+      if (obj.images && Array.isArray(obj.images)) {
+        featureGroup.images = [];
+        obj.images.forEach(img => {
+          const overlay = L.imageOverlay(img.url, img.bounds).addTo(featureGroup);
+          featureGroup.images.push({ url: img.url, bounds: img.bounds });
+        });
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false };
       customLayers.push(layerObj);
