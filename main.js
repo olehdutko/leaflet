@@ -64,24 +64,27 @@ function createLayerControl(layerObj) {
   if (layerObj.visible === undefined) layerObj.visible = true;
   const opt = tileLayerOptions[layerObj.tileType];
 
-  // Назва шару — просто "Шар N"
+  // Назва шару — тепер з часом створення
   if (!layerObj.title) {
-    layerObj.title = `Шар ${id}`;
+    const now = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    layerObj.title = `Шар ${timeStr}`;
   }
 
   const div = document.createElement('div');
   div.className = 'layer-card';
 
-  // --- Верхній рядок: заголовок + іконки ---
-  const header = document.createElement('div');
-  header.className = 'layer-card-header';
-
-  // Заголовок
+  // --- Заголовок ---
+  const titleRow = document.createElement('div');
+  titleRow.className = 'layer-card-title-row';
   const titleWrap = document.createElement('span');
   titleWrap.className = 'layer-card-title';
-  titleWrap.style.minWidth = '180px';
-  titleWrap.style.maxWidth = '220px';
-  titleWrap.style.display = 'inline-block';
+  titleWrap.style.display = 'block';
+  titleWrap.style.width = '100%';
+  titleWrap.style.boxSizing = 'border-box';
+  titleWrap.style.paddingLeft = '5px';
+  titleWrap.style.paddingRight = '16px';
   titleWrap.style.overflow = 'hidden';
   titleWrap.style.textOverflow = 'ellipsis';
   titleWrap.textContent = layerObj.title;
@@ -97,17 +100,46 @@ function createLayerControl(layerObj) {
       titleWrap.blur();
     }
   });
+  titleRow.appendChild(titleWrap);
+  div.appendChild(titleRow);
 
-  // Дії справа
-  const actions = document.createElement('span');
-  actions.className = 'layer-card-actions';
+  // --- Верхній рядок: іконки ---
+  const header = document.createElement('div');
+  header.className = 'layer-card-header';
+  header.style.display = 'flex';
+  header.style.justifyContent = 'flex-end';
+  header.style.alignItems = 'center';
+  header.style.gap = '8px';
 
   // Око (показати/приховати)
   const eyeBtn = document.createElement('button');
   eyeBtn.className = 'layer-card-icon-btn';
   eyeBtn.innerHTML = layerObj.visible ? '<i class="fa fa-eye"></i>' : '<i class="fa fa-eye-slash"></i>';
   eyeBtn.title = layerObj.visible ? 'Приховати шар' : 'Показати шар';
-  actions.appendChild(eyeBtn);
+  header.appendChild(eyeBtn);
+
+  // --- Експорт шару ---
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'layer-card-icon-btn';
+  exportBtn.innerHTML = '<i class="fa fa-arrow-up"></i>';
+  exportBtn.title = 'Експортувати шар';
+  header.appendChild(exportBtn);
+
+  exportBtn.onclick = (e) => {
+    e.stopPropagation();
+    const geojson = layerObj.featureGroup.toGeoJSON();
+    const exportData = {
+      title: layerObj.title || `Шар ${id}`,
+      geojson
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (layerObj.title || `layer-${id}`) + '.geojson';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Видалити (дозволити для всіх шарів)
   let removeBtn = null;
@@ -115,10 +147,8 @@ function createLayerControl(layerObj) {
   removeBtn.className = 'layer-card-icon-btn delete';
   removeBtn.innerHTML = '<i class="fa fa-trash"></i>';
   removeBtn.title = 'Видалити';
-  actions.appendChild(removeBtn);
+  header.appendChild(removeBtn);
 
-  header.appendChild(titleWrap);
-  header.appendChild(actions);
   div.appendChild(header);
 
   // --- Контент картки ---
@@ -190,19 +220,6 @@ function createLayerControl(layerObj) {
       slider.disabled = true;
       checkbox.disabled = true;
       removeBtn.disabled = false;
-      // Якщо прихований активний шар — активувати перший видимий
-      if (activeLayer === layerObj.featureGroup) {
-        const firstVisible = customLayers.find(l => l.visible);
-        if (firstVisible) {
-          activeLayer = firstVisible.featureGroup;
-          if (drawControl && drawControl.options && drawControl.options.edit) {
-            drawControl.options.edit.featureGroup = activeLayer;
-          }
-        } else {
-          activeLayer = null;
-        }
-        updateActiveLayerUI();
-      }
     }
     saveLayersToStorage();
   };
@@ -213,14 +230,45 @@ function createLayerControl(layerObj) {
       map.removeLayer(layerObj.tileLayer);
       map.removeLayer(featureGroup);
       layerControlsDiv.removeChild(div);
-      customLayers = customLayers.filter(l => l.id !== id);
-      if (activeLayer === featureGroup) activeLayer = null;
+
+      // Знаходимо індекс видаленого шару
+      const idx = customLayers.findIndex(l => l.id === layerObj.id);
+      customLayers = customLayers.filter(l => l.id !== layerObj.id);
+
+      // Визначаємо новий активний шар
+      let newActive = null;
+      if (customLayers.length > 0) {
+        if (idx < customLayers.length) {
+          newActive = customLayers[idx].featureGroup; // наступний
+        } else {
+          newActive = customLayers[0].featureGroup; // перший, якщо видаляли останній
+        }
+      }
+
+      activeLayer = newActive;
       updateActiveLayerUI();
-      saveLayersToStorage();
-      if (customLayers.length === 0 && drawControl) {
+
+      if (drawControl) {
         map.removeControl(drawControl);
+      }
+      if (activeLayer) {
+        drawControl = new L.Control.Draw({
+          edit: { featureGroup: activeLayer },
+          draw: {
+            polygon: true,
+            polyline: true,
+            rectangle: true,
+            circle: true,
+            marker: true,
+            circlemarker: false
+          }
+        });
+        map.addControl(drawControl);
+      } else {
         drawControl = null;
       }
+
+      saveLayersToStorage();
     };
   }
   // Select підкладки
@@ -260,7 +308,7 @@ function createLayerControl(layerObj) {
     saveLayersToStorage();
   };
   // Додаємо data-id для підсвічування
-  div.dataset.layerId = id;
+  div.dataset.layerId = layerObj.id;
 
   // --- Активувати шар по кліку на картку ---
   div.addEventListener('click', function(e) {
@@ -303,10 +351,11 @@ function createLayerControl(layerObj) {
 }
 
 function updateActiveLayerUI() {
-  // Підсвічуємо активний шар
+  // Підсвічуємо тільки одну активну картку (по справжньому id)
   document.querySelectorAll('.layer-card').forEach(card => {
     const id = +card.dataset.layerId;
-    if (customLayers[id-1] && customLayers[id-1].featureGroup === activeLayer) {
+    const layer = customLayers.find(l => l.id === id);
+    if (layer && layer.featureGroup === activeLayer) {
       card.classList.add('active');
     } else {
       card.classList.remove('active');
@@ -435,6 +484,14 @@ const exportAllBtn = document.getElementById('export-all');
 const importAllBtn = document.getElementById('import-all');
 const importAllInput = document.getElementById('import-all-input');
 
+// Встановлюю іконки: експорт — fa-upload (⬆️), імпорт — fa-download (⬇️)
+if (importAllBtn) {
+  importAllBtn.innerHTML = '<i class="fa fa-download"></i>';
+}
+if (exportAllBtn) {
+  exportAllBtn.innerHTML = '<i class="fa fa-upload"></i>';
+}
+
 exportAllBtn.onclick = () => {
   const all = customLayers.map(l => ({
     id: l.id,
@@ -461,35 +518,108 @@ importAllInput.onchange = e => {
   const reader = new FileReader();
   reader.onload = evt => {
     try {
-      const arr = JSON.parse(evt.target.result);
-      customLayers.forEach(l => {
-        map.removeLayer(l.tileLayer);
-        map.removeLayer(l.featureGroup);
-      });
-      customLayers = [];
-      layerControlsDiv.innerHTML = '';
-      arr.forEach(obj => {
-        const tileLayer = createTileLayer(obj.tileType, obj.opacity, obj.showLabels);
+      const data = JSON.parse(evt.target.result);
+      if (Array.isArray(data)) {
+        // старий варіант — масив шарів
+        customLayers.forEach(l => {
+          map.removeLayer(l.tileLayer);
+          map.removeLayer(l.featureGroup);
+        });
+        customLayers = [];
+        layerControlsDiv.innerHTML = '';
+        data.forEach(obj => {
+          const tileLayer = createTileLayer(obj.tileType, obj.opacity, obj.showLabels);
+          const featureGroup = new L.FeatureGroup();
+          tileLayer.addTo(map);
+          featureGroup.addTo(map);
+          if (obj.geojson) {
+            L.geoJSON(obj.geojson).eachLayer(l => featureGroup.addLayer(l));
+          }
+          const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true };
+          customLayers.push(layerObj);
+        });
+        customLayers.forEach(l => l.visible = true);
+        layerControlsDiv.innerHTML = '';
+        customLayers.forEach(l => {
+          const control = createLayerControl(l);
+          layerControlsDiv.appendChild(control);
+        });
+        if (customLayers.length === 0) {
+          layerId = 1;
+          addLayerBtn.onclick();
+        }
+        saveLayersToStorage();
+      } else if (
+        data && typeof data === 'object' &&
+        data.geojson && data.geojson.type &&
+        (data.geojson.type === 'FeatureCollection' || data.geojson.type === 'Feature')
+      ) {
+        // імпорт з файлу з title + geojson
+        const tileType = 'План';
+        const tileLayer = createTileLayer(tileType, 1);
         const featureGroup = new L.FeatureGroup();
         tileLayer.addTo(map);
         featureGroup.addTo(map);
-        if (obj.geojson) {
-          L.geoJSON(obj.geojson).eachLayer(l => featureGroup.addLayer(l));
-        }
-        const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true };
+        L.geoJSON(data.geojson).eachLayer(l => featureGroup.addLayer(l));
+        const layerObj = { id: layerId, tileLayer, featureGroup, tileType, title: data.title, visible: true };
         customLayers.push(layerObj);
-      });
-      customLayers.forEach(l => l.visible = true);
-      layerControlsDiv.innerHTML = '';
-      customLayers.forEach(l => {
-        const control = createLayerControl(l);
+        const control = createLayerControl(layerObj);
         layerControlsDiv.appendChild(control);
-      });
-      if (customLayers.length === 0) {
-        layerId = 1;
-        addLayerBtn.onclick();
+        layerId++;
+        activeLayer = featureGroup;
+        updateActiveLayerUI();
+        if (drawControl) {
+          map.removeControl(drawControl);
+        }
+        drawControl = new L.Control.Draw({
+          edit: { featureGroup: activeLayer },
+          draw: {
+            polygon: true,
+            polyline: true,
+            rectangle: true,
+            circle: true,
+            marker: true,
+            circlemarker: false
+          }
+        });
+        map.addControl(drawControl);
+        featureGroup.bringToFront();
+        saveLayersToStorage();
+      } else if (data && data.type && (data.type === 'FeatureCollection' || data.type === 'Feature')) {
+        // новий варіант — один GeoJSON
+        const tileType = 'План';
+        const tileLayer = createTileLayer(tileType, 1);
+        const featureGroup = new L.FeatureGroup();
+        tileLayer.addTo(map);
+        featureGroup.addTo(map);
+        L.geoJSON(data).eachLayer(l => featureGroup.addLayer(l));
+        const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true };
+        customLayers.push(layerObj);
+        const control = createLayerControl(layerObj);
+        layerControlsDiv.appendChild(control);
+        layerId++;
+        activeLayer = featureGroup;
+        updateActiveLayerUI();
+        if (drawControl) {
+          map.removeControl(drawControl);
+        }
+        drawControl = new L.Control.Draw({
+          edit: { featureGroup: activeLayer },
+          draw: {
+            polygon: true,
+            polyline: true,
+            rectangle: true,
+            circle: true,
+            marker: true,
+            circlemarker: false
+          }
+        });
+        map.addControl(drawControl);
+        featureGroup.bringToFront();
+        saveLayersToStorage();
+      } else {
+        alert('Невідомий формат файлу');
       }
-      saveLayersToStorage();
     } catch (err) {
       alert('Помилка імпорту шарів');
     }
