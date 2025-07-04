@@ -168,17 +168,26 @@ function createLayerControl(layerObj) {
     const reader = new FileReader();
     reader.onload = evt => {
       const imgUrl = evt.target.result;
-      // Додаємо зображення у центр карти з дефолтними розмірами
+      // Додаємо зображення у центр карти з дефолтними розмірами через bounds
       const mapCenter = map.getCenter();
       const bounds = [
-        [mapCenter.lat - 0.01, mapCenter.lng - 0.01],
-        [mapCenter.lat + 0.01, mapCenter.lng + 0.01]
+        [mapCenter.lat - 0.005, mapCenter.lng - 0.01], // southWest
+        [mapCenter.lat + 0.005, mapCenter.lng + 0.01]  // northEast
       ];
-      const overlay = L.imageOverlay(imgUrl, bounds).addTo(activeLayer);
-      // Зберігаємо info про зображення у activeLayer.images
+      const overlay = L.distortableImageOverlay(imgUrl, {
+        bounds: bounds,
+        selected: true
+      }).addTo(activeLayer);
       if (!activeLayer.images) activeLayer.images = [];
       activeLayer.images.push({ url: imgUrl, bounds });
       saveLayersToStorage();
+      overlay.on('edit', () => {
+        const idx = activeLayer.images.findIndex(img => img.url === imgUrl);
+        if (idx !== -1) {
+          activeLayer.images[idx].bounds = overlay.getBounds();
+          saveLayersToStorage();
+        }
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -439,8 +448,25 @@ function loadLayersFromStorage() {
       if (obj.images && Array.isArray(obj.images)) {
         featureGroup.images = [];
         obj.images.forEach(img => {
-          const overlay = L.imageOverlay(img.url, img.bounds).addTo(featureGroup);
-          featureGroup.images.push({ url: img.url, bounds: img.bounds });
+          let bounds = img.bounds;
+          if (!bounds && img.corners && img.corners.length === 4) {
+            // Якщо старий формат (corners), конвертуємо у bounds
+            const lats = img.corners.map(c => c[0]);
+            const lngs = img.corners.map(c => c[1]);
+            const southWest = [Math.min(...lats), Math.min(...lngs)];
+            const northEast = [Math.max(...lats), Math.max(...lngs)];
+            bounds = [southWest, northEast];
+          }
+          if (!bounds) return;
+          const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(featureGroup);
+          featureGroup.images.push({ url: img.url, bounds });
+          overlay.on('edit', () => {
+            const idx = featureGroup.images.findIndex(i => i.url === img.url);
+            if (idx !== -1) {
+              featureGroup.images[idx].bounds = overlay.getBounds();
+              saveLayersToStorage();
+            }
+          });
         });
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false };
@@ -582,6 +608,31 @@ importAllInput.onchange = e => {
           featureGroup.addTo(map);
           if (obj.geojson) {
             L.geoJSON(obj.geojson).eachLayer(l => featureGroup.addLayer(l));
+          }
+          // Відновлюємо зображення
+          if (obj.images && Array.isArray(obj.images)) {
+            featureGroup.images = [];
+            obj.images.forEach(img => {
+              let bounds = img.bounds;
+              if (!bounds && img.corners && img.corners.length === 4) {
+                // Якщо старий формат (corners), конвертуємо у bounds
+                const lats = img.corners.map(c => c[0]);
+                const lngs = img.corners.map(c => c[1]);
+                const southWest = [Math.min(...lats), Math.min(...lngs)];
+                const northEast = [Math.max(...lats), Math.max(...lngs)];
+                bounds = [southWest, northEast];
+              }
+              if (!bounds) return;
+              const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(featureGroup);
+              featureGroup.images.push({ url: img.url, bounds });
+              overlay.on('edit', () => {
+                const idx = featureGroup.images.findIndex(i => i.url === img.url);
+                if (idx !== -1) {
+                  featureGroup.images[idx].bounds = overlay.getBounds();
+                  saveLayersToStorage();
+                }
+              });
+            });
           }
           const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true };
           customLayers.push(layerObj);
