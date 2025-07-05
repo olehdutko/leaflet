@@ -180,6 +180,8 @@ function createLayerControl(layerObj) {
         bounds: bounds,
         selected: true
       }).addTo(map);
+      // overlay.options.url = imgUrl; // обовʼязково!
+      overlay._customUrl = imgUrl;
       const el = overlay.getElement();
       if (el) {
         el.addEventListener('click', function(e) {
@@ -270,6 +272,7 @@ function createLayerControl(layerObj) {
       if (featureGroup.images) {
         featureGroup.images.forEach(img => {
           const overlay = L.distortableImageOverlay(img.url, { bounds: img.bounds, selected: false }).addTo(map);
+          overlay._customUrl = imgUrl; // <-- ДОДАЙТЕ ЦЕ!
           const el = overlay.getElement();
           if (el) {
             el.addEventListener('click', function(e) {
@@ -867,3 +870,115 @@ importAllInput.onchange = e => {
   };
   reader.readAsText(file);
 }; 
+
+window._customConfirm = function(msg) {
+  return new Promise(resolve => {
+    // overlay
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = 0;
+    overlay.style.left = 0;
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.background = 'rgba(30, 41, 59, 0.35)';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = 9999;
+    overlay.style.backdropFilter = 'blur(2px)';
+
+    // dialog
+    const dialog = document.createElement('div');
+    dialog.style.background = '#fff';
+    dialog.style.padding = '32px 36px 24px 36px';
+    dialog.style.borderRadius = '14px';
+    dialog.style.boxShadow = '0 4px 32px rgba(30,41,59,0.18)';
+    dialog.style.textAlign = 'center';
+    dialog.style.minWidth = '320px';
+    dialog.style.maxWidth = '90vw';
+    dialog.style.fontFamily = 'system-ui, Arial, sans-serif';
+    dialog.innerHTML = `
+      <div style="font-size:1.15em; color:#1e293b; margin-bottom: 22px; font-weight: 500;">${msg}</div>
+      <div style="display:flex; gap:18px; justify-content:center;">
+        <button id="confirm-yes" style="background:#1976d2;color:#fff;border:none;padding:8px 28px;border-radius:6px;font-size:1em;cursor:pointer;box-shadow:0 1px 4px #1976d222;transition:background 0.15s;">Так</button>
+        <button id="confirm-no" style="background:#e3eaf5;color:#1976d2;border:none;padding:8px 28px;border-radius:6px;font-size:1em;cursor:pointer;transition:background 0.15s;">Скасувати</button>
+      </div>
+    `;
+    dialog.querySelector('#confirm-yes').onmouseover = () => dialog.querySelector('#confirm-yes').style.background = '#1565c0';
+    dialog.querySelector('#confirm-yes').onmouseout = () => dialog.querySelector('#confirm-yes').style.background = '#1976d2';
+    dialog.querySelector('#confirm-no').onmouseover = () => dialog.querySelector('#confirm-no').style.background = '#cfd8dc';
+    dialog.querySelector('#confirm-no').onmouseout = () => dialog.querySelector('#confirm-no').style.background = '#e3eaf5';
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    dialog.querySelector('#confirm-yes').onclick = () => {
+      document.body.removeChild(overlay);
+      resolve(true);
+    };
+    dialog.querySelector('#confirm-no').onclick = () => {
+      document.body.removeChild(overlay);
+      resolve(false);
+    };
+    overlay.tabIndex = -1;
+    overlay.focus();
+    overlay.onkeydown = (e) => {
+      if (e.key === 'Escape') {
+        document.body.removeChild(overlay);
+        resolve(false);
+      }
+    };
+    setTimeout(() => overlay.focus(), 10);
+  });
+};
+
+window.requestOverlayDelete = function(overlay) {
+  window._customConfirm('Ви впевнені? Зображення буде повністю видалене з мапи.').then(confirmed => {
+    if (!confirmed) return;
+
+    // знайти потрібний layer (featureGroup)
+    let foundLayer = null;
+    for (const l of customLayers) {
+      if (
+        l.featureGroup &&
+        l.featureGroup.overlays &&
+        l.featureGroup.overlays.some(ov => ov._url === overlay._overlay._url)
+      ) {
+        foundLayer = l.featureGroup;
+        break;
+      }
+    }
+
+    // видалити overlay з карти
+    // console.log('overlay:', overlay);
+    // console.log('map.hasLayer(overlay):', map.hasLayer(overlay));
+    // console.log('overlay instanceof L.DistortableImageOverlay:', overlay instanceof L.DistortableImageOverlay);
+    // console.log('overlay._leaflet_id:', overlay._leaflet_id);
+    // foundLayer.overlays.forEach(ov => console.log('ov._leaflet_id:', ov._leaflet_id));
+    
+    const ovUrl = overlay._overlay._url;
+    const realOverlay = foundLayer.overlays.find(ov => (ov._url) === ovUrl);
+    if (realOverlay) {
+      map.removeLayer(realOverlay);
+    }
+
+    // map.removeLayer(overlay);
+
+
+
+
+    // видалити overlay з overlays
+    if (foundLayer && foundLayer.overlays) {
+      foundLayer.overlays = foundLayer.overlays.filter(ov => ov._url !== overlay._overlay._url);
+    }
+
+    // видалити з images (по url, _url або _image.src)
+    if (foundLayer && foundLayer.images) {
+      const ovUrl = overlay._overlay._url;
+      foundLayer.images = foundLayer.images.filter(img => img.url !== ovUrl);
+    }
+
+    // оновити localStorage
+    saveLayersToStorage();
+  });
+};
