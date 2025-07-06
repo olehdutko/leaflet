@@ -655,6 +655,7 @@ if (!loaded || customLayers.length === 0) {
 map.on(L.Draw.Event.CREATED, function (e) {
   if (activeLayer) {
     activeLayer.addLayer(e.layer);
+    saveLayersToStorage(); // Зберігаємо після додавання об'єкта
   } else {
     alert('Оберіть шар для малювання!');
   }
@@ -670,6 +671,16 @@ map.on('draw:drawstart', function() {
   if (drawControl.options.edit) {
     drawControl.options.edit.featureGroup = activeLayer;
   }
+});
+
+// Зберігаємо після редагування об'єктів
+map.on('draw:edited', function() {
+  saveLayersToStorage();
+});
+
+// Зберігаємо після видалення об'єктів
+map.on('draw:deleted', function() {
+  saveLayersToStorage();
 });
 
 // --- Експорт/Імпорт всіх шарів ---
