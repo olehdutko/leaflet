@@ -191,7 +191,13 @@ function createLayerControl(layerObj) {
       }
       overlay.select(); // одразу показати тулбар
       if (!activeLayer.images) activeLayer.images = [];
-      activeLayer.images.push({ url: imgUrl, bounds });
+      // Зберігаємо і bounds, і corners
+      const imageData = {
+        url: imgUrl,
+        bounds: overlay.getBounds(),
+        corners: overlay.getCorners ? overlay.getCorners() : null
+      };
+      activeLayer.images.push(imageData);
       // --- Додаю збереження overlay у масив overlays ---
       if (!activeLayer.overlays) activeLayer.overlays = [];
       activeLayer.overlays.push(overlay);
@@ -200,6 +206,7 @@ function createLayerControl(layerObj) {
         const idx = activeLayer.images.findIndex(img => img.url === imgUrl);
         if (idx !== -1) {
           activeLayer.images[idx].bounds = overlay.getBounds();
+          activeLayer.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
           saveLayersToStorage();
         }
       });
@@ -271,8 +278,21 @@ function createLayerControl(layerObj) {
       // --- Створити нові overlays з images ---
       if (featureGroup.images) {
         featureGroup.images.forEach(img => {
-          const overlay = L.distortableImageOverlay(img.url, { bounds: img.bounds, selected: false }).addTo(map);
-          overlay._customUrl = imgUrl; // <-- ДОДАЙТЕ ЦЕ!
+          let overlay;
+          if (img.corners && img.corners.length === 4) {
+            // Використовуємо corners для відновлення трансформації
+            overlay = L.distortableImageOverlay(img.url, { 
+              corners: img.corners, 
+              selected: false 
+            }).addTo(map);
+          } else {
+            // Fallback на bounds
+            overlay = L.distortableImageOverlay(img.url, { 
+              bounds: img.bounds, 
+              selected: false 
+            }).addTo(map);
+          }
+          overlay._customUrl = img.url;
           const el = overlay.getElement();
           if (el) {
             el.addEventListener('click', function(e) {
@@ -286,6 +306,7 @@ function createLayerControl(layerObj) {
             const idx = featureGroup.images.findIndex(i => i.url === img.url);
             if (idx !== -1) {
               featureGroup.images[idx].bounds = overlay.getBounds();
+              featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
               saveLayersToStorage();
             }
           });
@@ -461,13 +482,28 @@ function updateActiveLayerUI() {
 function saveLayersToStorage() {
   const layersData = customLayers.map(l => {
     const images = l.featureGroup.images || [];
+    // Зберігаємо corners замість bounds для збереження трансформації
+    const imagesWithCorners = images.map(img => {
+      // Знаходимо відповідний overlay для отримання corners
+      const overlay = l.featureGroup.overlays?.find(o => 
+        o._customUrl === img.url || o._url === img.url || o._image?.src === img.url
+      );
+      if (overlay && overlay.getCorners) {
+        return {
+          ...img,
+          corners: overlay.getCorners(),
+          bounds: overlay.getBounds()
+        };
+      }
+      return img;
+    });
     return {
       id: l.id,
       tileType: l.tileType,
       opacity: l.tileLayer.options.opacity,
       showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
       geojson: l.featureGroup.toGeoJSON(),
-      images,
+      images: imagesWithCorners,
       title: l.title || undefined,
       visible: l.visible !== false
     };
@@ -499,17 +535,24 @@ function loadLayersFromStorage() {
       if (obj.images && Array.isArray(obj.images)) {
         featureGroup.images = [];
         obj.images.forEach(img => {
-          let bounds = img.bounds;
-          if (!bounds && img.corners && img.corners.length === 4) {
-            // Якщо старий формат (corners), конвертуємо у bounds
-            const lats = img.corners.map(c => c[0]);
-            const lngs = img.corners.map(c => c[1]);
-            const southWest = [Math.min(...lats), Math.min(...lngs)];
-            const northEast = [Math.max(...lats), Math.max(...lngs)];
-            bounds = [southWest, northEast];
+          let overlay;
+          if (img.corners && img.corners.length === 4) {
+            // Використовуємо corners для відновлення трансформації
+            overlay = L.distortableImageOverlay(img.url, { 
+              corners: img.corners, 
+              selected: false 
+            }).addTo(map);
+          } else if (img.bounds) {
+            // Fallback на bounds якщо corners немає
+            overlay = L.distortableImageOverlay(img.url, { 
+              bounds: img.bounds, 
+              selected: false 
+            }).addTo(map);
+          } else {
+            return; // Пропускаємо якщо немає ні corners, ні bounds
           }
-          if (!bounds) return;
-          const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+          
+          overlay._customUrl = img.url;
           const el = overlay.getElement();
           if (el) {
             el.addEventListener('click', function(e) {
@@ -518,14 +561,24 @@ function loadLayersFromStorage() {
             });
           }
           overlay.select();
-          featureGroup.images.push({ url: img.url, bounds });
+          
+          // Зберігаємо і corners, і bounds
+          const savedData = {
+            url: img.url,
+            bounds: overlay.getBounds(),
+            corners: overlay.getCorners ? overlay.getCorners() : img.corners
+          };
+          featureGroup.images.push(savedData);
+          
           // --- Додаю overlay у масив overlays для відновлення ---
           if (!featureGroup.overlays) featureGroup.overlays = [];
           featureGroup.overlays.push(overlay);
+          
           overlay.on('edit', () => {
             const idx = featureGroup.images.findIndex(i => i.url === img.url);
             if (idx !== -1) {
               featureGroup.images[idx].bounds = overlay.getBounds();
+              featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
               saveLayersToStorage();
             }
           });
@@ -679,17 +732,24 @@ importAllInput.onchange = e => {
           if (obj.images && Array.isArray(obj.images)) {
             featureGroup.images = [];
             obj.images.forEach(img => {
-              let bounds = img.bounds;
-              if (!bounds && img.corners && img.corners.length === 4) {
-                // Якщо старий формат (corners), конвертуємо у bounds
-                const lats = img.corners.map(c => c[0]);
-                const lngs = img.corners.map(c => c[1]);
-                const southWest = [Math.min(...lats), Math.min(...lngs)];
-                const northEast = [Math.max(...lats), Math.max(...lngs)];
-                bounds = [southWest, northEast];
+              let overlay;
+              if (img.corners && img.corners.length === 4) {
+                // Використовуємо corners для відновлення трансформації
+                overlay = L.distortableImageOverlay(img.url, { 
+                  corners: img.corners, 
+                  selected: false 
+                }).addTo(map);
+              } else if (img.bounds) {
+                // Fallback на bounds якщо corners немає
+                overlay = L.distortableImageOverlay(img.url, { 
+                  bounds: img.bounds, 
+                  selected: false 
+                }).addTo(map);
+              } else {
+                return; // Пропускаємо якщо немає ні corners, ні bounds
               }
-              if (!bounds) return;
-              const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+              
+              overlay._customUrl = img.url;
               const el = overlay.getElement();
               if (el) {
                 el.addEventListener('click', function(e) {
@@ -698,14 +758,23 @@ importAllInput.onchange = e => {
                 });
               }
               overlay.select();
-              featureGroup.images.push({ url: img.url, bounds });
-              // --- Додаю overlay у масив overlays для відновлення ---
+              
+              // Зберігаємо і corners, і bounds
+              const savedData = {
+                url: img.url,
+                bounds: overlay.getBounds(),
+                corners: overlay.getCorners ? overlay.getCorners() : img.corners
+              };
+              featureGroup.images.push(savedData);
+              
               if (!featureGroup.overlays) featureGroup.overlays = [];
               featureGroup.overlays.push(overlay);
+              
               overlay.on('edit', () => {
                 const idx = featureGroup.images.findIndex(i => i.url === img.url);
                 if (idx !== -1) {
                   featureGroup.images[idx].bounds = overlay.getBounds();
+                  featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
                   saveLayersToStorage();
                 }
               });
@@ -741,16 +810,24 @@ importAllInput.onchange = e => {
         if (data.images && Array.isArray(data.images)) {
           featureGroup.images = [];
           data.images.forEach(img => {
-            let bounds = img.bounds;
-            if (!bounds && img.corners && img.corners.length === 4) {
-              const lats = img.corners.map(c => c[0]);
-              const lngs = img.corners.map(c => c[1]);
-              const southWest = [Math.min(...lats), Math.min(...lngs)];
-              const northEast = [Math.max(...lats), Math.max(...lngs)];
-              bounds = [southWest, northEast];
+            let overlay;
+            if (img.corners && img.corners.length === 4) {
+              // Використовуємо corners для відновлення трансформації
+              overlay = L.distortableImageOverlay(img.url, { 
+                corners: img.corners, 
+                selected: false 
+              }).addTo(map);
+            } else if (img.bounds) {
+              // Fallback на bounds якщо corners немає
+              overlay = L.distortableImageOverlay(img.url, { 
+                bounds: img.bounds, 
+                selected: false 
+              }).addTo(map);
+            } else {
+              return; // Пропускаємо якщо немає ні corners, ні bounds
             }
-            if (!bounds) return;
-            const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+            
+            overlay._customUrl = img.url;
             const el = overlay.getElement();
             if (el) {
               el.addEventListener('click', function(e) {
@@ -759,13 +836,23 @@ importAllInput.onchange = e => {
               });
             }
             overlay.select();
-            featureGroup.images.push({ url: img.url, bounds });
+            
+            // Зберігаємо і corners, і bounds
+            const savedData = {
+              url: img.url,
+              bounds: overlay.getBounds(),
+              corners: overlay.getCorners ? overlay.getCorners() : img.corners
+            };
+            featureGroup.images.push(savedData);
+            
             if (!featureGroup.overlays) featureGroup.overlays = [];
             featureGroup.overlays.push(overlay);
+            
             overlay.on('edit', () => {
               const idx = featureGroup.images.findIndex(i => i.url === img.url);
               if (idx !== -1) {
                 featureGroup.images[idx].bounds = overlay.getBounds();
+                featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
                 saveLayersToStorage();
               }
             });
@@ -807,16 +894,24 @@ importAllInput.onchange = e => {
         if (data.images && Array.isArray(data.images)) {
           featureGroup.images = [];
           data.images.forEach(img => {
-            let bounds = img.bounds;
-            if (!bounds && img.corners && img.corners.length === 4) {
-              const lats = img.corners.map(c => c[0]);
-              const lngs = img.corners.map(c => c[1]);
-              const southWest = [Math.min(...lats), Math.min(...lngs)];
-              const northEast = [Math.max(...lats), Math.max(...lngs)];
-              bounds = [southWest, northEast];
+            let overlay;
+            if (img.corners && img.corners.length === 4) {
+              // Використовуємо corners для відновлення трансформації
+              overlay = L.distortableImageOverlay(img.url, { 
+                corners: img.corners, 
+                selected: false 
+              }).addTo(map);
+            } else if (img.bounds) {
+              // Fallback на bounds якщо corners немає
+              overlay = L.distortableImageOverlay(img.url, { 
+                bounds: img.bounds, 
+                selected: false 
+              }).addTo(map);
+            } else {
+              return; // Пропускаємо якщо немає ні corners, ні bounds
             }
-            if (!bounds) return;
-            const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(map);
+            
+            overlay._customUrl = img.url;
             const el = overlay.getElement();
             if (el) {
               el.addEventListener('click', function(e) {
@@ -825,13 +920,23 @@ importAllInput.onchange = e => {
               });
             }
             overlay.select();
-            featureGroup.images.push({ url: img.url, bounds });
+            
+            // Зберігаємо і corners, і bounds
+            const savedData = {
+              url: img.url,
+              bounds: overlay.getBounds(),
+              corners: overlay.getCorners ? overlay.getCorners() : img.corners
+            };
+            featureGroup.images.push(savedData);
+            
             if (!featureGroup.overlays) featureGroup.overlays = [];
             featureGroup.overlays.push(overlay);
+            
             overlay.on('edit', () => {
               const idx = featureGroup.images.findIndex(i => i.url === img.url);
               if (idx !== -1) {
                 featureGroup.images[idx].bounds = overlay.getBounds();
+                featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
                 saveLayersToStorage();
               }
             });
@@ -950,22 +1055,11 @@ window.requestOverlayDelete = function(overlay) {
     }
 
     // видалити overlay з карти
-    // console.log('overlay:', overlay);
-    // console.log('map.hasLayer(overlay):', map.hasLayer(overlay));
-    // console.log('overlay instanceof L.DistortableImageOverlay:', overlay instanceof L.DistortableImageOverlay);
-    // console.log('overlay._leaflet_id:', overlay._leaflet_id);
-    // foundLayer.overlays.forEach(ov => console.log('ov._leaflet_id:', ov._leaflet_id));
-    
     const ovUrl = overlay._overlay._url;
     const realOverlay = foundLayer.overlays.find(ov => (ov._url) === ovUrl);
     if (realOverlay) {
       map.removeLayer(realOverlay);
     }
-
-    // map.removeLayer(overlay);
-
-
-
 
     // видалити overlay з overlays
     if (foundLayer && foundLayer.overlays) {
