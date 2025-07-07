@@ -188,15 +188,21 @@ function createLayerControl(layerObj) {
           e.stopPropagation();
           overlay.select();
         });
+        // Додаємо подвійний клік для редагування
+        el.addEventListener('dblclick', function(e) {
+          e.stopPropagation();
+          showEditModal(overlay);
+        });
       }
       overlay.select(); // одразу показати тулбар
       if (!activeLayer.images) activeLayer.images = [];
-      // Зберігаємо і bounds, і corners
-      const imageData = {
-        url: imgUrl,
-        bounds: overlay.getBounds(),
-        corners: overlay.getCorners ? overlay.getCorners() : null
-      };
+              // Зберігаємо і corners, і bounds, і властивості
+        const imageData = {
+          url: imgUrl,
+          bounds: overlay.getBounds(),
+          corners: overlay.getCorners ? overlay.getCorners() : null,
+          properties: {} // Порожні властивості для нового зображення
+        };
       activeLayer.images.push(imageData);
       // --- Додаю збереження overlay у масив overlays ---
       if (!activeLayer.overlays) activeLayer.overlays = [];
@@ -293,6 +299,11 @@ function createLayerControl(layerObj) {
             }).addTo(map);
           }
           overlay._customUrl = img.url;
+          // Відновлюємо властивості зображення
+          if (img.properties) {
+            overlay.properties = img.properties;
+            applyObjectProperties(overlay, img.properties);
+          }
           const el = overlay.getElement();
           if (el) {
             el.addEventListener('click', function(e) {
@@ -480,6 +491,31 @@ function updateActiveLayerUI() {
 
 // --- Оновлюю saveLayersToStorage ---
 function saveLayersToStorage() {
+  customLayers.forEach(l => {
+    l.featureGroup.eachLayer(layer => {
+      const type = getObjectType(layer);
+      if (!layer.feature) return; // тільки geojson-обʼєкти
+      if (!layer.feature.properties) layer.feature.properties = {};
+      // Копіюємо властивості з layer.properties у feature.properties
+      if (layer.feature && layer.properties) {
+        Object.assign(layer.feature.properties, layer.properties);
+      }
+      Object.assign(layer.feature.properties, layer.properties || {});
+      // Додаємо стилі
+      if (type === 'marker') {
+        layer.feature.properties.color = layer.properties?.color || '#1976d2';
+      } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+        layer.feature.properties.fillColor = layer.options?.fillColor || '#1976d2';
+        layer.feature.properties.color = layer.options?.color || '#1976d2';
+        layer.feature.properties.fillOpacity = layer.options?.fillOpacity || 0.2;
+        layer.feature.properties.opacity = layer.options?.opacity || 1;
+      } else if (type === 'polyline') {
+        layer.feature.properties.color = layer.options?.color || '#1976d2';
+        layer.feature.properties.weight = layer.options?.weight || 3;
+        layer.feature.properties.opacity = layer.options?.opacity || 1;
+      }
+    });
+  });
   const layersData = customLayers.map(l => {
     const images = l.featureGroup.images || [];
     // Зберігаємо corners замість bounds для збереження трансформації
@@ -492,17 +528,21 @@ function saveLayersToStorage() {
         return {
           ...img,
           corners: overlay.getCorners(),
-          bounds: overlay.getBounds()
+          bounds: overlay.getBounds(),
+          properties: overlay.properties || {} // Зберігаємо властивості зображень
         };
       }
-      return img;
+      return {
+        ...img,
+        properties: img.properties || {} // Зберігаємо властивості зображень
+      };
     });
     return {
       id: l.id,
       tileType: l.tileType,
       opacity: l.tileLayer.options.opacity,
       showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
-      geojson: l.featureGroup.toGeoJSON(),
+      geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
       images: imagesWithCorners,
       title: l.title || undefined,
       visible: l.visible !== false
@@ -529,7 +569,31 @@ function loadLayersFromStorage() {
       tileLayer.addTo(map);
       featureGroup.addTo(map);
       if (obj.geojson) {
-        L.geoJSON(obj.geojson).eachLayer(l => featureGroup.addLayer(l));
+        L.geoJSON(obj.geojson, {
+          pointToLayer: function(feature, latlng) {
+            if (feature.properties && feature.properties.color) {
+              return L.marker(latlng, { icon: getColoredMarkerIcon(feature.properties.color) });
+            }
+            return L.marker(latlng);
+          },
+          style: function(feature) {
+            return {
+              color: feature.properties?.color || '#1976d2',
+              weight: feature.properties?.weight || 3,
+              opacity: feature.properties?.opacity ?? 1,
+              fillColor: feature.properties?.fillColor || '#1976d2',
+              fillOpacity: feature.properties?.fillOpacity ?? 0.2
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            featureGroup.addLayer(layer);
+            addDoubleClickToLayer(layer);
+            if (feature.properties) {
+              layer.properties = { ...feature.properties };
+              applyObjectProperties(layer, feature.properties);
+            }
+          }
+        });
       }
       // Відновлюємо зображення
       if (obj.images && Array.isArray(obj.images)) {
@@ -553,20 +617,31 @@ function loadLayersFromStorage() {
           }
           
           overlay._customUrl = img.url;
+          // Відновлюємо властивості зображення
+          if (img.properties) {
+            overlay.properties = img.properties;
+            applyObjectProperties(overlay, img.properties);
+          }
           const el = overlay.getElement();
           if (el) {
             el.addEventListener('click', function(e) {
               e.stopPropagation();
               overlay.select();
             });
+            // Додаємо подвійний клік для редагування
+            el.addEventListener('dblclick', function(e) {
+              e.stopPropagation();
+              showEditModal(overlay);
+            });
           }
           overlay.select();
           
-          // Зберігаємо і corners, і bounds
+          // Зберігаємо і corners, і bounds, і властивості
           const savedData = {
             url: img.url,
             bounds: overlay.getBounds(),
-            corners: overlay.getCorners ? overlay.getCorners() : img.corners
+            corners: overlay.getCorners ? overlay.getCorners() : img.corners,
+            properties: img.properties || {}
           };
           featureGroup.images.push(savedData);
           
@@ -652,9 +727,24 @@ if (!loaded || customLayers.length === 0) {
   addLayer();
 }
 
+// Ініціалізуємо модальне вікно редагування
+initEditModal();
+
 map.on(L.Draw.Event.CREATED, function (e) {
   if (activeLayer) {
     activeLayer.addLayer(e.layer);
+    addDoubleClickToLayer(e.layer);
+    // --- Додаємо дефолтні властивості ---
+    const type = getObjectType(e.layer);
+    e.layer.properties = e.layer.properties || {};
+    if (type === 'marker') {
+      e.layer.properties.color = '#1976d2';
+    }
+    e.layer.properties.name = '';
+    e.layer.properties.description = '';
+    if (e.layer.feature && e.layer.properties) {
+      e.layer.feature.properties = { ...e.layer.properties };
+    }
     saveLayersToStorage(); // Зберігаємо після додавання об'єкта
   } else {
     alert('Оберіть шар для малювання!');
@@ -737,7 +827,31 @@ importAllInput.onchange = e => {
           tileLayer.addTo(map);
           featureGroup.addTo(map);
           if (obj.geojson) {
-            L.geoJSON(obj.geojson).eachLayer(l => featureGroup.addLayer(l));
+            L.geoJSON(obj.geojson, {
+              pointToLayer: function(feature, latlng) {
+                if (feature.properties && feature.properties.color) {
+                  return L.marker(latlng, { icon: getColoredMarkerIcon(feature.properties.color) });
+                }
+                return L.marker(latlng);
+              },
+              style: function(feature) {
+                return {
+                  color: feature.properties?.color || '#1976d2',
+                  weight: feature.properties?.weight || 3,
+                  opacity: feature.properties?.opacity ?? 1,
+                  fillColor: feature.properties?.fillColor || '#1976d2',
+                  fillOpacity: feature.properties?.fillOpacity ?? 0.2
+                };
+              },
+              onEachFeature: function(feature, layer) {
+                featureGroup.addLayer(layer);
+                addDoubleClickToLayer(layer);
+                if (feature.properties) {
+                  layer.properties = { ...feature.properties };
+                  applyObjectProperties(layer, feature.properties);
+                }
+              }
+            });
           }
           // Відновлюємо зображення
           if (obj.images && Array.isArray(obj.images)) {
@@ -761,20 +875,31 @@ importAllInput.onchange = e => {
               }
               
               overlay._customUrl = img.url;
+              // Відновлюємо властивості зображення
+              if (img.properties) {
+                overlay.properties = img.properties;
+                applyObjectProperties(overlay, img.properties);
+              }
               const el = overlay.getElement();
               if (el) {
                 el.addEventListener('click', function(e) {
                   e.stopPropagation();
                   overlay.select();
                 });
+                // Додаємо подвійний клік для редагування
+                el.addEventListener('dblclick', function(e) {
+                  e.stopPropagation();
+                  showEditModal(overlay);
+                });
               }
               overlay.select();
               
-              // Зберігаємо і corners, і bounds
+              // Зберігаємо і corners, і bounds, і властивості
               const savedData = {
                 url: img.url,
                 bounds: overlay.getBounds(),
-                corners: overlay.getCorners ? overlay.getCorners() : img.corners
+                corners: overlay.getCorners ? overlay.getCorners() : img.corners,
+                properties: img.properties || {}
               };
               featureGroup.images.push(savedData);
               
@@ -839,20 +964,31 @@ importAllInput.onchange = e => {
             }
             
             overlay._customUrl = img.url;
+            // Відновлюємо властивості зображення
+            if (img.properties) {
+              overlay.properties = img.properties;
+              applyObjectProperties(overlay, img.properties);
+            }
             const el = overlay.getElement();
             if (el) {
               el.addEventListener('click', function(e) {
                 e.stopPropagation();
                 overlay.select();
               });
+              // Додаємо подвійний клік для редагування
+              el.addEventListener('dblclick', function(e) {
+                e.stopPropagation();
+                showEditModal(overlay);
+              });
             }
             overlay.select();
             
-            // Зберігаємо і corners, і bounds
+            // Зберігаємо і corners, і bounds, і властивості
             const savedData = {
               url: img.url,
               bounds: overlay.getBounds(),
-              corners: overlay.getCorners ? overlay.getCorners() : img.corners
+              corners: overlay.getCorners ? overlay.getCorners() : img.corners,
+              properties: img.properties || {}
             };
             featureGroup.images.push(savedData);
             
@@ -923,20 +1059,31 @@ importAllInput.onchange = e => {
             }
             
             overlay._customUrl = img.url;
+            // Відновлюємо властивості зображення
+            if (img.properties) {
+              overlay.properties = img.properties;
+              applyObjectProperties(overlay, img.properties);
+            }
             const el = overlay.getElement();
             if (el) {
               el.addEventListener('click', function(e) {
                 e.stopPropagation();
                 overlay.select();
               });
+              // Додаємо подвійний клік для редагування
+              el.addEventListener('dblclick', function(e) {
+                e.stopPropagation();
+                showEditModal(overlay);
+              });
             }
             overlay.select();
             
-            // Зберігаємо і corners, і bounds
+            // Зберігаємо і corners, і bounds, і властивості
             const savedData = {
               url: img.url,
               bounds: overlay.getBounds(),
-              corners: overlay.getCorners ? overlay.getCorners() : img.corners
+              corners: overlay.getCorners ? overlay.getCorners() : img.corners,
+              properties: img.properties || {}
             };
             featureGroup.images.push(savedData);
             
@@ -1087,3 +1234,249 @@ window.requestOverlayDelete = function(overlay) {
     saveLayersToStorage();
   });
 };
+
+// --- Функції для роботи з модальним вікном редагування об'єктів ---
+let currentEditingObject = null;
+
+// Функція для отримання типу об'єкта
+function getObjectType(layer) {
+  if (layer instanceof L.Marker) return 'marker';
+  if (layer instanceof L.Polygon) return 'polygon';
+  if (layer instanceof L.Polyline) return 'polyline';
+  if (layer instanceof L.Circle) return 'circle';
+  if (layer instanceof L.Rectangle) return 'rectangle';
+  if (layer._overlay && layer._overlay._image) return 'image';
+  return 'unknown';
+}
+
+// Функція для отримання властивостей об'єкта
+function getObjectProperties(layer) {
+  const type = getObjectType(layer);
+  const properties = {
+    name: layer.properties?.name || '',
+    description: layer.properties?.description || ''
+  };
+  
+  if (type === 'marker') {
+    properties.color = layer.options?.color || '#1976d2';
+  } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+    properties.fillColor = layer.options?.fillColor || '#1976d2';
+    properties.color = layer.options?.color || '#1976d2';
+    properties.fillOpacity = layer.options?.fillOpacity || 0.2;
+    properties.opacity = layer.options?.opacity || 1;
+  } else if (type === 'polyline') {
+    properties.color = layer.options?.color || '#1976d2';
+    properties.weight = layer.options?.weight || 3;
+    properties.opacity = layer.options?.opacity || 1;
+  } else if (type === 'image') {
+    properties.opacity = layer._overlay?.options?.opacity || 1;
+  }
+  
+  return properties;
+}
+
+// SVG-іконка маркера з кастомним кольором
+function getColoredMarkerIcon(color = "#1976d2") {
+  const svg = encodeURIComponent(`
+    <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 0C7.163 0 0 7.163 0 16c0 11.046 16 32 16 32s16-20.954 16-32C32 7.163 24.837 0 16 0z" fill="${color}"/>
+      <circle cx="16" cy="16" r="7" fill="#fff"/>
+    </svg>
+  `);
+  return L.icon({
+    iconUrl: "data:image/svg+xml;utf8," + svg,
+    iconSize: [32, 48],
+    iconAnchor: [16, 48],
+    popupAnchor: [0, -40]
+  });
+}
+
+// Функція для застосування властивостей до об'єкта
+function applyObjectProperties(layer, properties) {
+  const type = getObjectType(layer);
+  // Зберігаємо властивості в layer.properties
+  if (!layer.properties) layer.properties = {};
+  layer.properties.name = properties.name;
+  layer.properties.description = properties.description;
+  if (type === 'marker') {
+    layer.setIcon(getColoredMarkerIcon(properties.color));
+    layer.properties.color = properties.color;
+    layer.options.color = properties.color;
+  } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+    layer.setStyle({
+      fillColor: properties.fillColor,
+      color: properties.color,
+      fillOpacity: properties.fillOpacity,
+      opacity: properties.opacity
+    });
+  } else if (type === 'polyline') {
+    layer.setStyle({
+      color: properties.color,
+      weight: properties.weight,
+      opacity: properties.opacity
+    });
+  } else if (type === 'image') {
+    if (layer._overlay) {
+      layer._overlay.setOpacity(properties.opacity);
+    }
+  }
+}
+
+// Функція для показу модального вікна
+function showEditModal(layer) {
+  currentEditingObject = layer;
+  const type = getObjectType(layer);
+  const properties = getObjectProperties(layer);
+  
+  // Оновлюємо заголовок
+  document.getElementById('modal-title').textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'об\'єкта'}`;
+  
+  // Заповнюємо поля
+  document.getElementById('object-name').value = properties.name;
+  document.getElementById('object-description').value = properties.description;
+  
+  // Показуємо/приховуємо відповідні групи полів
+  const lineColorGroup = document.getElementById('line-color-group');
+  const fillColorGroup = document.getElementById('fill-color-group');
+  const borderColorGroup = document.getElementById('border-color-group');
+  const markerColorGroup = document.getElementById('marker-color-group');
+  const lineWidthGroup = document.getElementById('line-width-group');
+  const opacityGroup = document.getElementById('opacity-group');
+  
+  // Приховуємо всі групи
+  [lineColorGroup, fillColorGroup, borderColorGroup, markerColorGroup, lineWidthGroup, opacityGroup].forEach(group => {
+    group.style.display = 'none';
+  });
+  
+  // Показуємо відповідні групи залежно від типу
+  if (type === 'marker') {
+    markerColorGroup.style.display = 'block';
+    document.getElementById('marker-color').value = properties.color;
+  } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+    fillColorGroup.style.display = 'block';
+    borderColorGroup.style.display = 'block';
+    opacityGroup.style.display = 'block';
+    document.getElementById('fill-color').value = properties.fillColor;
+    document.getElementById('border-color').value = properties.color;
+    document.getElementById('object-opacity').value = properties.fillOpacity;
+    document.getElementById('opacity-value').textContent = Math.round(properties.fillOpacity * 100) + '%';
+  } else if (type === 'polyline') {
+    lineColorGroup.style.display = 'block';
+    lineWidthGroup.style.display = 'block';
+    opacityGroup.style.display = 'block';
+    document.getElementById('line-color').value = properties.color;
+    document.getElementById('line-width').value = properties.weight;
+    document.getElementById('line-width-value').textContent = properties.weight;
+    document.getElementById('object-opacity').value = properties.opacity;
+    document.getElementById('opacity-value').textContent = Math.round(properties.opacity * 100) + '%';
+  } else if (type === 'image') {
+    opacityGroup.style.display = 'block';
+    document.getElementById('object-opacity').value = properties.opacity;
+    document.getElementById('opacity-value').textContent = Math.round(properties.opacity * 100) + '%';
+  }
+  
+  // Показуємо модальне вікно
+  document.getElementById('edit-object-modal').style.display = 'flex';
+}
+
+// Функція для закриття модального вікна
+function closeEditModal() {
+  document.getElementById('edit-object-modal').style.display = 'none';
+  currentEditingObject = null;
+}
+
+// Функція для збереження змін
+function saveObjectChanges() {
+  if (!currentEditingObject) return;
+  
+  const type = getObjectType(currentEditingObject);
+  const properties = {
+    name: document.getElementById('object-name').value,
+    description: document.getElementById('object-description').value
+  };
+  
+  if (type === 'marker') {
+    properties.color = document.getElementById('marker-color').value;
+  } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+    properties.fillColor = document.getElementById('fill-color').value;
+    properties.color = document.getElementById('border-color').value;
+    properties.fillOpacity = parseFloat(document.getElementById('object-opacity').value);
+    properties.opacity = 1;
+  } else if (type === 'polyline') {
+    properties.color = document.getElementById('line-color').value;
+    properties.weight = parseInt(document.getElementById('line-width').value);
+    properties.opacity = parseFloat(document.getElementById('object-opacity').value);
+  } else if (type === 'image') {
+    properties.opacity = parseFloat(document.getElementById('object-opacity').value);
+  }
+  
+  applyObjectProperties(currentEditingObject, properties);
+  // --- Додаємо копіювання у feature.properties ---
+  if (currentEditingObject.feature && currentEditingObject.properties) {
+    currentEditingObject.feature.properties = { ...currentEditingObject.properties };
+  }
+  saveLayersToStorage();
+  closeEditModal();
+}
+
+// Ініціалізація модального вікна
+function initEditModal() {
+  // Обробники подій для кнопок
+  document.getElementById('modal-close').addEventListener('click', closeEditModal);
+  document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
+  document.getElementById('save-object').addEventListener('click', saveObjectChanges);
+  
+  // Обробники для range слайдерів
+  document.getElementById('line-width').addEventListener('input', function() {
+    document.getElementById('line-width-value').textContent = this.value;
+  });
+  
+  document.getElementById('object-opacity').addEventListener('input', function() {
+    document.getElementById('opacity-value').textContent = Math.round(this.value * 100) + '%';
+  });
+  
+  // Закриття по кліку поза модальним вікном
+  document.getElementById('edit-object-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeEditModal();
+    }
+  });
+  
+  // Закриття по Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('edit-object-modal').style.display === 'flex') {
+      closeEditModal();
+    }
+  });
+}
+
+// Функція для додавання подвійного кліку до об'єктів
+function addDoubleClickToLayer(layer) {
+  const type = getObjectType(layer);
+  if (type === 'marker') {
+    // Для маркера — на icon
+    layer.on('add', function() {
+      const el = layer.getElement && layer.getElement();
+      if (el) {
+        el.addEventListener('dblclick', function(e) {
+          e.stopPropagation();
+          showEditModal(layer);
+        });
+      }
+    });
+    // Якщо вже доданий на карту
+    const el = layer.getElement && layer.getElement();
+    if (el) {
+      el.addEventListener('dblclick', function(e) {
+        e.stopPropagation();
+        showEditModal(layer);
+      });
+    }
+  } else {
+    // Для всіх інших — на шар
+    layer.on('dblclick', function(e) {
+      if (e.originalEvent) e.originalEvent.stopPropagation();
+      showEditModal(layer);
+    });
+  }
+}

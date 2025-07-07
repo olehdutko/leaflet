@@ -29,6 +29,62 @@
     <div id="layer-controls"></div>
   </div>
   <div id="map"></div>
+  
+  <!-- Модальне вікно для редагування об'єктів -->
+  <div id="edit-object-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Редагування об'єкта</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="object-name">Назва:</label>
+          <input type="text" id="object-name" placeholder="Введіть назву об'єкта">
+        </div>
+        <div class="form-group">
+          <label for="object-description">Опис:</label>
+          <textarea id="object-description" placeholder="Введіть опис об'єкта" rows="3"></textarea>
+        </div>
+        
+        <!-- Налаштування кольорів (показується тільки для відповідних об'єктів) -->
+        <div id="color-settings">
+          <div class="form-group" id="line-color-group" style="display: none;">
+            <label for="line-color">Колір лінії:</label>
+            <input type="color" id="line-color" value="#1976d2">
+          </div>
+          <div class="form-group" id="fill-color-group" style="display: none;">
+            <label for="fill-color">Колір заповнення:</label>
+            <input type="color" id="fill-color" value="#1976d2">
+          </div>
+          <div class="form-group" id="border-color-group" style="display: none;">
+            <label for="border-color">Колір рамки:</label>
+            <input type="color" id="border-color" value="#1976d2">
+          </div>
+          <div class="form-group" id="marker-color-group" style="display: none;">
+            <label for="marker-color">Колір маркера:</label>
+            <input type="color" id="marker-color" value="#1976d2">
+          </div>
+        </div>
+        
+        <div class="form-group" id="line-width-group" style="display: none;">
+          <label for="line-width">Товщина лінії:</label>
+          <input type="range" id="line-width" min="1" max="10" value="3">
+          <span id="line-width-value">3</span>
+        </div>
+        
+        <div class="form-group" id="opacity-group" style="display: none;">
+          <label for="object-opacity">Прозорість:</label>
+          <input type="range" id="object-opacity" min="0" max="1" step="0.1" value="1">
+          <span id="opacity-value">100%</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-object" class="btn-primary">Зберегти</button>
+        <button id="cancel-edit" class="btn-secondary">Скасувати</button>
+      </div>
+    </div>
+  </div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
   <script>console.log('L before toolbar', window.L);</script>

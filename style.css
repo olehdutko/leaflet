@@ -339,3 +339,210 @@ body {
 .distortable-image-overlay img {
   pointer-events: auto !important;
 } 
+
+/* Модальне вікно для редагування об'єктів */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+}
+
+.modal-body {
+  padding: 20px 24px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 20px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.form-group input[type="color"] {
+  width: 50px;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.form-group input[type="range"] {
+  width: calc(100% - 50px);
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+.btn-primary {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover {
+  background: #1565c0;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+/* Темна тема для модального вікна */
+.theme-dark .modal-content {
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+.theme-dark .modal-header {
+  border-bottom-color: #374151;
+}
+
+.theme-dark .modal-header h3 {
+  color: #f9fafb;
+}
+
+.theme-dark .modal-close {
+  color: #9ca3af;
+}
+
+.theme-dark .modal-close:hover {
+  background: #374151;
+}
+
+.theme-dark .modal-footer {
+  border-top-color: #374151;
+}
+
+.theme-dark .form-group label {
+  color: #d1d5db;
+}
+
+.theme-dark .form-group input[type="text"],
+.theme-dark .form-group textarea {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+.theme-dark .form-group input[type="text"]:focus,
+.theme-dark .form-group textarea:focus {
+  border-color: #1976d2;
+}
+
+.theme-dark .btn-secondary {
+  background: #374151;
+  color: #f9fafb;
+  border-color: #4b5563;
+}
+
+.theme-dark .btn-secondary:hover {
+  background: #4b5563;
+} 
