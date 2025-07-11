@@ -659,3 +659,12 @@ body {
   gap: 8px;
   justify-content: flex-end;
 } 
+.hidden {
+  display: none !important;
+}
+.modal-content-narrow {
+  max-width: 400px;
+}
+.position-relative {
+  position: relative;
+} 

@@ -32,8 +32,8 @@
   <div id="map"></div>
   
   <!-- Модальне вікно для редагування об'єктів -->
-  <div id="edit-object-modal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 400px;">
+  <div id="edit-object-modal" class="modal hidden">
+    <div class="modal-content modal-content-narrow">
       <div class="modal-header">
         <h3 id="modal-title">Редактор лінії</h3>
         <button class="modal-close" id="modal-close">&times;</button>
@@ -47,29 +47,29 @@
           <label for="object-description">Опис (можна використовувати HTML)</label>
           <textarea id="object-description" placeholder="Опис" rows="3"></textarea>
         </div>
-        <div class="form-group" id="image-group" style="display:none;">
+        <div class="form-group" id="image-group" class="hidden">
           <label for="object-image">Зображення</label>
           <input type="file" id="object-image">
         </div>
-        <div class="form-group" id="color-picker-group" style="display:none;">
+        <div class="form-group" id="color-picker-group" class="hidden">
           <label>Колір</label>
-          <div class="color-palette" id="color-palette" style="display: flex; gap: 8px; margin-bottom: 8px;">
-            <div class="color-swatch" data-color="#ff4500" style="background-color:#ff4500; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <div class="color-swatch" data-color="#ff8c00" style="background-color:#ff8c00; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <div class="color-swatch" data-color="#ffd700" style="background-color:#ffd700; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <div class="color-swatch" data-color="#90ee90" style="background-color:#90ee90; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <div class="color-swatch" data-color="#00bcd4" style="background-color:#00bcd4; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <div class="color-swatch" data-color="#2196f3" style="background-color:#2196f3; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <div class="color-swatch" data-color="#e91e63" style="background-color:#e91e63; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <div class="color-swatch" data-color="#212121" style="background-color:#212121; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
-            <input type="color" id="object-color" class="color-picker-input" value="#1976d2" style="width:32px; height:32px; border:none; background:none; padding:0;">
+          <div class="color-palette" id="color-palette">
+            <div class="color-swatch" data-color="#ff4500" style="background-color:#ff4500;"></div>
+            <div class="color-swatch" data-color="#ff8c00" style="background-color:#ff8c00;"></div>
+            <div class="color-swatch" data-color="#ffd700" style="background-color:#ffd700;"></div>
+            <div class="color-swatch" data-color="#90ee90" style="background-color:#90ee90;"></div>
+            <div class="color-swatch" data-color="#00bcd4" style="background-color:#00bcd4;"></div>
+            <div class="color-swatch" data-color="#2196f3" style="background-color:#2196f3;"></div>
+            <div class="color-swatch" data-color="#e91e63" style="background-color:#e91e63;"></div>
+            <div class="color-swatch" data-color="#212121" style="background-color:#212121;"></div>
+            <input type="color" id="object-color" class="color-picker-input" value="#1976d2">
           </div>
         </div>
-        <div class="form-group" id="line-width-group" style="display:none;">
+        <div class="form-group" id="line-width-group" class="hidden">
           <label for="line-width">Товщина: <span id="line-width-value">3px</span></label>
           <input type="range" id="line-width" min="1" max="10" value="3">
         </div>
-        <div class="form-group" id="style-group" style="display:none;">
+        <div class="form-group" id="style-group" class="hidden">
           <label for="line-style">Стиль</label>
           <select id="line-style">
             <option value="solid">Суцільна</option>
@@ -77,18 +77,18 @@
             <option value="dotted">Точкова</option>
           </select>
         </div>
-        <div class="form-group" id="opacity-group" style="display:none;">
+        <div class="form-group" id="opacity-group" class="hidden">
           <label for="object-opacity">Прозорість: <span id="opacity-value">100%</span></label>
           <input type="range" id="object-opacity" min="0" max="1" step="0.1" value="1">
         </div>
-        <div class="form-group" id="marker-icon-group" style="display:none; position: relative;">
+        <div class="form-group" id="marker-icon-group" class="hidden position-relative">
           <label for="marker-icon">Назва іконки (Material Icons)</label>
           <input type="text" id="marker-icon" placeholder="напр. home, star..." autocomplete="off" />
           <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
-          <span id="marker-icon-preview" class="material-icons" style="font-size: 28px; vertical-align: middle; margin-left: 8px;">place</span>
+          <span id="marker-icon-preview" class="material-icons">place</span>
         </div>
       </div>
-      <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
+      <div class="modal-footer modal-footer-flex">
         <button id="save-object" class="btn-primary">Оновити</button>
         <button id="delete-object" class="btn-danger">Видалити</button>
         <button id="cancel-edit" class="btn-secondary">Закрити</button>

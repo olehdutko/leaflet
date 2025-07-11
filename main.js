@@ -1617,12 +1617,13 @@ function showEditModal(layer) {
   
   // Показуємо модальне вікно
   const editModal = document.getElementById('edit-object-modal');
-  if (editModal) editModal.style.display = 'flex';
+  if (editModal) editModal.classList.remove('hidden');
 }
 
 // Функція для закриття модального вікна
 function closeEditModal() {
-  document.getElementById('edit-object-modal').style.display = 'none';
+  const editModal = document.getElementById('edit-object-modal');
+  if (editModal) editModal.classList.add('hidden');
   currentEditingObject = null;
 }
 
@@ -1696,7 +1697,7 @@ function initEditModal() {
   
   // Закриття по Escape
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('edit-object-modal').style.display === 'flex') {
+    if (e.key === 'Escape' && document.getElementById('edit-object-modal').classList.contains('hidden') === false) {
       closeEditModal();
     }
   });
