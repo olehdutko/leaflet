@@ -573,3 +573,89 @@ body {
   color: #fff;
   z-index: 1;
 } 
+
+.line-controls-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+}
+.line-controls-row .control-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.line-controls-row label {
+  min-width: 110px;
+  display: inline-block;
+  margin-bottom: 0;
+  vertical-align: baseline;
+  text-align: right;
+}
+.line-controls-row > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-top: none;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.autocomplete-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.autocomplete-item:hover, .autocomplete-item.active {
+  background: #e3f2fd;
+}
+.autocomplete-item .material-icons {
+  font-size: 20px;
+  color: #1976d2;
+}
+.color-palette {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.color-swatch {
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+#image-group, #color-picker-group, #line-width-group, #style-group, #opacity-group, #marker-icon-group {
+  display: none;
+}
+#marker-icon-group {
+  position: relative;
+}
+#object-color.color-picker-input {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  padding: 0;
+}
+#marker-icon-preview {
+  font-size: 28px;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+.modal-footer-flex {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+} 
