@@ -10,6 +10,89 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-distortableimage@0.20.7/dist/leaflet.distortableimage.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <style>
+    .line-controls-row {
+      display: flex;
+      gap: 24px;
+      align-items: flex-end;
+    }
+    .line-controls-row .control-block {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+    .line-controls-row label {
+      min-width: 110px;
+      display: inline-block;
+      margin-bottom: 0;
+      vertical-align: baseline;
+      text-align: right;
+    }
+    .line-controls-row > div {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .custom-pin {
+      position: relative;
+      width: 36px;
+      height: 48px;
+      border-radius: 50% 50% 50% 50% / 50% 50% 60% 60%;
+      box-shadow: 0 2px 8px rgba(30,41,59,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .custom-pin .material-icons {
+      color: #fff;
+      font-size: 22px;
+      line-height: 1;
+      z-index: 2;
+    }
+    .custom-pin:after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -10px;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 12px solid inherit;
+      filter: drop-shadow(0 2px 2px rgba(30,41,59,0.18));
+    }
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      max-height: 180px;
+      overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .autocomplete-item {
+      padding: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .autocomplete-item:hover, .autocomplete-item.active {
+      background: #e3f2fd;
+    }
+    .autocomplete-item .material-icons {
+      font-size: 20px;
+      color: #1976d2;
+    }
+  </style>
 </head>
 <body>
   <!-- <div id="theme-toggle">
@@ -32,56 +115,65 @@
   
   <!-- Модальне вікно для редагування об'єктів -->
   <div id="edit-object-modal" class="modal" style="display: none;">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 400px;">
       <div class="modal-header">
-        <h3 id="modal-title">Редагування об'єкта</h3>
+        <h3 id="modal-title">Редактор лінії</h3>
         <button class="modal-close" id="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="object-name">Назва:</label>
-          <input type="text" id="object-name" placeholder="Введіть назву об'єкта">
+          <label for="object-name">Назва</label>
+          <input type="text" id="object-name" placeholder="Назва">
         </div>
         <div class="form-group">
-          <label for="object-description">Опис:</label>
-          <textarea id="object-description" placeholder="Введіть опис об'єкта" rows="3"></textarea>
+          <label for="object-description">Опис (можна використовувати HTML)</label>
+          <textarea id="object-description" placeholder="Опис" rows="3"></textarea>
         </div>
-        
-        <!-- Налаштування кольорів (показується тільки для відповідних об'єктів) -->
-        <div id="color-settings">
-          <div class="form-group" id="line-color-group" style="display: none;">
-            <label for="line-color">Колір лінії:</label>
-            <input type="color" id="line-color" value="#1976d2">
-          </div>
-          <div class="form-group" id="fill-color-group" style="display: none;">
-            <label for="fill-color">Колір заповнення:</label>
-            <input type="color" id="fill-color" value="#1976d2">
-          </div>
-          <div class="form-group" id="border-color-group" style="display: none;">
-            <label for="border-color">Колір рамки:</label>
-            <input type="color" id="border-color" value="#1976d2">
-          </div>
-          <div class="form-group" id="marker-color-group" style="display: none;">
-            <label for="marker-color">Колір маркера:</label>
-            <input type="color" id="marker-color" value="#1976d2">
+        <div class="form-group" id="image-group" style="display:none;">
+          <label for="object-image">Зображення</label>
+          <input type="file" id="object-image">
+        </div>
+        <div class="form-group" id="color-picker-group" style="display:none;">
+          <label>Колір</label>
+          <div class="color-palette" id="color-palette" style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <div class="color-swatch" data-color="#ff4500" style="background-color:#ff4500; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <div class="color-swatch" data-color="#ff8c00" style="background-color:#ff8c00; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <div class="color-swatch" data-color="#ffd700" style="background-color:#ffd700; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <div class="color-swatch" data-color="#90ee90" style="background-color:#90ee90; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <div class="color-swatch" data-color="#00bcd4" style="background-color:#00bcd4; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <div class="color-swatch" data-color="#2196f3" style="background-color:#2196f3; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <div class="color-swatch" data-color="#e91e63" style="background-color:#e91e63; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <div class="color-swatch" data-color="#212121" style="background-color:#212121; border-radius:50%; width:24px; height:24px; border:2px solid #fff; cursor:pointer;"></div>
+            <input type="color" id="object-color" class="color-picker-input" value="#1976d2" style="width:32px; height:32px; border:none; background:none; padding:0;">
           </div>
         </div>
-        
-        <div class="form-group" id="line-width-group" style="display: none;">
-          <label for="line-width">Товщина лінії:</label>
+        <div class="form-group" id="line-width-group" style="display:none;">
+          <label for="line-width">Товщина: <span id="line-width-value">3px</span></label>
           <input type="range" id="line-width" min="1" max="10" value="3">
-          <span id="line-width-value">3</span>
         </div>
-        
-        <div class="form-group" id="opacity-group" style="display: none;">
-          <label for="object-opacity">Прозорість:</label>
+        <div class="form-group" id="style-group" style="display:none;">
+          <label for="line-style">Стиль</label>
+          <select id="line-style">
+            <option value="solid">Суцільна</option>
+            <option value="dashed">Пунктирна</option>
+            <option value="dotted">Точкова</option>
+          </select>
+        </div>
+        <div class="form-group" id="opacity-group" style="display:none;">
+          <label for="object-opacity">Прозорість: <span id="opacity-value">100%</span></label>
           <input type="range" id="object-opacity" min="0" max="1" step="0.1" value="1">
-          <span id="opacity-value">100%</span>
+        </div>
+        <div class="form-group" id="marker-icon-group" style="display:none; position: relative;">
+          <label for="marker-icon">Назва іконки (Material Icons)</label>
+          <input type="text" id="marker-icon" placeholder="напр. home, star..." autocomplete="off" />
+          <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
+          <span id="marker-icon-preview" class="material-icons" style="font-size: 28px; vertical-align: middle; margin-left: 8px;">place</span>
         </div>
       </div>
-      <div class="modal-footer">
-        <button id="save-object" class="btn-primary">Зберегти</button>
-        <button id="cancel-edit" class="btn-secondary">Скасувати</button>
+      <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="save-object" class="btn-primary">Оновити</button>
+        <button id="delete-object" class="btn-danger">Видалити</button>
+        <button id="cancel-edit" class="btn-secondary">Закрити</button>
       </div>
     </div>
   </div>

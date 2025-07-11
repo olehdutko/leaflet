@@ -37,6 +37,73 @@ let drawControl = null; // оголошуємо глобально
 const layerControlsDiv = document.getElementById('layer-controls');
 const addLayerBtn = document.getElementById('add-layer');
 
+// --- Перенесено: Функція для збереження шарів у localStorage ---
+function saveLayersToStorage() {
+  customLayers.forEach(l => {
+    l.featureGroup.eachLayer(layer => {
+      const type = getObjectType(layer);
+      if (!layer.feature) return; // тільки geojson-обʼєкти
+      if (!layer.feature.properties) layer.feature.properties = {};
+      // Копіюємо властивості з layer.properties у feature.properties
+      if (layer.feature && layer.properties) {
+        Object.assign(layer.feature.properties, layer.properties);
+      }
+      Object.assign(layer.feature.properties, layer.properties || {});
+      // Додаємо стилі
+      if (type === 'marker') {
+        layer.feature.properties.color = layer.properties?.color || '#1976d2';
+      } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+        layer.feature.properties.fillColor = layer.options?.fillColor || '#1976d2';
+        layer.feature.properties.color = layer.options?.color || '#1976d2';
+        layer.feature.properties.fillOpacity = layer.options?.fillOpacity || 0.2;
+        layer.feature.properties.opacity = layer.options?.opacity || 1;
+      } else if (type === 'polyline') {
+        layer.feature.properties.color = layer.options?.color || '#1976d2';
+        layer.feature.properties.weight = layer.options?.weight || 3;
+        layer.feature.properties.opacity = layer.options?.opacity || 1;
+        // Додаю збереження стилю лінії з захистом
+        let dash = layer.options && layer.options.dashArray !== undefined && layer.options.dashArray !== null ? String(layer.options.dashArray) : '';
+        if (dash === '10, 10') layer.feature.properties.style = 'dashed';
+        else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
+        else layer.feature.properties.style = 'solid';
+      }
+    });
+  });
+  const layersData = customLayers.map(l => {
+    const images = l.featureGroup.images || [];
+    // Зберігаємо corners замість bounds для збереження трансформації
+    const imagesWithCorners = images.map(img => {
+      // Знаходимо відповідний overlay для отримання corners
+      const overlay = l.featureGroup.overlays?.find(o => 
+        o._customUrl === img.url || o._url === img.url || o._image?.src === img.url
+      );
+      if (overlay && overlay.getCorners) {
+        return {
+          ...img,
+          corners: overlay.getCorners(),
+          bounds: overlay.getBounds(),
+          properties: overlay.properties || {} // Зберігаємо властивості зображень
+        };
+      }
+      return {
+        ...img,
+        properties: img.properties || {} // Зберігаємо властивості зображень
+      };
+    });
+    return {
+      id: l.id,
+      tileType: l.tileType,
+      opacity: l.tileLayer.options.opacity,
+      showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
+      geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
+      images: imagesWithCorners,
+      title: l.title || undefined,
+      visible: l.visible !== false
+    };
+  });
+  localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
+}
+
 function createTileLayer(type, opacity=1, showLabels=true) {
   const opt = tileLayerOptions[type];
   let url = opt.url;
@@ -487,10 +554,6 @@ function updateActiveLayerUI() {
       card.classList.remove('active');
     }
   });
-}
-
-// --- Оновлюю saveLayersToStorage ---
-function saveLayersToStorage() {
   customLayers.forEach(l => {
     l.featureGroup.eachLayer(layer => {
       const type = getObjectType(layer);
@@ -513,6 +576,11 @@ function saveLayersToStorage() {
         layer.feature.properties.color = layer.options?.color || '#1976d2';
         layer.feature.properties.weight = layer.options?.weight || 3;
         layer.feature.properties.opacity = layer.options?.opacity || 1;
+        // Додаю збереження стилю лінії з захистом
+        let dash = layer.options && layer.options.dashArray !== undefined && layer.options.dashArray !== null ? String(layer.options.dashArray) : '';
+        if (dash === '10, 10') layer.feature.properties.style = 'dashed';
+        else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
+        else layer.feature.properties.style = 'solid';
       }
     });
   });
@@ -591,6 +659,14 @@ function loadLayersFromStorage() {
             if (feature.properties) {
               layer.properties = { ...feature.properties };
               applyObjectProperties(layer, feature.properties);
+              // --- Додаю застосування стилю лінії при завантаженні ---
+              if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
+                let dashArray = null;
+                if (feature.properties.style === 'dashed') dashArray = '10, 10';
+                else if (feature.properties.style === 'dotted') dashArray = '2, 8';
+                layer.options.dashArray = dashArray;
+                layer.setStyle({ dashArray });
+              }
             }
           }
         });
@@ -849,6 +925,14 @@ importAllInput.onchange = e => {
                 if (feature.properties) {
                   layer.properties = { ...feature.properties };
                   applyObjectProperties(layer, feature.properties);
+                  // --- Додаю застосування стилю лінії при завантаженні ---
+                  if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
+                    let dashArray = null;
+                    if (feature.properties.style === 'dashed') dashArray = '10, 10';
+                    else if (feature.properties.style === 'dotted') dashArray = '2, 8';
+                    layer.options.dashArray = dashArray;
+                    layer.setStyle({ dashArray });
+                  }
                 }
               }
             });
@@ -1259,6 +1343,7 @@ function getObjectProperties(layer) {
   
   if (type === 'marker') {
     properties.color = layer.options?.color || '#1976d2';
+    properties.icon = layer.properties?.icon || 'place';
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
     properties.fillColor = layer.options?.fillColor || '#1976d2';
     properties.color = layer.options?.color || '#1976d2';
@@ -1275,19 +1360,77 @@ function getObjectProperties(layer) {
   return properties;
 }
 
-// SVG-іконка маркера з кастомним кольором
-function getColoredMarkerIcon(color = "#1976d2") {
-  const svg = encodeURIComponent(`
-    <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 0C7.163 0 0 7.163 0 16c0 11.046 16 32 16 32s16-20.954 16-32C32 7.163 24.837 0 16 0z" fill="${color}"/>
-      <circle cx="16" cy="16" r="7" fill="#fff"/>
-    </svg>
-  `);
-  return L.icon({
-    iconUrl: "data:image/svg+xml;utf8," + svg,
-    iconSize: [32, 48],
-    iconAnchor: [16, 48],
-    popupAnchor: [0, -40]
+// --- Масив Material Icons для автокомпліту ---
+const materialIcons = [
+  'place','home','star','flag','search','person','location_on','directions_bike','restaurant','local_cafe','school','park','favorite','work','email','phone','event','alarm','build','camera','chat','check','close','cloud','delete','done','edit','explore','face','help','info','lock','map','menu','pets','print','save','send','settings','shopping_cart','visibility','warning','wifi','zoom_in','zoom_out','youtube_searched_for','directions_car','directions_bus','directions_walk','directions_run','directions_boat','directions_railway','directions_subway','directions_transit','directions_ferry','directions','account_circle','account_box','add','remove','arrow_forward','arrow_back','arrow_upward','arrow_downward','attach_money','attach_file','battery_full','brightness_7','brightness_4','calendar_today','call','check_circle','chevron_left','chevron_right','clear','code','compare','create','credit_card','dashboard','data_usage','delete_forever','desktop_mac','directions_railway_filled','directions_subway_filled','directions_transit_filled','directions_bike','directions_boat_filled','directions_bus_filled','directions_car_filled','directions_ferry_filled','directions_run_filled','directions_walk_filled','edit_location','emoji_emotions','emoji_events','emoji_flags','emoji_food_beverage','emoji_nature','emoji_objects','emoji_people','emoji_symbols','emoji_transportation','engineering','expand_less','expand_more','explore_off','extension','face_retouching_natural','fast_forward','fast_rewind','favorite_border','feedback','file_copy','filter_list','find_in_page','find_replace','fingerprint','fitness_center','flight','folder','folder_open','format_align_center','format_align_justify','format_align_left','format_align_right','format_bold','format_clear','format_color_fill','format_color_reset','format_color_text','format_indent_decrease','format_indent_increase','format_italic','format_line_spacing','format_list_bulleted','format_list_numbered','format_paint','format_quote','format_shapes','format_size','format_strikethrough','format_textdirection_l_to_r','format_textdirection_r_to_l','format_underlined','forum','forward','free_breakfast','fullscreen','fullscreen_exit','functions','g_translate','gamepad','games','gavel','gesture','get_app','gif','golf_course','gps_fixed','gps_not_fixed','gps_off','grade','gradient','grain','graphic_eq','grid_off','grid_on','group','group_add','group_work','hd','hdr_off','hdr_on','hdr_strong','hdr_weak','headset','headset_mic','healing','hearing','help_outline','highlight','high_quality','history','home_work','horizontal_split','hot_tub','hotel','hourglass_empty','hourglass_full','how_to_reg','how_to_vote','http','https','image','image_aspect_ratio','image_search','import_contacts','import_export','important_devices','inbox','indeterminate_check_box','info_outline','input','insert_chart','insert_chart_outlined','insert_comment','insert_drive_file','insert_emoticon','insert_invitation','insert_link','insert_photo','invert_colors','iso','keyboard','keyboard_arrow_down','keyboard_arrow_left','keyboard_arrow_right','keyboard_arrow_up','keyboard_backspace','keyboard_capslock','keyboard_hide','keyboard_return','keyboard_tab','keyboard_voice','kitchen','label','label_important','label_off','landscape','language','laptop','laptop_chromebook','laptop_mac','laptop_windows','last_page','launch','layers','layers_clear','leak_add','leak_remove','lens','library_add','library_books','library_music','lightbulb','line_style','line_weight','linear_scale','link','link_off','list','live_help','live_tv','local_activity','local_airport','local_atm','local_bar','local_cafe','local_car_wash','local_convenience_store','local_dining','local_drink','local_florist','local_gas_station','local_grocery_store','local_hospital','local_hotel','local_laundry_service','local_library','local_mall','local_movies','local_offer','local_parking','local_pharmacy','local_phone','local_pizza','local_play','local_post_office','local_printshop','local_see','local_shipping','local_taxi','location_city','location_disabled','location_off','location_on','location_searching','lock_open','lock_outline','looks','looks_3','looks_4','looks_5','looks_6','looks_one','looks_two','loop','loupe','low_priority','loyalty','mail','mail_outline','map','markunread','markunread_mailbox','maximize','meeting_room','memory','menu_book','merge_type','message','mic','mic_none','mic_off','minimize','missed_video_call','mms','mobile_friendly','mobile_off','mobile_screen_share','money','money_off','monochrome_photos','mood','mood_bad','more','more_horiz','more_vert','motorcycle','mouse','move_to_inbox','movie','movie_creation','movie_filter','multiline_chart','music_note','music_off','music_video','my_location','nature','nature_people','navigate_before','navigate_next','navigation','near_me','network_cell','network_check','network_locked','network_wifi','new_releases','next_week','nfc','nights_stay','no_encryption','no_meeting_room','no_sim','not_interested','note','note_add','notes','notification_important','notifications','notifications_active','notifications_none','notifications_off','notifications_paused','offline_bolt','offline_pin','ondemand_video','opacity','open_in_browser','open_in_new','open_with','outdoor_grill','outlined_flag','pages','pageview','palette','pan_tool','panorama','panorama_fish_eye','panorama_horizontal','panorama_vertical','panorama_wide_angle','party_mode','pause','pause_circle_filled','pause_circle_outline','payment','people','people_alt','people_outline','perm_camera_mic','perm_contact_calendar','perm_data_setting','perm_device_information','perm_identity','perm_media','perm_phone_msg','perm_scan_wifi','person_add','person_add_disabled','person_outline','person_pin','person_pin_circle','person_remove','person_remove_alt_1','person_search','pets','phone','phone_android','phone_bluetooth_speaker','phone_callback','phone_disabled','phone_enabled','phone_forwarded','phone_in_talk','phone_iphone','phone_locked','phone_missed','phone_paused','phonelink','phonelink_erase','phonelink_lock','phonelink_off','phonelink_ring','phonelink_setup','photo','photo_album','photo_camera','photo_filter','photo_library','photo_size_select_actual','photo_size_select_large','photo_size_select_small','picture_as_pdf','picture_in_picture','picture_in_picture_alt','pie_chart','pin_drop','place','play_arrow','play_circle_filled','play_circle_outline','play_for_work','playlist_add','playlist_add_check','playlist_play','plus_one','poll','polymer','pool','portable_wifi_off','portrait','post_add','power','power_input','power_off','power_settings_new','pregnant_woman','present_to_all','print','priority_high','public','publish','query_builder','question_answer','queue','queue_music','queue_play_next','radio','radio_button_checked','radio_button_unchecked','rate_review','receipt','recent_actors','record_voice_over','redeem','redo','refresh','remove','remove_circle','remove_circle_outline','remove_from_queue','remove_red_eye','remove_shopping_cart','reorder','repeat','repeat_one','replay','replay_10','replay_30','replay_5','reply','reply_all','report','report_off','report_problem','restaurant','restaurant_menu','restore','restore_from_trash','restore_page','ring_volume','room','rotate_90_degrees_ccw','rotate_left','rotate_right','rounded_corner','router','rowing','rss_feed','rv_hookup','satellite','save','save_alt','scanner','scatter_plot','schedule','school','score','screen_lock_landscape','screen_lock_portrait','screen_lock_rotation','screen_rotation','screen_share','sd_card','sd_storage','search','security','select_all','send','sentiment_dissatisfied','sentiment_neutral','sentiment_satisfied','sentiment_very_dissatisfied','sentiment_very_satisfied','settings','settings_applications','settings_backup_restore','settings_bluetooth','settings_brightness','settings_cell','settings_ethernet','settings_input_antenna','settings_input_component','settings_input_composite','settings_input_hdmi','settings_input_svideo','settings_overscan','settings_phone','settings_power','settings_remote','settings_system_daydream','settings_voice','share','shop','shop_two','shopping_basket','shopping_cart','short_text','show_chart','shuffle','signal_cellular_4_bar','signal_cellular_connected_no_internet_4_bar','signal_cellular_no_sim','signal_cellular_null','signal_cellular_off','signal_wifi_4_bar','signal_wifi_4_bar_lock','signal_wifi_off','sim_card','skip_next','skip_previous','slideshow','slow_motion_video','smartphone','smoke_free','smoking_rooms','sms','sms_failed','snooze','sort','sort_by_alpha','spa','space_bar','speaker','speaker_group','speaker_notes','speaker_notes_off','speaker_phone','spellcheck','star','star_border','star_half','stars','stay_current_landscape','stay_current_portrait','stay_primary_landscape','stay_primary_portrait','stop','stop_screen_share','storage','store','store_mall_directory','straighten','streetview','strikethrough_s','style','subdirectory_arrow_left','subdirectory_arrow_right','subject','subscriptions','subtitles','subway','supervised_user_circle','supervisor_account','surround_sound','swap_calls','swap_horiz','swap_vert','swap_vertical_circle','switch_camera','switch_video','sync','sync_disabled','sync_problem','system_update','tab','tab_unselected','table_chart','tablet','tablet_android','tablet_mac','tag_faces','tap_and_play','terrain','text_fields','text_format','text_rotate_up','text_rotate_vertical','text_rotation_angledown','text_rotation_angleup','text_rotation_down','text_rotation_none','textsms','texture','theaters','thumb_down','thumb_up','thumbs_up_down','time_to_leave','timelapse','timeline','timer','timer_10','timer_3','timer_off','title','toc','today','toggle_off','toggle_on','toll','tonality','touch_app','toys','track_changes','traffic','train','tram','transfer_within_a_station','transform','transit_enterexit','translate','trending_down','trending_flat','trending_up','trip_origin','tune','turned_in','turned_in_not','tv','unarchive','undo','unfold_less','unfold_more','universal_access','unsubscribe','update','usb','verified_user','vertical_align_bottom','vertical_align_center','vertical_align_top','vibration','video_call','video_label','video_library','videocam','videocam_off','videogame_asset','view_agenda','view_array','view_carousel','view_column','view_comfy','view_compact','view_day','view_headline','view_list','view_module','view_quilt','view_stream','view_week','vignette','visibility','visibility_off','voice_chat','voicemail','volume_down','volume_mute','volume_off','volume_up','vpn_key','vpn_lock','wallpaper','warning','watch','watch_later','wb_auto','wb_cloudy','wb_incandescent','wb_iridescent','wb_sunny','wc','web','web_asset','weekend','whatshot','where_to_vote','widgets','wifi','wifi_lock','wifi_tethering','work','work_off','work_outline','wrap_text','youtube_searched_for','zoom_in','zoom_out'];
+
+// --- Автокомпліт для інпуту іконки маркера ---
+function setupMarkerIconAutocomplete() {
+  const input = document.getElementById('marker-icon');
+  const list = document.getElementById('marker-icon-autocomplete');
+  const preview = document.getElementById('marker-icon-preview');
+  if (!input || !list || !preview) return;
+  let currentFocus = -1;
+  input.oninput = function() {
+    const val = input.value.trim().toLowerCase();
+    list.innerHTML = '';
+    if (!val) return;
+    const matches = materialIcons.filter(name => name.includes(val)).slice(0, 10);
+    matches.forEach(name => {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.innerHTML = `<span class="material-icons">${name}</span> ${name}`;
+      item.onclick = function() {
+        input.value = name;
+        preview.textContent = name;
+        list.innerHTML = '';
+        if (currentEditingObject) {
+          currentEditingObject.properties = currentEditingObject.properties || {};
+          currentEditingObject.properties.icon = name;
+          applyObjectProperties(currentEditingObject, currentEditingObject.properties);
+        }
+      };
+      list.appendChild(item);
+    });
+  };
+  input.onfocus = input.oninput;
+  input.onkeydown = function(e) {
+    const items = list.querySelectorAll('.autocomplete-item');
+    if (e.key === 'ArrowDown') {
+      currentFocus++;
+      if (currentFocus >= items.length) currentFocus = 0;
+      items.forEach((el, i) => el.classList.toggle('active', i === currentFocus));
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      currentFocus--;
+      if (currentFocus < 0) currentFocus = items.length - 1;
+      items.forEach((el, i) => el.classList.toggle('active', i === currentFocus));
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      if (currentFocus > -1 && items[currentFocus]) {
+        items[currentFocus].click();
+        e.preventDefault();
+      }
+    }
+  };
+  document.addEventListener('click', function(e) {
+    if (e.target !== input) list.innerHTML = '';
+  });
+}
+
+// --- Додаю підтримку іконки для маркера ---
+function getColoredMarkerIcon(color = "#1976d2", iconName = "place") {
+  return L.divIcon({
+    className: '',
+    html: `<div class="custom-pin">
+      <svg width="38" height="51" viewBox="0 0 48 64">
+        <path d="M24 0C12 0 0 10 0 24c0 16 24 40 24 40s24-24 24-40C48 10 36 0 24 0z" fill="${color}"/>
+      </svg>
+      <span class="material-icons">${iconName}</span>
+    </div>`,
+    iconSize: [38, 51],
+    iconAnchor: [19, 48],
+    popupAnchor: [0, -44]
   });
 }
 
@@ -1299,8 +1442,10 @@ function applyObjectProperties(layer, properties) {
   layer.properties.name = properties.name;
   layer.properties.description = properties.description;
   if (type === 'marker') {
-    layer.setIcon(getColoredMarkerIcon(properties.color));
+    const iconName = properties.icon || 'place';
+    layer.setIcon(getColoredMarkerIcon(properties.color, iconName));
     layer.properties.color = properties.color;
+    layer.properties.icon = iconName;
     layer.options.color = properties.color;
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
     layer.setStyle({
@@ -1329,54 +1474,150 @@ function showEditModal(layer) {
   const properties = getObjectProperties(layer);
   
   // Оновлюємо заголовок
-  document.getElementById('modal-title').textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'об\'єкта'}`;
+  const modalTitle = document.getElementById('modal-title');
+  if (modalTitle) {
+    modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'об\'єкта'}`;
+  }
   
   // Заповнюємо поля
-  document.getElementById('object-name').value = properties.name;
-  document.getElementById('object-description').value = properties.description;
-  
-  // Показуємо/приховуємо відповідні групи полів
-  const lineColorGroup = document.getElementById('line-color-group');
-  const fillColorGroup = document.getElementById('fill-color-group');
-  const borderColorGroup = document.getElementById('border-color-group');
-  const markerColorGroup = document.getElementById('marker-color-group');
+  const objectName = document.getElementById('object-name');
+  if (objectName) objectName.value = properties.name;
+  const objectDescription = document.getElementById('object-description');
+  if (objectDescription) objectDescription.value = properties.description;
+
+  // Групи контролів
+  const colorPickerGroup = document.getElementById('color-picker-group');
   const lineWidthGroup = document.getElementById('line-width-group');
+  const styleGroup = document.getElementById('style-group');
   const opacityGroup = document.getElementById('opacity-group');
+  const imageGroup = document.getElementById('image-group');
+  const markerIconGroup = document.getElementById('marker-icon-group');
   
   // Приховуємо всі групи
-  [lineColorGroup, fillColorGroup, borderColorGroup, markerColorGroup, lineWidthGroup, opacityGroup].forEach(group => {
-    group.style.display = 'none';
+  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, imageGroup, markerIconGroup].forEach(group => {
+    if (group) group.style.display = 'none';
   });
   
   // Показуємо відповідні групи залежно від типу
   if (type === 'marker') {
-    markerColorGroup.style.display = 'block';
-    document.getElementById('marker-color').value = properties.color;
+    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
+    if (markerIconGroup) markerIconGroup.style.display = 'block';
+    // Встановити значення інпуту та превʼю
+    const markerIconInput = document.getElementById('marker-icon');
+    const markerIconPreview = document.getElementById('marker-icon-preview');
+    if (markerIconInput && markerIconPreview) {
+      markerIconInput.value = properties.icon || 'place';
+      markerIconPreview.textContent = markerIconInput.value;
+      markerIconInput.oninput = function() {
+        markerIconPreview.textContent = markerIconInput.value;
+        if (currentEditingObject) {
+          currentEditingObject.properties = currentEditingObject.properties || {};
+          currentEditingObject.properties.icon = markerIconInput.value;
+          applyObjectProperties(currentEditingObject, currentEditingObject.properties);
+        }
+      };
+      setupMarkerIconAutocomplete();
+    }
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-    fillColorGroup.style.display = 'block';
-    borderColorGroup.style.display = 'block';
-    opacityGroup.style.display = 'block';
-    document.getElementById('fill-color').value = properties.fillColor;
-    document.getElementById('border-color').value = properties.color;
-    document.getElementById('object-opacity').value = properties.fillOpacity;
-    document.getElementById('opacity-value').textContent = Math.round(properties.fillOpacity * 100) + '%';
+    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
+    if (opacityGroup) opacityGroup.style.display = 'block';
   } else if (type === 'polyline') {
-    lineColorGroup.style.display = 'block';
-    lineWidthGroup.style.display = 'block';
-    opacityGroup.style.display = 'block';
-    document.getElementById('line-color').value = properties.color;
-    document.getElementById('line-width').value = properties.weight;
-    document.getElementById('line-width-value').textContent = properties.weight;
-    document.getElementById('object-opacity').value = properties.opacity;
-    document.getElementById('opacity-value').textContent = Math.round(properties.opacity * 100) + '%';
+    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
+    if (lineWidthGroup) lineWidthGroup.style.display = 'block';
+    if (styleGroup) styleGroup.style.display = 'block';
+    // opacityGroup не показуємо для polyline
   } else if (type === 'image') {
-    opacityGroup.style.display = 'block';
-    document.getElementById('object-opacity').value = properties.opacity;
-    document.getElementById('opacity-value').textContent = Math.round(properties.opacity * 100) + '%';
+    if (imageGroup) imageGroup.style.display = 'block';
+    if (opacityGroup) opacityGroup.style.display = 'block';
+  }
+
+  // Заповнюємо значення контролів
+  // Колір
+  const objectColorInput = document.getElementById('object-color');
+  if (objectColorInput) objectColorInput.value = properties.color || properties.fillColor || '#1976d2';
+  // Товщина
+  const lineWidth = document.getElementById('line-width');
+  const lineWidthValue = document.getElementById('line-width-value');
+  if (lineWidth && lineWidthValue && properties.weight) {
+    lineWidth.value = properties.weight;
+    lineWidthValue.textContent = properties.weight + 'px';
+  }
+  // Стиль лінії (за замовчуванням solid)
+  const lineStyle = document.getElementById('line-style');
+  if (lineStyle) lineStyle.value = properties.style || 'solid';
+  // Прозорість
+  const objectOpacity = document.getElementById('object-opacity');
+  const opacityValue = document.getElementById('opacity-value');
+  if (objectOpacity && opacityValue) {
+    let opacity = properties.opacity;
+    if (type === 'polygon' || type === 'circle' || type === 'rectangle') opacity = properties.fillOpacity;
+    objectOpacity.value = opacity ?? 1;
+    opacityValue.textContent = Math.round((opacity ?? 1) * 100) + '%';
+  }
+
+  // --- Додаю інтерактивність для вибору кольору ---
+  if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle')) {
+    const colorPalette = document.getElementById('color-palette');
+    const objectColorInput = document.getElementById('object-color');
+    if (colorPalette && objectColorInput) {
+      // Клік по swatch
+      colorPalette.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.onclick = function() {
+          colorPalette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+          swatch.classList.add('selected');
+          objectColorInput.value = swatch.dataset.color;
+          if (currentEditingObject) {
+            currentEditingObject.properties = currentEditingObject.properties || {};
+            currentEditingObject.properties.color = swatch.dataset.color;
+            if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+              currentEditingObject.properties.fillColor = swatch.dataset.color;
+            }
+            applyObjectProperties(currentEditingObject, currentEditingObject.properties);
+          }
+        };
+      });
+      // Зміна через color picker
+      objectColorInput.oninput = function(e) {
+        colorPalette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+        if (currentEditingObject) {
+          currentEditingObject.properties = currentEditingObject.properties || {};
+          currentEditingObject.properties.color = e.target.value;
+          if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+            currentEditingObject.properties.fillColor = e.target.value;
+          }
+          applyObjectProperties(currentEditingObject, currentEditingObject.properties);
+        }
+      };
+    }
+  }
+
+  // --- Додаю інтерактивність для вибору стилю лінії ---
+  if (type === 'polyline') {
+    const lineStyle = document.getElementById('line-style');
+    if (lineStyle && currentEditingObject) {
+      lineStyle.onchange = function(e) {
+        let dashArray = null;
+        if (e.target.value === 'dashed') dashArray = '10, 10';
+        else if (e.target.value === 'dotted') dashArray = '2, 8';
+        // Оновлюємо властивість
+        currentEditingObject.options.dashArray = dashArray;
+        currentEditingObject.setStyle({ dashArray });
+        currentEditingObject.properties = currentEditingObject.properties || {};
+        currentEditingObject.properties.style = e.target.value;
+        saveLayersToStorage(); // одразу зберігаємо стиль
+      };
+      // Встановити стиль при відкритті модалки
+      let dashArray = null;
+      if (lineStyle.value === 'dashed') dashArray = '10, 10';
+      else if (lineStyle.value === 'dotted') dashArray = '2, 8';
+      currentEditingObject.setStyle({ dashArray });
+      currentEditingObject.options.dashArray = dashArray;
+    }
   }
   
   // Показуємо модальне вікно
-  document.getElementById('edit-object-modal').style.display = 'flex';
+  const editModal = document.getElementById('edit-object-modal');
+  if (editModal) editModal.style.display = 'flex';
 }
 
 // Функція для закриття модального вікна
@@ -1396,18 +1637,29 @@ function saveObjectChanges() {
   };
   
   if (type === 'marker') {
-    properties.color = document.getElementById('marker-color').value;
+    const markerColor = document.getElementById('object-color');
+    if (markerColor) properties.color = markerColor.value;
+    const markerIcon = document.getElementById('marker-icon');
+    if (markerIcon) properties.icon = markerIcon.value;
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-    properties.fillColor = document.getElementById('fill-color').value;
-    properties.color = document.getElementById('border-color').value;
-    properties.fillOpacity = parseFloat(document.getElementById('object-opacity').value);
+    const fillColor = document.getElementById('object-color');
+    if (fillColor) properties.fillColor = fillColor.value;
+    // Для полігонів колір рамки та прозорість можна додати за потреби
+    properties.color = fillColor ? fillColor.value : undefined;
+    const objectOpacity = document.getElementById('object-opacity');
+    if (objectOpacity) properties.fillOpacity = parseFloat(objectOpacity.value);
     properties.opacity = 1;
   } else if (type === 'polyline') {
-    properties.color = document.getElementById('line-color').value;
-    properties.weight = parseInt(document.getElementById('line-width').value);
-    properties.opacity = parseFloat(document.getElementById('object-opacity').value);
+    const objectColor = document.getElementById('object-color');
+    if (objectColor) properties.color = objectColor.value;
+    const lineWidth = document.getElementById('line-width');
+    if (lineWidth) properties.weight = parseInt(lineWidth.value);
+    const lineStyle = document.getElementById('line-style');
+    if (lineStyle) properties.style = lineStyle.value;
+    // opacity не зчитуємо для polyline
   } else if (type === 'image') {
-    properties.opacity = parseFloat(document.getElementById('object-opacity').value);
+    const objectOpacity = document.getElementById('object-opacity');
+    if (objectOpacity) properties.opacity = parseFloat(objectOpacity.value);
   }
   
   applyObjectProperties(currentEditingObject, properties);

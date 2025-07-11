@@ -546,3 +546,30 @@ body {
 .theme-dark .btn-secondary:hover {
   background: #4b5563;
 } 
+
+.custom-pin {
+  position: relative;
+  width: 38px;
+  height: 51px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.custom-pin svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 38px;
+  height: 51px;
+  z-index: 0;
+}
+.custom-pin .material-icons {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 38px;
+  text-align: center;
+  font-size: 28px;
+  color: #fff;
+  z-index: 1;
+} 
