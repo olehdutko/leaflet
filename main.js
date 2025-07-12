@@ -67,6 +67,10 @@ function saveLayersToStorage() {
         else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
         else layer.feature.properties.style = 'solid';
       }
+      // --- додаю image ---
+      if (layer.properties && layer.properties.image) {
+        layer.feature.properties.image = layer.properties.image;
+      }
     });
   });
   const layersData = customLayers.map(l => {
@@ -667,6 +671,10 @@ function loadLayersFromStorage() {
                 layer.options.dashArray = dashArray;
                 layer.setStyle({ dashArray });
               }
+              // --- image ---
+              if (feature.properties.image) {
+                layer.properties.image = feature.properties.image;
+              }
             }
           }
         });
@@ -932,6 +940,10 @@ importAllInput.onchange = e => {
                     else if (feature.properties.style === 'dotted') dashArray = '2, 8';
                     layer.options.dashArray = dashArray;
                     layer.setStyle({ dashArray });
+                  }
+                  // --- image ---
+                  if (feature.properties.image) {
+                    layer.properties.image = feature.properties.image;
                   }
                 }
               }
@@ -1357,6 +1369,8 @@ function getObjectProperties(layer) {
     properties.opacity = layer._overlay?.options?.opacity || 1;
   }
   
+  if (layer.properties?.image) properties.image = layer.properties.image;
+  
   return properties;
 }
 
@@ -1618,6 +1632,53 @@ function showEditModal(layer) {
   // Показуємо модальне вікно
   const editModal = document.getElementById('edit-object-modal');
   if (editModal) editModal.classList.remove('hidden');
+
+  // --- Зображення ---
+  const imageInput = document.getElementById('object-image');
+  const imagePreviewContainer = document.getElementById('object-image-preview-container');
+  const imagePreview = document.getElementById('object-image-preview');
+  const imageRemoveBtn = document.getElementById('object-image-remove');
+  // показати preview, якщо є
+  if (properties.image) {
+    imagePreview.src = properties.image;
+    imagePreviewContainer.classList.remove('hidden');
+    if (imageInput) imageInput.classList.add('hidden');
+  } else {
+    imagePreview.src = '';
+    imagePreviewContainer.classList.add('hidden');
+    if (imageInput) imageInput.classList.remove('hidden');
+  }
+  // вибір нового зображення
+  if (imageInput) {
+    imageInput.value = '';
+    imageInput.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        imagePreview.src = evt.target.result;
+        imagePreviewContainer.classList.remove('hidden');
+        if (imageInput) imageInput.classList.add('hidden');
+        if (currentEditingObject) {
+          currentEditingObject.properties = currentEditingObject.properties || {};
+          currentEditingObject.properties.image = evt.target.result;
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+  }
+  // видалення зображення
+  if (imageRemoveBtn) {
+    imageRemoveBtn.onclick = function() {
+      imagePreview.src = '';
+      imagePreviewContainer.classList.add('hidden');
+      if (imageInput) imageInput.classList.remove('hidden');
+      if (currentEditingObject) {
+        currentEditingObject.properties = currentEditingObject.properties || {};
+        delete currentEditingObject.properties.image;
+      }
+    };
+  }
 }
 
 // Функція для закриття модального вікна
@@ -1661,6 +1722,12 @@ function saveObjectChanges() {
   } else if (type === 'image') {
     const objectOpacity = document.getElementById('object-opacity');
     if (objectOpacity) properties.opacity = parseFloat(objectOpacity.value);
+  }
+  
+  // зображення
+  const imagePreview = document.getElementById('object-image-preview');
+  if (imagePreview && imagePreview.src && !imagePreview.classList.contains('hidden')) {
+    properties.image = imagePreview.src;
   }
   
   applyObjectProperties(currentEditingObject, properties);
