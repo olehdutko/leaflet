@@ -1,3 +1,19 @@
+:root {
+  --main-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #d1d5db;
+  --accent-color: #3b82f6;
+  --accent-color-hover: #2563eb;
+  --danger-color: #ef4444;
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
 html, body {
   height: 100%;
   width: 100vw;
@@ -10,6 +26,7 @@ body {
   flex-direction: row;
   height: 100vh;
   width: 100vw;
+  font-family: var(--main-font-family);
 }
 #layers-panel {
   position: relative;
@@ -147,7 +164,7 @@ body {
   color: #fff;
 }
 .layer-card, .layer-card-title, .layer-card-select, .layer-card-checkbox, .layer-card-slider {
-  font-family: -apple-system, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-family: var(--main-font-family);
 }
 
 .layer-card {
@@ -274,7 +291,7 @@ body {
 }
 .layers-panel-title, h2.layers-panel-title {
   font-size: 24px;
-  font-family: -apple-system, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--main-font-family);
   font-weight: 700;
   color: #111827;
   margin: 0 0 20px 0;
@@ -308,7 +325,7 @@ body {
 }
 .layer-title-input {
   font-size: 24px;
-  font-family: -apple-system, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-family: var(--main-font-family);
   color: #111827;
   font-variation-settings: 'wght' 600;
   padding: 1px 2px;
