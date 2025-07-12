@@ -1773,8 +1773,27 @@ function initEditModal() {
 // Функція для додавання подвійного кліку до об'єктів
 function addDoubleClickToLayer(layer) {
   const type = getObjectType(layer);
+  // --- тултіп ---
+  function getTooltipHtml(properties) {
+    let html = '';
+    if (properties.name) html += `<div class='tooltip-title'>${properties.name}</div>`;
+    if (properties.description) html += `<div class='tooltip-desc'>${properties.description}</div>`;
+    if (properties.image) html += `<div class='tooltip-img-wrap'><img src='${properties.image}' class='tooltip-img' /></div>`;
+    // можна додати ще інші властивості
+    return html || '<span class="tooltip-empty">(немає даних)</span>';
+  }
+  function showTooltip(e) {
+    const props = layer.properties || {};
+    const html = getTooltipHtml(props);
+    layer.bindTooltip(html, {direction:'top', sticky:true, className:'custom-tooltip', opacity:1}).openTooltip(e.latlng || undefined);
+  }
+  function hideTooltip() {
+    layer.closeTooltip();
+  }
+  layer.on('mouseover', showTooltip);
+  layer.on('mouseout', hideTooltip);
+  // --- подвійний клік ---
   if (type === 'marker') {
-    // Для маркера — на icon
     layer.on('add', function() {
       const el = layer.getElement && layer.getElement();
       if (el) {
@@ -1784,7 +1803,6 @@ function addDoubleClickToLayer(layer) {
         });
       }
     });
-    // Якщо вже доданий на карту
     const el = layer.getElement && layer.getElement();
     if (el) {
       el.addEventListener('dblclick', function(e) {
@@ -1793,7 +1811,6 @@ function addDoubleClickToLayer(layer) {
       });
     }
   } else {
-    // Для всіх інших — на шар
     layer.on('dblclick', function(e) {
       if (e.originalEvent) e.originalEvent.stopPropagation();
       showEditModal(layer);

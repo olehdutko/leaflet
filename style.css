@@ -698,3 +698,41 @@ body {
   border: 1px solid #d1d5db;
   object-fit: contain;
 } 
+.custom-tooltip {
+  background: #fff;
+  color: #222;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(30,41,59,0.18);
+  padding: 14px 18px;
+  font-size: 15px;
+  min-width: 180px;
+  max-width: 320px;
+  line-height: 1.5;
+  border: 1px solid #e3eaf5;
+}
+.tooltip-title {
+  font-weight: 700;
+  font-size: 1.1em;
+  margin-bottom: 4px;
+}
+.tooltip-desc {
+  margin-bottom: 6px;
+  color: #444;
+}
+.tooltip-img-wrap {
+  margin-top: 6px;
+  text-align: center;
+}
+.tooltip-img {
+  max-width: 180px;
+  max-height: 120px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+.tooltip-empty {
+  color: #aaa;
+  font-style: italic;
+} 
