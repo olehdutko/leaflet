@@ -150,6 +150,14 @@ function createLayerControl(layerObj) {
   const titleRow = document.createElement('div');
   titleRow.className = 'layer-card-title-row';
 
+  // --- Drag handle ---
+  const dragHandle = document.createElement('span');
+  dragHandle.className = 'layer-card-drag-handle';
+  dragHandle.title = 'Перетягнути шар';
+  dragHandle.tabIndex = -1;
+  dragHandle.innerHTML = '&#8942;&#8942;'; // ⋮⋮
+  titleRow.appendChild(dragHandle);
+
   // --- Кнопка згортання ---
   const collapseBtn = document.createElement('button');
   collapseBtn.className = 'layer-card-collapse-btn';
@@ -775,6 +783,20 @@ function loadLayersFromStorage() {
       activeLayer = null;
     }
     updateActiveLayerUI();
+    // --- Додаю drag-and-drop через SortableJS ---
+    if (window.Sortable) {
+      if (window.layerControlsSortable) window.layerControlsSortable.destroy();
+      window.layerControlsSortable = new Sortable(layerControlsDiv, {
+        animation: 150,
+        handle: '.layer-card-drag-handle',
+        onEnd: function (evt) {
+          // Оновлюємо customLayers згідно нового порядку DOM
+          const newOrder = Array.from(layerControlsDiv.children).map(card => +card.dataset.layerId);
+          customLayers.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+          saveLayersToStorage();
+        }
+      });
+    }
     return true;
   } catch (e) {
     return false;
@@ -2028,7 +2050,20 @@ let searchMarker = null;
   }
 })();
 
+function centerGeoSearchBar() {
+  const bar = document.getElementById('geosearch-bar');
+  const mapDiv = document.getElementById('map');
+  if (!bar || !mapDiv) return;
+  const mapRect = mapDiv.getBoundingClientRect();
+  // Центр мапи
+  const centerX = mapRect.left + mapRect.width / 2;
+  bar.style.left = centerX + 'px';
+  bar.style.transform = 'translateX(-50%)';
+}
+
+window.addEventListener('resize', centerGeoSearchBar);
 document.addEventListener('DOMContentLoaded', function() {
+  centerGeoSearchBar();
   const drawer = document.getElementById('layers-panel-drawer');
   const toggle = document.getElementById('layers-panel-toggle');
   if (drawer && toggle) {
@@ -2036,6 +2071,7 @@ document.addEventListener('DOMContentLoaded', function() {
       drawer.classList.toggle('closed');
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
+        centerGeoSearchBar();
       }, 300);
     });
   }

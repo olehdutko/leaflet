@@ -874,15 +874,20 @@ body {
 } 
 #geosearch-bar {
   position: fixed;
-  top: 18px;
   left: 50%;
+  top: 24px;
   transform: translateX(-50%);
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  pointer-events: none;
+  z-index: 2002;
+  width: 420px;
+  max-width: 90vw;
+  pointer-events: auto;
+}
+@media (max-width: 600px) {
+  #geosearch-bar {
+    width: 95vw;
+    max-width: 95vw;
+    top: 12px;
+  }
 }
 #geosearch-input {
   min-width: 320px;
@@ -967,4 +972,16 @@ body {
 } 
 .layer-card-disabled {
   opacity: 0.35;
+} 
+.leaflet-draw-section {
+  top: 50px;
+} 
+.layer-card-drag-handle {
+  cursor: grab;
+  font-size: 18px;
+  color: #888;
+  margin-right: 8px;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
 } 
