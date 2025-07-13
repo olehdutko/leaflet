@@ -1900,3 +1900,100 @@ function addDoubleClickToLayer(layer) {
     });
   }
 }
+
+// --- Геопошук з автокомплітом ---
+let searchMarker = null;
+(function setupGeoSearch() {
+  const input = document.getElementById('geosearch-input');
+  const list = document.getElementById('geosearch-autocomplete');
+  if (!input || !list) return;
+  let timer = null;
+  let results = [];
+  let activeIdx = -1;
+
+  input.addEventListener('input', function() {
+    const val = input.value.trim();
+    list.innerHTML = '';
+    list.classList.remove('active');
+    activeIdx = -1;
+    if (!val) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&addressdetails=1&limit=7&accept-language=uk`)
+        .then(r => r.json())
+        .then(data => {
+          results = data;
+          if (!results.length) return;
+          list.innerHTML = '';
+          results.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.textContent = item.display_name;
+            div.addEventListener('mousedown', function(e) {
+              e.preventDefault();
+              selectResult(idx);
+            });
+            list.appendChild(div);
+          });
+          list.classList.add('active');
+        });
+    }, 250);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    if (!results.length) return;
+    if (e.key === 'ArrowDown') {
+      activeIdx = Math.min(activeIdx + 1, results.length - 1);
+      updateActive();
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      activeIdx = Math.max(activeIdx - 1, 0);
+      updateActive();
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      if (activeIdx >= 0) {
+        selectResult(activeIdx);
+        e.preventDefault();
+      }
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!input.contains(e.target) && !list.contains(e.target)) {
+      list.classList.remove('active');
+    }
+  });
+
+  function updateActive() {
+    Array.from(list.children).forEach((el, idx) => {
+      if (idx === activeIdx) el.classList.add('active');
+      else el.classList.remove('active');
+    });
+  }
+
+  function selectResult(idx) {
+    const item = results[idx];
+    if (!item) return;
+    input.value = item.display_name;
+    list.classList.remove('active');
+    if (window.map && item.lat && item.lon) {
+      map.setView([parseFloat(item.lat), parseFloat(item.lon)], 16, { animate: true });
+      // --- Додаємо тимчасовий маркер ---
+      if (window.searchMarker) {
+        map.removeLayer(window.searchMarker);
+        window.searchMarker = null;
+      }
+      window.searchMarker = L.marker([parseFloat(item.lat), parseFloat(item.lon)], {
+        icon: L.icon({
+          iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+          shadowSize: [41, 41]
+        })
+      }).addTo(map);
+      window.searchMarker.bindPopup(item.display_name).openPopup();
+    }
+  }
+})();
