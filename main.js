@@ -130,7 +130,7 @@ function getLayerIcon(type) {
 
 function createLayerControl(layerObj) {
   const { id, tileLayer, featureGroup } = layerObj;
-  let collapsed = false;
+  let collapsed = layerObj.collapsed || false;
   let showLabels = true;
   if (layerObj.visible === undefined) layerObj.visible = true;
   const opt = tileLayerOptions[layerObj.tileType];
@@ -149,6 +149,23 @@ function createLayerControl(layerObj) {
   // --- Заголовок ---
   const titleRow = document.createElement('div');
   titleRow.className = 'layer-card-title-row';
+
+  // --- Кнопка згортання ---
+  const collapseBtn = document.createElement('button');
+  collapseBtn.className = 'layer-card-collapse-btn';
+  collapseBtn.innerHTML = collapsed ? '<i class="fa fa-chevron-down"></i>' : '<i class="fa fa-chevron-up"></i>';
+  collapseBtn.title = collapsed ? 'Розгорнути' : 'Згорнути';
+  collapseBtn.onclick = (e) => {
+    e.stopPropagation();
+    collapsed = !collapsed;
+    layerObj.collapsed = collapsed;
+    collapseBtn.innerHTML = collapsed ? '<i class="fa fa-chevron-down"></i>' : '<i class="fa fa-chevron-up"></i>';
+    collapseBtn.title = collapsed ? 'Розгорнути' : 'Згорнути';
+    content.style.display = collapsed ? 'none' : '';
+    div.classList.toggle('layer-card-collapsed', collapsed);
+  };
+  titleRow.appendChild(collapseBtn);
+
   const titleWrap = document.createElement('span');
   titleWrap.className = 'layer-card-title';
   titleWrap.style.display = 'block';
@@ -297,6 +314,7 @@ function createLayerControl(layerObj) {
   // --- Контент картки ---
   const content = document.createElement('div');
   content.className = 'layer-card-content';
+  if (collapsed) content.style.display = 'none';
 
   // Select з іконкою
   const selectWrap = document.createElement('div');
@@ -2009,3 +2027,16 @@ let searchMarker = null;
     }
   }
 })();
+
+document.addEventListener('DOMContentLoaded', function() {
+  const drawer = document.getElementById('layers-panel-drawer');
+  const toggle = document.getElementById('layers-panel-toggle');
+  if (drawer && toggle) {
+    toggle.addEventListener('click', function() {
+      drawer.classList.toggle('closed');
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 300);
+    });
+  }
+});

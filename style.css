@@ -28,21 +28,83 @@ body {
   width: 100vw;
   font-family: var(--main-font-family);
 }
+#layers-panel-drawer {
+  position: static;
+  height: 100vh;
+  z-index: 2001;
+  display: flex;
+  align-items: flex-start;
+  transition: none;
+}
+#layers-panel-drawer.closed {
+  transform: translateX(-90%);
+}
 #layers-panel {
   position: relative;
-  width: 18%;
-  min-width: 220px;
-  max-width: 35%;
-  height: 100vh;
-  background: #fff;
+  width: 260px;
+  min-width: 260px;
+  max-width: 420px;
   box-shadow: 2px 0 16px rgba(0,0,0,0.10);
-  z-index: 1001;
-  display: flex;
-  flex-direction: column;
   border-top-right-radius: 18px;
   border-bottom-right-radius: 18px;
+  background: #fff;
+  height: 100vh;
+  transition: width 0.3s cubic-bezier(.4,0,.2,1), min-width 0.3s cubic-bezier(.4,0,.2,1), box-shadow 0.2s;
+}
+#layers-panel-drawer.closed #layers-panel {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  box-shadow: none;
+}
+.toggle-panel-btn {
+  position: fixed;
+  left: 246px;
+  top: 90px;
+  width: 28px;
+  height: 28px;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, left 0.3s, top 0.3s, width 0.18s, height 0.18s, box-shadow 0.18s;
+  z-index: 3000;
+  background: #fff;
+  color: #1976d2;
+  border: 2px solid #1976d2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.10);
+  cursor: pointer;
   padding: 0;
-  pointer-events: auto;
+}
+
+.toggle-panel-btn:hover {
+  background: #e3f2fd;
+  color: #1565c0;
+  border-color: #1565c0;
+}
+
+.toggle-panel-btn .material-icons {
+  font-size: 18px;
+  color: rgb(25, 118, 210);
+  transition: color 0.18s, font-size 0.18s;
+}
+
+#layers-panel-drawer.closed .toggle-panel-btn {
+  left: 10px;
+  top: 90px;
+}
+
+#layers-panel-drawer.closed .toggle-panel-btn .material-icons {
+  transform: rotate(180deg);
+}
+@media (max-width: 600px) {
+  #layers-panel {
+    min-width: 90vw;
+    max-width: 100vw;
+  }
+  #layers-panel-drawer.closed {
+    transform: translateX(-98%);
+  }
 }
 #map {
   flex: 1 1 0;
@@ -50,6 +112,7 @@ body {
   height: 100vh;
   z-index: 1;
   position: relative;
+  transition: none;
 }
 #theme-toggle {
   position: absolute;
@@ -73,7 +136,7 @@ body {
 #layer-controls {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 #add-layer {
   /* видалено всі стилі, щоб успадковувала .layers-panel-btn */
@@ -282,9 +345,7 @@ body {
   border-radius: 8px;
   margin-top: 6px;
 }
-.layer-card-collapsed {
-  display: none;
-}
+
 .layers-panel-header {
   display: flex;
   align-items: center;
@@ -875,4 +936,35 @@ body {
 }
 #geosearch-autocomplete .autocomplete-item:hover, #geosearch-autocomplete .autocomplete-item.active {
   background: #e3f2fd;
+} 
+.layer-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.layer-card-collapse-btn {
+  background: none;
+  border: none;
+  color: #1976d2;
+  font-size: 1.4em;
+  cursor: pointer;
+  padding: 2px 6px 2px 2px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+}
+.layer-card-collapse-btn:hover {
+  background: #e3eaf5;
+  color: #1565c0;
+}
+.layer-card-collapsed {
+  opacity: 0.95;
+}
+.layer-card-content {
+  transition: max-height 0.2s, opacity 0.2s;
+} 
+.layer-card-disabled {
+  opacity: 0.35;
 } 

@@ -21,17 +21,20 @@
     <button id="light-theme">Світла</button>
     <button id="dark-theme">Темна</button>
   </div> -->
-  <div id="layers-panel">
-    <div class="layers-panel-header">
-      <span class="layers-panel-title">Шари</span>
-      <span class="layers-panel-actions">
-        <button class="layers-panel-btn" id="export-all" title="Експортувати всі шари"><i class="fa fa-download"></i></button>
-        <input type="file" id="import-all-input" accept=".json,.geojson" style="display:none">
-        <button class="layers-panel-btn" id="import-all" title="Імпортувати шари"><i class="fa fa-upload"></i></button>
-        <button class="layers-panel-btn" id="add-layer" title="Новий шар"><i class="fa fa-plus"></i></button>
-      </span>
+  <div id="layers-panel-drawer">
+    <button id="layers-panel-toggle" class="toggle-panel-btn" title="Сховати панель шарів"><span class="material-icons">chevron_left</span></button>
+    <div id="layers-panel">
+      <div class="layers-panel-header">
+        <span class="layers-panel-title">Шари</span>
+        <span class="layers-panel-actions">
+          <button class="layers-panel-btn" id="export-all" title="Експортувати всі шари"><i class="fa fa-download"></i></button>
+          <input type="file" id="import-all-input" accept=".json,.geojson" style="display:none">
+          <button class="layers-panel-btn" id="import-all" title="Імпортувати шари"><i class="fa fa-upload"></i></button>
+          <button class="layers-panel-btn" id="add-layer" title="Новий шар"><i class="fa fa-plus"></i></button>
+        </span>
+      </div>
+      <div id="layer-controls"></div>
     </div>
-    <div id="layer-controls"></div>
   </div>
   <div id="map"></div>
   
