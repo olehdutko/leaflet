@@ -185,13 +185,14 @@ function createLayerControl(layerObj) {
   // Око (показати/приховати)
   const eyeBtn = document.createElement('button');
   eyeBtn.className = 'layer-card-icon-btn';
+  if (layerObj.visible) eyeBtn.classList.add('primary');
   eyeBtn.innerHTML = layerObj.visible ? '<i class="fa fa-eye"></i>' : '<i class="fa fa-eye-slash"></i>';
   eyeBtn.title = layerObj.visible ? 'Приховати шар' : 'Показати шар';
   header.appendChild(eyeBtn);
 
   // --- Експорт шару ---
   const exportBtn = document.createElement('button');
-  exportBtn.className = 'layer-card-icon-btn';
+  exportBtn.className = 'layer-card-icon-btn primary';
   exportBtn.innerHTML = '<i class="fa fa-arrow-up"></i>';
   exportBtn.title = 'Експортувати шар';
   header.appendChild(exportBtn);
@@ -1777,19 +1778,91 @@ function addDoubleClickToLayer(layer) {
   function getTooltipHtml(properties) {
     let html = '';
     if (properties.name) html += `<div class='tooltip-title'>${properties.name}</div>`;
-    if (properties.description) html += `<div class='tooltip-desc'>${properties.description}</div>`;
+    if (properties.description) {
+      // Автоматично замінюємо посилання на <a>
+      const descWithLinks = properties.description.replace(/(https?:\/\/[^\s]+)/g, function(url) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+      });
+      html += `<div class='tooltip-desc'>${descWithLinks}</div>`;
+    }
     if (properties.image) html += `<div class='tooltip-img-wrap'><img src='${properties.image}' class='tooltip-img' /></div>`;
     // можна додати ще інші властивості
     return html || '<span class="tooltip-empty">(немає даних)</span>';
   }
+  let customTooltip = null;
+  let tooltipTimer = null;
+  
   function showTooltip(e) {
+    // Зупиняємо попередній таймер
+    if (tooltipTimer) {
+      clearTimeout(tooltipTimer);
+      tooltipTimer = null;
+    }
+    
+    // Видаляємо попередній тултіп, якщо він є
+    if (customTooltip) {
+      customTooltip.remove();
+      customTooltip = null;
+    }
+    
     const props = layer.properties || {};
     const html = getTooltipHtml(props);
-    layer.bindTooltip(html, {direction:'top', sticky:true, className:'custom-tooltip', opacity:1}).openTooltip(e.latlng || undefined);
+    
+    // Створюємо власний тултіп
+    customTooltip = document.createElement('div');
+    customTooltip.className = 'custom-tooltip';
+    customTooltip.innerHTML = html;
+    customTooltip.style.position = 'absolute';
+    customTooltip.style.zIndex = '1000';
+    customTooltip.style.pointerEvents = 'auto';
+    customTooltip.style.cursor = 'default';
+    
+    // Додаємо тултіп до карти
+    const mapContainer = map.getContainer();
+    mapContainer.appendChild(customTooltip);
+    
+    // Позиціонуємо тултіп
+    if (e.originalEvent && typeof e.originalEvent.clientX === 'number' && typeof e.originalEvent.clientY === 'number') {
+      const mapContainer = map.getContainer();
+      const rect = mapContainer.getBoundingClientRect();
+      customTooltip.style.left = (e.originalEvent.clientX - rect.left) + 'px';
+      customTooltip.style.top = (e.originalEvent.clientY - rect.top) + 'px';
+      customTooltip.style.transform = 'translate(-50%, -120%)';
+    } else {
+      // fallback: над об'єктом
+      const point = map.latLngToLayerPoint(e.latlng);
+      customTooltip.style.left = point.x + 'px';
+      customTooltip.style.top = point.y + 'px';
+      customTooltip.style.transform = 'translate(-60%, -120%)';
+    }
+    
+    // Обробники подій для тултіпа
+    customTooltip.addEventListener('mouseenter', function() {
+      if (tooltipTimer) {
+        clearTimeout(tooltipTimer);
+        tooltipTimer = null;
+      }
+    });
+    
+    customTooltip.addEventListener('mouseleave', function() {
+      hideTooltip();
+    });
   }
+  
   function hideTooltip() {
-    layer.closeTooltip();
+    if (tooltipTimer) {
+      clearTimeout(tooltipTimer);
+    }
+    
+    tooltipTimer = setTimeout(() => {
+      if (customTooltip) {
+        customTooltip.remove();
+        customTooltip = null;
+      }
+      tooltipTimer = null;
+    }, 100);
   }
+  
   layer.on('mouseover', showTooltip);
   layer.on('mouseout', hideTooltip);
   // --- подвійний клік ---

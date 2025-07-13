@@ -87,9 +87,11 @@
         </div>
         <div class="form-group" id="marker-icon-group" class="hidden position-relative">
           <label for="marker-icon">Назва іконки (Material Icons)</label>
-          <input type="text" id="marker-icon" placeholder="напр. home, star..." autocomplete="off" />
+          <div class="marker-icon-input-wrap">
+            <input type="text" id="marker-icon" placeholder="напр. home, star..." autocomplete="off" />
+            <span id="marker-icon-preview" class="material-icons">place</span>
+          </div>
           <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
-          <span id="marker-icon-preview" class="material-icons">place</span>
         </div>
       </div>
       <div class="modal-footer modal-footer-flex">

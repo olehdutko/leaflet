@@ -220,6 +220,12 @@ body {
   opacity: 0.3;
   pointer-events: none;
 }
+.layer-card-icon-btn.primary {
+  color: #1976d2;
+}
+.layer-card-icon-btn.primary:hover {
+  background: #e3eaf5;
+}
 .layer-card-select {
   display: flex;
   align-items: center;
@@ -285,6 +291,7 @@ body {
   justify-content: space-between;
   padding: 24px 24px 10px 24px;
   border-bottom: 1px solid #e3eaf5;
+  gap: 12px;
 }
 .theme-dark .layers-panel-header {
   border-bottom: 1px solid #2a3550;
@@ -294,12 +301,15 @@ body {
   font-family: var(--main-font-family);
   font-weight: 700;
   color: #111827;
-  margin: 0 0 20px 0;
+  margin: 0;
   letter-spacing: 1px;
+  display: flex;
+  align-items: center;
 }
 .layers-panel-actions {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 .layers-panel-btn {
   background: none;
@@ -666,10 +676,25 @@ body {
   background: none;
   padding: 0;
 }
+.marker-icon-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.marker-icon-input-wrap input[type="text"] {
+  padding-right: 40px;
+}
 #marker-icon-preview {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 28px;
-  vertical-align: middle;
-  margin-left: 8px;
+  color: #222;
+  pointer-events: none;
+}
+.theme-dark #marker-icon-preview {
+  color: #f9fafb;
 }
 .modal-footer-flex {
   display: flex;
@@ -709,6 +734,13 @@ body {
   max-width: 320px;
   line-height: 1.5;
   border: 1px solid #e3eaf5;
+  pointer-events: auto;
+  cursor: default;
+  transition: box-shadow 0.2s ease;
+}
+
+.custom-tooltip:hover {
+  box-shadow: 0 6px 32px rgba(30,41,59,0.25);
 }
 .tooltip-title {
   font-weight: 700;
@@ -735,4 +767,31 @@ body {
 .tooltip-empty {
   color: #aaa;
   font-style: italic;
+}
+
+/* Темна тема для тултіпів */
+.theme-dark .custom-tooltip {
+  background: #2d3748;
+  color: #e2e8f0;
+  border: 1px solid #4a5568;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+.theme-dark .custom-tooltip:hover {
+  box-shadow: 0 6px 32px rgba(0,0,0,0.5);
+}
+
+.theme-dark .tooltip-desc {
+  color: #a0aec0;
+}
+
+.theme-dark .tooltip-empty {
+  color: #718096;
+} 
+
+.custom-tooltip a {
+  color: #1976d2;
+  text-decoration: underline;
+  cursor: pointer;
+  word-break: break-all;
 } 
