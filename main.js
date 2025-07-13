@@ -1767,6 +1767,7 @@ function initEditModal() {
     else if (type === 'polyline') typeName = 'полілінію';
     else if (type === 'rectangle') typeName = 'прямокутник';
     else if (type === 'circle') typeName = 'коло';
+    closeEditModal(); // закриваємо модалку перед діалогом
     showConfirmDialog({
       title: 'Видалити?',
       message: `Ви дійсно хочете видалити ${typeName}?`,
@@ -1778,7 +1779,6 @@ function initEditModal() {
           layerObj.featureGroup.removeLayer(currentEditingObject);
         }
         map.removeLayer(currentEditingObject);
-        closeEditModal();
         saveLayersToStorage();
       }
     });
@@ -2062,10 +2062,13 @@ function showConfirmDialog({title = 'Підтвердження', message = '', 
   titleEl.textContent = title;
   msgEl.textContent = message;
   modal.classList.remove('hidden');
+  document.body.classList.add('blurred'); // Додаємо розмиття
+
   function close(result) {
     modal.classList.add('hidden');
     okBtn.onclick = null;
     cancelBtn.onclick = null;
+    document.body.classList.remove('blurred'); // Прибираємо розмиття
     if (result && typeof onConfirm === 'function') onConfirm();
     if (!result && typeof onCancel === 'function') onCancel();
   }

@@ -985,3 +985,13 @@ body {
   display: inline-flex;
   align-items: center;
 } 
+/* Розмиття всього вікна, окрім модального діалогу */
+body.blurred > *:not(#confirm-modal) {
+  filter: blur(6px) brightness(0.95);
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.2s;
+}
+#confirm-modal {
+  z-index: 9999 !important;
+} 
