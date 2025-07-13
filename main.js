@@ -432,6 +432,7 @@ function createLayerControl(layerObj) {
       // Знаходимо індекс видаленого шару
       const idx = customLayers.findIndex(l => l.id === layerObj.id);
       customLayers = customLayers.filter(l => l.id !== layerObj.id);
+      saveLayersToStorage(); // одразу після оновлення customLayers
 
       // Визначаємо новий активний шар
       let newActive = null;
@@ -465,8 +466,6 @@ function createLayerControl(layerObj) {
       } else {
         drawControl = null;
       }
-
-      saveLayersToStorage();
     };
   }
   // Select підкладки
@@ -513,16 +512,13 @@ function createLayerControl(layerObj) {
     // Не активуємо, якщо клік по кнопці (іконці)
     if (e.target.closest('button')) return;
     if (!layerObj.visible) return;
+    // Завжди оновлюємо activeLayer і drawControl
     activeLayer = featureGroup;
-    // Видаляємо старий drawControl
     if (drawControl) {
       map.removeControl(drawControl);
     }
-    // Додаємо новий drawControl з новим featureGroup
     drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: activeLayer
-      },
+      edit: { featureGroup: activeLayer },
       draw: {
         polygon: true,
         polyline: true,
@@ -1537,7 +1533,23 @@ function showEditModal(layer) {
       latInput.value = latlng.lat;
       lngInput.value = latlng.lng;
     }
-  } else {
+  } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
+    if (opacityGroup) opacityGroup.style.display = 'block';
+    // Приховати координати для не-маркерів
+    const coordsGroup = document.querySelector('.marker-coords-group');
+    if (coordsGroup) coordsGroup.style.display = 'none';
+  } else if (type === 'polyline') {
+    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
+    if (lineWidthGroup) lineWidthGroup.style.display = 'block';
+    if (styleGroup) styleGroup.style.display = 'block';
+    // opacityGroup не показуємо для polyline
+    // Приховати координати для не-маркерів
+    const coordsGroup = document.querySelector('.marker-coords-group');
+    if (coordsGroup) coordsGroup.style.display = 'none';
+  } else if (type === 'image') {
+    if (imageGroup) imageGroup.style.display = 'block';
+    if (opacityGroup) opacityGroup.style.display = 'block';
     // Приховати координати для не-маркерів
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) coordsGroup.style.display = 'none';

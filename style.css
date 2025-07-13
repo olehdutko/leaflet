@@ -431,6 +431,7 @@ body {
 
 .modal-close:hover {
   background: #f3f4f6;
+  color: #e53935;
 }
 
 .modal-body {
@@ -520,6 +521,21 @@ body {
 
 .btn-secondary:hover {
   background: #e5e7eb;
+}
+
+.btn-danger {
+  background: #e53935;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-danger:hover {
+  background: #b71c1c;
 }
 
 /* Темна тема для модального вікна */
