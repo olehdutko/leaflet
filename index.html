@@ -29,7 +29,7 @@
         <span class="layers-panel-title">Шари</span>
         <span class="layers-panel-actions">
           <button class="layers-panel-btn" id="export-all" title="Експортувати всі шари"><i class="fa fa-download"></i></button>
-          <input type="file" id="import-all-input" accept=".json,.geojson" style="display:none">
+          <input type="file" id="import-all-input" accept=".json,.geojson,.kmz" style="display:none">
           <button class="layers-panel-btn" id="import-all" title="Імпортувати шари"><i class="fa fa-upload"></i></button>
           <button class="layers-panel-btn" id="add-layer" title="Новий шар"><i class="fa fa-plus"></i></button>
         </span>
@@ -136,6 +136,9 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.js"></script>  
   <script src="./leaflet.distortableimage.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <!-- Додаємо бібліотеки для KMZ імпорту -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
   <script src="main.js"></script>
 </body>
 </html> 
