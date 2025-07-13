@@ -451,47 +451,53 @@ function createLayerControl(layerObj) {
   // Видалити (дозволити для всіх шарів)
   if (removeBtn) {
     removeBtn.onclick = () => {
-      map.removeLayer(layerObj.tileLayer);
-      map.removeLayer(featureGroup);
-      layerControlsDiv.removeChild(div);
+      showConfirmDialog({
+        title: 'Видалити шар?',
+        message: `Ви дійсно хочете видалити шар "${layerObj.title}"?`,
+        onConfirm: () => {
+          map.removeLayer(layerObj.tileLayer);
+          map.removeLayer(featureGroup);
+          layerControlsDiv.removeChild(div);
 
-      // Знаходимо індекс видаленого шару
-      const idx = customLayers.findIndex(l => l.id === layerObj.id);
-      customLayers = customLayers.filter(l => l.id !== layerObj.id);
-      saveLayersToStorage(); // одразу після оновлення customLayers
+          // Знаходимо індекс видаленого шару
+          const idx = customLayers.findIndex(l => l.id === layerObj.id);
+          customLayers = customLayers.filter(l => l.id !== layerObj.id);
+          saveLayersToStorage(); // одразу після оновлення customLayers
 
-      // Визначаємо новий активний шар
-      let newActive = null;
-      if (customLayers.length > 0) {
-        if (idx < customLayers.length) {
-          newActive = customLayers[idx].featureGroup; // наступний
-        } else {
-          newActive = customLayers[0].featureGroup; // перший, якщо видаляли останній
-        }
-      }
-
-      activeLayer = newActive;
-      updateActiveLayerUI();
-
-      if (drawControl) {
-        map.removeControl(drawControl);
-      }
-      if (activeLayer) {
-        drawControl = new L.Control.Draw({
-          edit: { featureGroup: activeLayer },
-          draw: {
-            polygon: true,
-            polyline: true,
-            rectangle: true,
-            circle: true,
-            marker: true,
-            circlemarker: false
+          // Визначаємо новий активний шар
+          let newActive = null;
+          if (customLayers.length > 0) {
+            if (idx < customLayers.length) {
+              newActive = customLayers[idx].featureGroup; // наступний
+            } else {
+              newActive = customLayers[0].featureGroup; // перший, якщо видаляли останній
+            }
           }
-        });
-        map.addControl(drawControl);
-      } else {
-        drawControl = null;
-      }
+
+          activeLayer = newActive;
+          updateActiveLayerUI();
+
+          if (drawControl) {
+            map.removeControl(drawControl);
+          }
+          if (activeLayer) {
+            drawControl = new L.Control.Draw({
+              edit: { featureGroup: activeLayer },
+              draw: {
+                polygon: true,
+                polyline: true,
+                rectangle: true,
+                circle: true,
+                marker: true,
+                circlemarker: false
+              }
+            });
+            map.addControl(drawControl);
+          } else {
+            drawControl = null;
+          }
+        }
+      });
     };
   }
   // Select підкладки
@@ -1267,104 +1273,46 @@ importAllInput.onchange = e => {
   reader.readAsText(file);
 }; 
 
-window._customConfirm = function(msg) {
-  return new Promise(resolve => {
-    // overlay
-    const overlay = document.createElement('div');
-    overlay.style.position = 'fixed';
-    overlay.style.top = 0;
-    overlay.style.left = 0;
-    overlay.style.width = '100vw';
-    overlay.style.height = '100vh';
-    overlay.style.background = 'rgba(30, 41, 59, 0.35)';
-    overlay.style.display = 'flex';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    overlay.style.zIndex = 9999;
-    overlay.style.backdropFilter = 'blur(2px)';
-
-    // dialog
-    const dialog = document.createElement('div');
-    dialog.style.background = '#fff';
-    dialog.style.padding = '32px 36px 24px 36px';
-    dialog.style.borderRadius = '14px';
-    dialog.style.boxShadow = '0 4px 32px rgba(30,41,59,0.18)';
-    dialog.style.textAlign = 'center';
-    dialog.style.minWidth = '320px';
-    dialog.style.maxWidth = '90vw';
-    dialog.style.fontFamily = 'system-ui, Arial, sans-serif';
-    dialog.innerHTML = `
-      <div style="font-size:1.15em; color:#1e293b; margin-bottom: 22px; font-weight: 500;">${msg}</div>
-      <div style="display:flex; gap:18px; justify-content:center;">
-        <button id="confirm-yes" style="background:#1976d2;color:#fff;border:none;padding:8px 28px;border-radius:6px;font-size:1em;cursor:pointer;box-shadow:0 1px 4px #1976d222;transition:background 0.15s;">Так</button>
-        <button id="confirm-no" style="background:#e3eaf5;color:#1976d2;border:none;padding:8px 28px;border-radius:6px;font-size:1em;cursor:pointer;transition:background 0.15s;">Скасувати</button>
-      </div>
-    `;
-    dialog.querySelector('#confirm-yes').onmouseover = () => dialog.querySelector('#confirm-yes').style.background = '#1565c0';
-    dialog.querySelector('#confirm-yes').onmouseout = () => dialog.querySelector('#confirm-yes').style.background = '#1976d2';
-    dialog.querySelector('#confirm-no').onmouseover = () => dialog.querySelector('#confirm-no').style.background = '#cfd8dc';
-    dialog.querySelector('#confirm-no').onmouseout = () => dialog.querySelector('#confirm-no').style.background = '#e3eaf5';
-
-    overlay.appendChild(dialog);
-    document.body.appendChild(overlay);
-
-    dialog.querySelector('#confirm-yes').onclick = () => {
-      document.body.removeChild(overlay);
-      resolve(true);
-    };
-    dialog.querySelector('#confirm-no').onclick = () => {
-      document.body.removeChild(overlay);
-      resolve(false);
-    };
-    overlay.tabIndex = -1;
-    overlay.focus();
-    overlay.onkeydown = (e) => {
-      if (e.key === 'Escape') {
-        document.body.removeChild(overlay);
-        resolve(false);
-      }
-    };
-    setTimeout(() => overlay.focus(), 10);
-  });
-};
-
+// --- стандартний діалог для видалення зображення ---
 window.requestOverlayDelete = function(overlay) {
-  window._customConfirm('Ви впевнені? Зображення буде повністю видалене з мапи.').then(confirmed => {
-    if (!confirmed) return;
-
-    // знайти потрібний layer (featureGroup)
-    let foundLayer = null;
-    for (const l of customLayers) {
-      if (
-        l.featureGroup &&
-        l.featureGroup.overlays &&
-        l.featureGroup.overlays.some(ov => ov._url === overlay._overlay._url)
-      ) {
-        foundLayer = l.featureGroup;
-        break;
+  showConfirmDialog({
+    title: 'Видалити зображення?',
+    message: 'Ви дійсно хочете видалити це зображення з мапи?',
+    onConfirm: () => {
+      // знайти потрібний layer (featureGroup)
+      let foundLayer = null;
+      for (const l of customLayers) {
+        if (
+          l.featureGroup &&
+          l.featureGroup.overlays &&
+          l.featureGroup.overlays.some(ov => ov._url === overlay._overlay._url)
+        ) {
+          foundLayer = l.featureGroup;
+          break;
+        }
       }
-    }
 
-    // видалити overlay з карти
-    const ovUrl = overlay._overlay._url;
-    const realOverlay = foundLayer.overlays.find(ov => (ov._url) === ovUrl);
-    if (realOverlay) {
-      map.removeLayer(realOverlay);
-    }
-
-    // видалити overlay з overlays
-    if (foundLayer && foundLayer.overlays) {
-      foundLayer.overlays = foundLayer.overlays.filter(ov => ov._url !== overlay._overlay._url);
-    }
-
-    // видалити з images (по url, _url або _image.src)
-    if (foundLayer && foundLayer.images) {
+      // видалити overlay з карти
       const ovUrl = overlay._overlay._url;
-      foundLayer.images = foundLayer.images.filter(img => img.url !== ovUrl);
-    }
+      const realOverlay = foundLayer.overlays.find(ov => (ov._url) === ovUrl);
+      if (realOverlay) {
+        map.removeLayer(realOverlay);
+      }
 
-    // оновити localStorage
-    saveLayersToStorage();
+      // видалити overlay з overlays
+      if (foundLayer && foundLayer.overlays) {
+        foundLayer.overlays = foundLayer.overlays.filter(ov => ov._url !== overlay._overlay._url);
+      }
+
+      // видалити з images (по url, _url або _image.src)
+      if (foundLayer && foundLayer.images) {
+        const ovUrl = overlay._overlay._url;
+        foundLayer.images = foundLayer.images.filter(img => img.url !== ovUrl);
+      }
+
+      // оновити localStorage
+      saveLayersToStorage();
+    }
   });
 };
 
@@ -1809,6 +1757,33 @@ function initEditModal() {
   document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
   document.getElementById('save-object').addEventListener('click', saveObjectChanges);
   
+  // --- Додаю підтвердження для видалення об'єкта ---
+  document.getElementById('delete-object').onclick = function() {
+    if (!currentEditingObject) return;
+    const type = getObjectType(currentEditingObject);
+    let typeName = 'обʼєкт';
+    if (type === 'marker') typeName = 'маркер';
+    else if (type === 'polygon') typeName = 'полігон';
+    else if (type === 'polyline') typeName = 'полілінію';
+    else if (type === 'rectangle') typeName = 'прямокутник';
+    else if (type === 'circle') typeName = 'коло';
+    showConfirmDialog({
+      title: 'Видалити?',
+      message: `Ви дійсно хочете видалити ${typeName}?`,
+      onConfirm: function() {
+        if (!currentEditingObject) return;
+        // Знаходимо відповідний customLayer
+        const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject));
+        if (layerObj && layerObj.featureGroup) {
+          layerObj.featureGroup.removeLayer(currentEditingObject);
+        }
+        map.removeLayer(currentEditingObject);
+        closeEditModal();
+        saveLayersToStorage();
+      }
+    });
+  };
+  
   // Обробники для range слайдерів
   document.getElementById('line-width').addEventListener('input', function() {
     document.getElementById('line-width-value').textContent = this.value;
@@ -2076,3 +2051,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+function showConfirmDialog({title = 'Підтвердження', message = '', onConfirm, onCancel}) {
+  const modal = document.getElementById('confirm-modal');
+  const titleEl = document.getElementById('confirm-modal-title');
+  const msgEl = document.getElementById('confirm-modal-message');
+  const okBtn = document.getElementById('confirm-modal-ok');
+  const cancelBtn = document.getElementById('confirm-modal-cancel');
+  if (!modal || !titleEl || !msgEl || !okBtn || !cancelBtn) return;
+  titleEl.textContent = title;
+  msgEl.textContent = message;
+  modal.classList.remove('hidden');
+  function close(result) {
+    modal.classList.add('hidden');
+    okBtn.onclick = null;
+    cancelBtn.onclick = null;
+    if (result && typeof onConfirm === 'function') onConfirm();
+    if (!result && typeof onCancel === 'function') onCancel();
+  }
+  okBtn.onclick = () => close(true);
+  cancelBtn.onclick = () => close(false);
+}
