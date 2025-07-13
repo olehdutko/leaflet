@@ -102,7 +102,8 @@ function saveLayersToStorage() {
       geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
       images: imagesWithCorners,
       title: l.title || undefined,
-      visible: l.visible !== false
+      visible: l.visible !== false,
+      collapsed: l.collapsed || false // ДОДАНО: зберігаємо стан collapsed
     };
   });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
@@ -218,6 +219,7 @@ function createLayerControl(layerObj) {
     collapseBtn.title = collapsed ? 'Розгорнути' : 'Згорнути';
     content.style.display = collapsed ? 'none' : '';
     div.classList.toggle('layer-card-collapsed', collapsed);
+    saveLayersToStorage(); // ДОДАНО: зберігати стан одразу
   };
   titleRow.appendChild(collapseBtn);
 
@@ -549,6 +551,48 @@ function createLayerControl(layerObj) {
         saveLayersToStorage();
       };
       
+      // --- виділення та прозорість при кліку ---
+      objectItem.onclick = (e) => {
+        if (e.target.closest('.object-visibility-btn')) return;
+        document.querySelectorAll('.global-object-search-highlight').forEach(el => {
+          el.classList.remove('global-object-search-highlight');
+        });
+        const transparentClass = 'global-object-search-transparent';
+        let allLayers = [];
+        featureGroup.eachLayer(layer => {
+          if (layer.visible === false) return;
+          allLayers.push(layer);
+        });
+        if (featureGroup.images && featureGroup.images.length > 0 && featureGroup.overlays) {
+          featureGroup.overlays.forEach(overlay => {
+            if (overlay && overlay.visible !== false) allLayers.push(overlay);
+          });
+        }
+        allLayers.forEach(l => {
+          let el = l.getElement ? l.getElement() : l._path;
+          if (el && l !== obj.layer) {
+            el.classList.add(transparentClass);
+          }
+        });
+        let foundEl = obj.layer.getElement ? obj.layer.getElement() : obj.layer._path;
+        if (foundEl) foundEl.classList.add('global-object-search-highlight');
+        // --- приблизити до знайденого об'єкта ---
+        if (obj.layer.getBounds) {
+          map.fitBounds(obj.layer.getBounds(), { maxZoom: 17 });
+        } else if (obj.layer.getLatLng) {
+          map.setView(obj.layer.getLatLng(), 17);
+        }
+        setTimeout(() => {
+          allLayers.forEach(l => {
+            let el = l.getElement ? l.getElement() : l._path;
+            if (el && l !== obj.layer) {
+              el.classList.remove(transparentClass);
+            }
+          });
+          if (foundEl) foundEl.classList.remove('global-object-search-highlight');
+        }, 10000);
+      };
+      
       // подвійний клік для редагування
       objectItem.ondblclick = (e) => {
         e.stopPropagation();
@@ -876,7 +920,8 @@ function updateActiveLayerUI() {
       geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
       images: imagesWithCorners,
       title: l.title || undefined,
-      visible: l.visible !== false
+      visible: l.visible !== false,
+      collapsed: l.collapsed || false // ДОДАНО: зберігаємо стан collapsed
     };
   });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
@@ -1003,6 +1048,7 @@ function loadLayersFromStorage() {
         });
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false };
+      if (typeof obj.collapsed !== 'undefined') layerObj.collapsed = obj.collapsed;
       customLayers.push(layerObj);
       const control = createLayerControl(layerObj);
       layerControlsDiv.appendChild(control);
@@ -1293,7 +1339,11 @@ importAllInput.onchange = e => {
               });
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true };
+            if (typeof obj.collapsed !== 'undefined') layerObj.collapsed = obj.collapsed;
             customLayers.push(layerObj);
+            const control = createLayerControl(layerObj);
+            layerControlsDiv.appendChild(control);
+            featureGroup.bringToFront();
           });
           customLayers.forEach(l => l.visible = true);
           layerControlsDiv.innerHTML = '';
@@ -2297,4 +2347,129 @@ async function handleKmzFile(file) {
     console.error('Помилка при імпорті KMZ:', error);
     alert('Помилка при імпорті KMZ файлу: ' + error.message);
   }
+}
+
+// --- Глобальний пошук по об'єктах ---
+const globalSearchInput = document.getElementById('global-object-search');
+const globalSearchResults = document.getElementById('global-object-search-results');
+
+if (globalSearchInput && globalSearchResults) {
+  globalSearchInput.addEventListener('input', function() {
+    const query = this.value.trim().toLowerCase();
+    globalSearchResults.innerHTML = '';
+    if (!query) return;
+
+    // шукати лише у видимих шарах та об'єктах
+    let results = [];
+    customLayers.forEach(layerObj => {
+      if (!layerObj.visible) return;
+      const fg = layerObj.featureGroup;
+      fg.eachLayer(layer => {
+        if (layer.visible === false) return;
+        const name = layer.properties?.name || layer.feature?.properties?.name || '';
+        const desc = layer.properties?.description || layer.feature?.properties?.description || '';
+        if (
+          name.toLowerCase().includes(query) ||
+          desc.toLowerCase().includes(query)
+        ) {
+          results.push({
+            layer,
+            name,
+            desc,
+            layerObj
+          });
+        }
+      });
+      // зображення
+      if (fg.images && fg.images.length > 0 && fg.overlays) {
+        fg.images.forEach((img, idx) => {
+          const overlay = fg.overlays[idx];
+          if (!overlay || overlay.visible === false) return;
+          const name = img.properties?.name || '';
+          const desc = img.properties?.description || '';
+          if (
+            name.toLowerCase().includes(query) ||
+            desc.toLowerCase().includes(query)
+          ) {
+            results.push({
+              layer: overlay,
+              name,
+              desc,
+              layerObj
+            });
+          }
+        });
+      }
+    });
+
+    if (results.length === 0) {
+      const noRes = document.createElement('div');
+      noRes.className = 'global-object-search-item';
+      noRes.textContent = 'Нічого не знайдено';
+      globalSearchResults.appendChild(noRes);
+      return;
+    }
+
+    results.forEach(res => {
+      const item = document.createElement('div');
+      item.className = 'global-object-search-item';
+      item.innerHTML = `<span><b>${res.name || '[без назви]'}</b></span>` +
+        (res.desc ? `<span style="color:#888;">${res.desc}</span>` : '');
+      item.onclick = () => {
+        // зняти попереднє виділення
+        document.querySelectorAll('.global-object-search-highlight').forEach(el => {
+          el.classList.remove('global-object-search-highlight');
+        });
+
+        // --- нова логіка: всі інші об'єкти стають прозорими ---
+        const transparentClass = 'global-object-search-transparent';
+        // зібрати всі видимі об'єкти на мапі
+        let allLayers = [];
+        customLayers.forEach(layerObj => {
+          if (!layerObj.visible) return;
+          const fg = layerObj.featureGroup;
+          fg.eachLayer(layer => {
+            if (layer.visible === false) return;
+            allLayers.push(layer);
+          });
+          if (fg.images && fg.images.length > 0 && fg.overlays) {
+            fg.overlays.forEach(overlay => {
+              if (overlay && overlay.visible !== false) allLayers.push(overlay);
+            });
+          }
+        });
+        // зробити прозорими всі крім знайденого
+        allLayers.forEach(l => {
+          let el = l.getElement ? l.getElement() : l._path;
+          if (el && l !== res.layer) {
+            el.classList.add(transparentClass);
+          }
+        });
+        // виділити знайдений
+        let foundEl = res.layer.getElement ? res.layer.getElement() : res.layer._path;
+        if (foundEl) foundEl.classList.add('global-object-search-highlight');
+
+        // приблизити
+        if (res.layer.getBounds) {
+          map.fitBounds(res.layer.getBounds(), { maxZoom: 17 });
+        } else if (res.layer.getLatLng) {
+          map.setView(res.layer.getLatLng(), 17);
+        }
+
+        // повернути прозорість через 10 секунд
+        setTimeout(() => {
+          allLayers.forEach(l => {
+            let el = l.getElement ? l.getElement() : l._path;
+            if (el && l !== res.layer) {
+              el.classList.remove(transparentClass);
+            }
+          });
+          if (foundEl) foundEl.classList.remove('global-object-search-highlight');
+        }, 10000);
+        globalSearchResults.innerHTML = '';
+        globalSearchInput.value = '';
+      };
+      globalSearchResults.appendChild(item);
+    });
+  });
 }
