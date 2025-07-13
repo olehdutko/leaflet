@@ -47,6 +47,13 @@
           <label for="object-description">Опис (можна використовувати HTML)</label>
           <textarea id="object-description" placeholder="Опис" rows="3"></textarea>
         </div>
+        <div class="form-group marker-coords-group" style="display:none;">
+          <label>Координати</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="number" id="marker-lat" step="any" placeholder="Широта" style="flex:1;" />
+            <input type="number" id="marker-lng" step="any" placeholder="Довгота" style="flex:1;" />
+          </div>
+        </div>
         <div class="form-group" id="object-image-group">
           <label for="object-image">Зображення</label>
           <input type="file" id="object-image" accept="image/*">

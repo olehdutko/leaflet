@@ -1525,25 +1525,22 @@ function showEditModal(layer) {
       markerIconPreview.textContent = markerIconInput.value;
       markerIconInput.oninput = function() {
         markerIconPreview.textContent = markerIconInput.value;
-        if (currentEditingObject) {
-          currentEditingObject.properties = currentEditingObject.properties || {};
-          currentEditingObject.properties.icon = markerIconInput.value;
-          applyObjectProperties(currentEditingObject, currentEditingObject.properties);
-        }
       };
-      setupMarkerIconAutocomplete();
     }
-  } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
-    if (opacityGroup) opacityGroup.style.display = 'block';
-  } else if (type === 'polyline') {
-    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
-    if (lineWidthGroup) lineWidthGroup.style.display = 'block';
-    if (styleGroup) styleGroup.style.display = 'block';
-    // opacityGroup не показуємо для polyline
-  } else if (type === 'image') {
-    if (imageGroup) imageGroup.style.display = 'block';
-    if (opacityGroup) opacityGroup.style.display = 'block';
+    // Показати/заповнити координати
+    const coordsGroup = document.querySelector('.marker-coords-group');
+    if (coordsGroup) coordsGroup.style.display = '';
+    const latInput = document.getElementById('marker-lat');
+    const lngInput = document.getElementById('marker-lng');
+    if (latInput && lngInput && currentEditingObject && currentEditingObject.getLatLng) {
+      const latlng = currentEditingObject.getLatLng();
+      latInput.value = latlng.lat;
+      lngInput.value = latlng.lng;
+    }
+  } else {
+    // Приховати координати для не-маркерів
+    const coordsGroup = document.querySelector('.marker-coords-group');
+    if (coordsGroup) coordsGroup.style.display = 'none';
   }
 
   // Заповнюємо значення контролів
@@ -1704,6 +1701,19 @@ function saveObjectChanges() {
     if (markerColor) properties.color = markerColor.value;
     const markerIcon = document.getElementById('marker-icon');
     if (markerIcon) properties.icon = markerIcon.value;
+    // --- координати ---
+    const latInput = document.getElementById('marker-lat');
+    const lngInput = document.getElementById('marker-lng');
+    if (latInput && lngInput && currentEditingObject.setLatLng) {
+      const lat = parseFloat(latInput.value);
+      const lng = parseFloat(lngInput.value);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const old = currentEditingObject.getLatLng();
+        if (lat !== old.lat || lng !== old.lng) {
+          currentEditingObject.setLatLng([lat, lng]);
+        }
+      }
+    }
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
     const fillColor = document.getElementById('object-color');
     if (fillColor) properties.fillColor = fillColor.value;
