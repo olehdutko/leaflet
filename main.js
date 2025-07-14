@@ -102,8 +102,7 @@ function saveLayersToStorage() {
       geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
       images: imagesWithCorners,
       title: l.title || undefined,
-      visible: l.visible !== false,
-      collapsed: l.collapsed || false // ДОДАНО: зберігаємо стан collapsed
+      visible: l.visible !== false
     };
   });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
@@ -219,7 +218,6 @@ function createLayerControl(layerObj) {
     collapseBtn.title = collapsed ? 'Розгорнути' : 'Згорнути';
     content.style.display = collapsed ? 'none' : '';
     div.classList.toggle('layer-card-collapsed', collapsed);
-    saveLayersToStorage(); // ДОДАНО: зберігати стан одразу
   };
   titleRow.appendChild(collapseBtn);
 
@@ -551,46 +549,69 @@ function createLayerControl(layerObj) {
         saveLayersToStorage();
       };
       
-      // --- виділення та прозорість при кліку ---
+      // виділення при кліку по елементу списку
       objectItem.onclick = (e) => {
-        if (e.target.closest('.object-visibility-btn')) return;
+        // не виділяти якщо клік по visibilityBtn
+        if (e.target === visibilityBtn || visibilityBtn.contains(e.target)) return;
+        // зняти попереднє виділення
         document.querySelectorAll('.global-object-search-highlight').forEach(el => {
           el.classList.remove('global-object-search-highlight');
         });
-        const transparentClass = 'global-object-search-transparent';
-        let allLayers = [];
-        featureGroup.eachLayer(layer => {
-          if (layer.visible === false) return;
-          allLayers.push(layer);
-        });
-        if (featureGroup.images && featureGroup.images.length > 0 && featureGroup.overlays) {
-          featureGroup.overlays.forEach(overlay => {
-            if (overlay && overlay.visible !== false) allLayers.push(overlay);
+        // визначити тип
+        const layer = obj.isImage && featureGroup.overlays ? featureGroup.overlays[obj.index] : obj.layer;
+        const isLineOrPoly = layer instanceof L.Polyline || layer instanceof L.Polygon;
+        const isMarker = layer instanceof L.Marker && !(layer instanceof L.CircleMarker);
+        if (isLineOrPoly) {
+          const prevStyle = {
+            color: layer.options.color,
+            weight: layer.options.weight,
+            dashArray: layer.options.dashArray,
+            opacity: layer.options.opacity,
+            fillColor: layer.options.fillColor,
+            fillOpacity: layer.options.fillOpacity
+          };
+          layer.setStyle({
+            color: '#cd1d1d',
+            weight: 8,
+            dashArray: '8,4',
+            opacity: 1,
+            fillColor: '#ffe066',
+            fillOpacity: 0.7
           });
-        }
-        allLayers.forEach(l => {
-          let el = l.getElement ? l.getElement() : l._path;
-          if (el && l !== obj.layer) {
-            el.classList.add(transparentClass);
-          }
-        });
-        let foundEl = obj.layer.getElement ? obj.layer.getElement() : obj.layer._path;
-        if (foundEl) foundEl.classList.add('global-object-search-highlight');
-        // --- приблизити до знайденого об'єкта ---
-        if (obj.layer.getBounds) {
-          map.fitBounds(obj.layer.getBounds(), { maxZoom: 17 });
-        } else if (obj.layer.getLatLng) {
-          map.setView(obj.layer.getLatLng(), 17);
-        }
-        setTimeout(() => {
-          allLayers.forEach(l => {
-            let el = l.getElement ? l.getElement() : l._path;
-            if (el && l !== obj.layer) {
-              el.classList.remove(transparentClass);
-            }
+          setTimeout(() => {
+            layer.setStyle(prevStyle);
+          }, 2000);
+        } else if (isMarker) {
+          // зберегти попередню іконку
+          const prevIcon = layer.getIcon();
+          // створити яскраву іконку
+          const highlightIcon = L.divIcon({
+            className: 'highlight-marker-icon',
+            html: '<div style="background:#cd1d1d;width:32px;height:32px;border-radius:50%;border:3px solid #ffe066;box-shadow:0 0 12px #cd1d1d;"></div>',
+            iconSize: [32,32],
+            iconAnchor: [16,32]
           });
-          if (foundEl) foundEl.classList.remove('global-object-search-highlight');
-        }, 10000);
+          layer.setIcon(highlightIcon);
+          setTimeout(() => {
+            layer.setIcon(prevIcon);
+          }, 2000);
+        } else if (layer && layer.getElement && layer.getElement()) {
+          layer.getElement().classList.add('global-object-search-highlight');
+          setTimeout(() => {
+            layer.getElement().classList.remove('global-object-search-highlight');
+          }, 2000);
+        } else if (layer && layer._path) {
+          layer._path.classList.add('global-object-search-highlight');
+          setTimeout(() => {
+            layer._path.classList.remove('global-object-search-highlight');
+          }, 2000);
+        }
+        // приблизити
+        if (layer && layer.getBounds) {
+          map.fitBounds(layer.getBounds(), { maxZoom: 17 });
+        } else if (layer && layer.getLatLng) {
+          map.setView(layer.getLatLng(), 17);
+        }
       };
       
       // подвійний клік для редагування
@@ -920,8 +941,7 @@ function updateActiveLayerUI() {
       geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
       images: imagesWithCorners,
       title: l.title || undefined,
-      visible: l.visible !== false,
-      collapsed: l.collapsed || false // ДОДАНО: зберігаємо стан collapsed
+      visible: l.visible !== false
     };
   });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
@@ -1048,7 +1068,6 @@ function loadLayersFromStorage() {
         });
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false };
-      if (typeof obj.collapsed !== 'undefined') layerObj.collapsed = obj.collapsed;
       customLayers.push(layerObj);
       const control = createLayerControl(layerObj);
       layerControlsDiv.appendChild(control);
@@ -1339,11 +1358,7 @@ importAllInput.onchange = e => {
               });
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true };
-            if (typeof obj.collapsed !== 'undefined') layerObj.collapsed = obj.collapsed;
             customLayers.push(layerObj);
-            const control = createLayerControl(layerObj);
-            layerControlsDiv.appendChild(control);
-            featureGroup.bringToFront();
           });
           customLayers.forEach(l => l.visible = true);
           layerControlsDiv.innerHTML = '';
@@ -2421,33 +2436,55 @@ if (globalSearchInput && globalSearchResults) {
           el.classList.remove('global-object-search-highlight');
         });
 
-        // --- нова логіка: всі інші об'єкти стають прозорими ---
-        const transparentClass = 'global-object-search-transparent';
-        // зібрати всі видимі об'єкти на мапі
-        let allLayers = [];
-        customLayers.forEach(layerObj => {
-          if (!layerObj.visible) return;
-          const fg = layerObj.featureGroup;
-          fg.eachLayer(layer => {
-            if (layer.visible === false) return;
-            allLayers.push(layer);
+        // виділити на мапі
+        const isLineOrPoly = res.layer instanceof L.Polyline || res.layer instanceof L.Polygon;
+        const isMarker = res.layer instanceof L.Marker && !(res.layer instanceof L.CircleMarker);
+        if (isLineOrPoly) {
+          // зберегти попередній стиль
+          const prevStyle = {
+            color: res.layer.options.color,
+            weight: res.layer.options.weight,
+            dashArray: res.layer.options.dashArray,
+            opacity: res.layer.options.opacity,
+            fillColor: res.layer.options.fillColor,
+            fillOpacity: res.layer.options.fillOpacity
+          };
+          res.layer.setStyle({
+            color: '#cd1d1d',
+            weight: 8,
+            dashArray: '8,4',
+            opacity: 1,
+            fillColor: '#ffe066',
+            fillOpacity: 0.7
           });
-          if (fg.images && fg.images.length > 0 && fg.overlays) {
-            fg.overlays.forEach(overlay => {
-              if (overlay && overlay.visible !== false) allLayers.push(overlay);
-            });
-          }
-        });
-        // зробити прозорими всі крім знайденого
-        allLayers.forEach(l => {
-          let el = l.getElement ? l.getElement() : l._path;
-          if (el && l !== res.layer) {
-            el.classList.add(transparentClass);
-          }
-        });
-        // виділити знайдений
-        let foundEl = res.layer.getElement ? res.layer.getElement() : res.layer._path;
-        if (foundEl) foundEl.classList.add('global-object-search-highlight');
+          setTimeout(() => {
+            res.layer.setStyle(prevStyle);
+          }, 2000);
+        } else if (isMarker) {
+          // зберегти попередню іконку
+          const prevIcon = res.layer.getIcon();
+          // створити яскраву іконку
+          const highlightIcon = L.divIcon({
+            className: 'highlight-marker-icon',
+            html: '<div style="background:#cd1d1d;width:32px;height:32px;border-radius:50%;border:3px solid #ffe066;box-shadow:0 0 12px #cd1d1d;"></div>',
+            iconSize: [32,32],
+            iconAnchor: [16,32]
+          });
+          res.layer.setIcon(highlightIcon);
+          setTimeout(() => {
+            res.layer.setIcon(prevIcon);
+          }, 2000);
+        } else if (res.layer.getElement && res.layer.getElement()) {
+          res.layer.getElement().classList.add('global-object-search-highlight');
+          setTimeout(() => {
+            res.layer.getElement().classList.remove('global-object-search-highlight');
+          }, 2000);
+        } else if (res.layer._path) {
+          res.layer._path.classList.add('global-object-search-highlight');
+          setTimeout(() => {
+            res.layer._path.classList.remove('global-object-search-highlight');
+          }, 2000);
+        }
 
         // приблизити
         if (res.layer.getBounds) {
@@ -2456,16 +2493,6 @@ if (globalSearchInput && globalSearchResults) {
           map.setView(res.layer.getLatLng(), 17);
         }
 
-        // повернути прозорість через 10 секунд
-        setTimeout(() => {
-          allLayers.forEach(l => {
-            let el = l.getElement ? l.getElement() : l._path;
-            if (el && l !== res.layer) {
-              el.classList.remove(transparentClass);
-            }
-          });
-          if (foundEl) foundEl.classList.remove('global-object-search-highlight');
-        }, 10000);
         globalSearchResults.innerHTML = '';
         globalSearchInput.value = '';
       };

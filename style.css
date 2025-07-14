@@ -1213,12 +1213,9 @@ body.blurred > *:not(#confirm-modal) {
   background: #f3f4f6;
 }
 .global-object-search-highlight {
-  background: #fffbe6;
-  border: 2px solid #1976d2;
-  border-radius: 6px;
-  transition: border 0.2s;
-} 
-.global-object-search-transparent {
-  opacity: 0.25 !important;
-  transition: opacity 0.2s;
+  box-shadow: 5px 5px 5px 5px rgb(39 224 47);
+  border-radius: 30px !important;
+  transition: border 0.2s, box-shadow 0.2s;
+  color: #cd1d1d;
+  opacity: 1;
 } 
