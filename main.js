@@ -1,32 +1,5 @@
-// Центр Львова
-const center = [49.8397, 24.0297];
-// Доступні підкладки для шарів
-const tileLayerOptions = {
-  "План": {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '© OpenStreetMap',
-    maxZoom: 19,
-    hasLabels: false
-  },
-  "Ландшафт": {
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    attribution: '© OpenTopoMap',
-    maxZoom: 17,
-    hasLabels: false
-  },
-  "Супутник": {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles © Esri',
-    maxZoom: 19,
-    hasLabels: false
-  }
-};
-
-const map = L.map('map', {
-  center: center,
-  zoom: 13,
-  // layers: [baseMap] // прибрано
-});
+// Імпорт базових налаштувань карти
+import { map, center, tileLayerOptions } from './map-init.js';
 
 // ... після створення map ...
 map.attributionControl.addAttribution('<a href="mailto:oleh.dutko@gmail.com">oleh.dutko@gmail.com</a>');
@@ -50,7 +23,6 @@ function saveLayersToStorage() {
     l.featureGroup.eachLayer(layer => {
       const type = getObjectType(layer);
       if (!layer.feature) return; // тільки geojson-обʼєкти
-      if (!layer.feature.properties) layer.feature.properties = {};
       // Копіюємо властивості з layer.properties у feature.properties
       if (layer.feature && layer.properties) {
         Object.assign(layer.feature.properties, layer.properties);
@@ -127,13 +99,6 @@ function createTileLayer(type, opacity=1, showLabels=true) {
     attribution: opt.attribution,
     opacity: opacity
   });
-}
-
-function getLayerIcon(type) {
-  if (type === 'План') return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><rect width="24" height="24" rx="4" fill="#1976d2"/><path d="M7 17V7l5-2v10l-5 2zM12 5l5 2v10l-5-2V5z" fill="#fff"/></svg>`;
-  if (type === 'Ландшафт') return '<i class="fa fa-mountain" style="font-size:22px;color:#1976d2;"></i>';
-  if (type === 'Супутник') return '<i class="fa fa-globe" style="font-size:22px;color:#1976d2;"></i>';
-  return '';
 }
 
 // --- функція для створення тултіпа ---
@@ -248,23 +213,7 @@ function createLayerControl(layerObj) {
   exportBtn.innerHTML = '<i class="fa fa-arrow-up"></i>';
   exportBtn.title = 'Експортувати шар';
   iconsRight.appendChild(exportBtn);
-  // Додаю обробник експорту
-  exportBtn.onclick = () => {
-    const data = {
-      title: layerObj.title,
-      geojson: layerObj.featureGroup.toGeoJSON(),
-      images: (layerObj.featureGroup.images || [])
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (layerObj.title || 'layer') + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  exportBtn.onclick = () => exportLayer(layerObj);
   // Видалити
   const removeBtn = document.createElement('button');
   removeBtn.className = 'layer-card-icon-btn delete';
@@ -968,14 +917,15 @@ function createLayerControl(layerObj) {
 }
 
 function updateActiveLayerUI() {
-  // Підсвічуємо тільки одну активну картку (по справжньому id)
+  // Зняти active з усіх карток
   document.querySelectorAll('.layer-card').forEach(card => {
-    const id = +card.dataset.layerId;
-    const layer = customLayers.find(l => l.id === id);
-    if (layer && layer.featureGroup === activeLayer) {
-      card.classList.add('active');
-    } else {
-      card.classList.remove('active');
+    card.classList.remove('active');
+  });
+  // Додати active лише для поточного activeLayer
+  customLayers.forEach(l => {
+    if (l.featureGroup === activeLayer) {
+      const card = document.querySelector(`.layer-card[data-layer-id='${l.id}']`);
+      if (card) card.classList.add('active');
     }
   });
   customLayers.forEach(l => {
@@ -1092,110 +1042,32 @@ function loadLayersFromStorage() {
                 layer.options.dashArray = dashArray;
                 layer.setStyle({ dashArray });
               }
-              // --- image ---
-              if (feature.properties.image) {
-                layer.properties.image = feature.properties.image;
-              }
             }
           }
         });
       }
-      // Відновлюємо зображення
-      if (obj.images && Array.isArray(obj.images)) {
-        featureGroup.images = [];
-        obj.images.forEach(img => {
-          let overlay;
-          if (img.corners && img.corners.length === 4) {
-            overlay = L.distortableImageOverlay(img.url, { 
-              corners: img.corners, 
-              selected: false 
-            }).addTo(map);
-          } else if (img.bounds) {
-            overlay = L.distortableImageOverlay(img.url, { 
-              bounds: img.bounds, 
-              selected: false 
-            }).addTo(map);
-          } else {
-            return; // Пропускаємо якщо немає ні corners, ні bounds
-          }
-          overlay._customUrl = img.url;
-          // Відновлюємо властивості зображення
-          if (img.properties) {
-            overlay.properties = img.properties;
-            applyObjectProperties(overlay, img.properties);
-            // --- Додаю застосування opacity ---
-            if (typeof img.properties.opacity === 'number') {
-              overlay.setOpacity(img.properties.opacity);
-            }
-          }
-          const el = overlay.getElement();
-          if (el) {
-            el.addEventListener('click', function(e) {
-              e.stopPropagation();
-              overlay.select();
-            });
-            // Додаємо подвійний клік для редагування
-            el.addEventListener('dblclick', function(e) {
-              e.stopPropagation();
-              showEditModal(overlay);
-            });
-          }
-          overlay.select();
-          
-          // Зберігаємо і corners, і bounds, і властивості
-          const savedData = {
-            url: img.url,
-            bounds: overlay.getBounds(),
-            corners: overlay.getCorners ? overlay.getCorners() : img.corners,
-            properties: img.properties || {}
-          };
-          featureGroup.images.push(savedData);
-          
-          // --- Додаю overlay у масив overlays для відновлення ---
-          if (!featureGroup.overlays) featureGroup.overlays = [];
-          featureGroup.overlays.push(overlay);
-          
-          overlay.on('edit', () => {
-            const idx = featureGroup.images.findIndex(i => i.url === img.url);
-            if (idx !== -1) {
-              featureGroup.images[idx].bounds = overlay.getBounds();
-              featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
-              saveLayersToStorage();
-            }
-          });
-        });
+      // Додаю дефолтну назву шару, якщо не задано
+      let title = obj.title;
+      if (!title) {
+        const now = new Date();
+        const pad = n => n.toString().padStart(2, '0');
+        const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        title = `Шар ${timeStr}`;
       }
-      const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.collapsed || false };
+      const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title, visible: true, collapsed: obj.collapsed || false };
       customLayers.push(layerObj);
-      const control = createLayerControl(layerObj);
-      layerControlsDiv.appendChild(control);
-      featureGroup.bringToFront();
     });
-    // Активувати перший видимий шар
-    const firstVisible = customLayers.find(l => l.visible);
-    if (firstVisible) {
-      activeLayer = firstVisible.featureGroup;
-      if (drawControl && drawControl.options && drawControl.options.edit) {
-        drawControl.options.edit.featureGroup = activeLayer;
-      }
-    } else {
-      activeLayer = null;
+    customLayers.forEach(l => l.visible = true);
+    layerControlsDiv.innerHTML = '';
+    customLayers.forEach(l => {
+      const control = createLayerControl(l);
+      layerControlsDiv.appendChild(control);
+    });
+    if (customLayers.length === 0) {
+      layerId = 1;
+      addLayer();
     }
-    updateActiveLayerUI();
-    // --- Додаю drag-and-drop через SortableJS ---
-    if (window.Sortable) {
-      if (window.layerControlsSortable) window.layerControlsSortable.destroy();
-      window.layerControlsSortable = new Sortable(layerControlsDiv, {
-        animation: 150,
-        handle: '.layer-card-drag-handle',
-        onEnd: function (evt) {
-          // Оновлюємо customLayers згідно нового порядку DOM
-          const newOrder = Array.from(layerControlsDiv.children).map(card => +card.dataset.layerId);
-          customLayers.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
-          saveLayersToStorage();
-        }
-      });
-    }
+    saveLayersToStorage();
     return true;
   } catch (e) {
     return false;
@@ -1208,39 +1080,17 @@ function addLayer() {
   const featureGroup = new L.FeatureGroup();
   tileLayer.addTo(map);
   featureGroup.addTo(map);
-  const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true };
+  // Додаю дефолтну назву шару
+  const now = new Date();
+  const pad = n => n.toString().padStart(2, '0');
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true, title: `Шар ${timeStr}` };
   customLayers.push(layerObj);
   const control = createLayerControl(layerObj);
   layerControlsDiv.appendChild(control);
   layerId++;
-  // Явно активуємо новий шар
-  activeLayer = featureGroup;
-  // --- Додаємо drawControl, якщо його ще нема ---
-  if (!drawControl) {
-    drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: activeLayer
-      },
-      draw: {
-        polygon: true,
-        polyline: true,
-        rectangle: true,
-        circle: true,
-        marker: true,
-        circlemarker: false
-      }
-    });
-    map.addControl(drawControl);
-  } else {
-    // Якщо drawControl вже є — онови featureGroup
-    drawControl.options.edit.featureGroup = activeLayer;
-  }
-  updateActiveLayerUI();
-  // Підняти малюнки над підкладкою
-  featureGroup.bringToFront();
-  saveLayersToStorage();
+  // ... existing code ...
 }
-addLayerBtn.onclick = addLayer;
 
 const loaded = loadLayersFromStorage();
 if (!loaded || customLayers.length === 0) {
@@ -1395,65 +1245,25 @@ importAllInput.onchange = e => {
             // Відновлюємо зображення
             if (obj.images && Array.isArray(obj.images)) {
               featureGroup.images = [];
+              featureGroup.overlays = [];
               obj.images.forEach(img => {
-                let overlay;
-                if (img.corners && img.corners.length === 4) {
-                  overlay = L.distortableImageOverlay(img.url, { 
-                    corners: img.corners, 
-                    selected: false 
-                  }).addTo(map);
-                } else if (img.bounds) {
-                  overlay = L.distortableImageOverlay(img.url, { 
-                    bounds: img.bounds, 
-                    selected: false 
-                  }).addTo(map);
-                } else {
-                  return; // Пропускаємо якщо немає ні corners, ні bounds
-                }
-                overlay._customUrl = img.url;
-                // Відновлюємо властивості зображення
-                if (img.properties) {
-                  overlay.properties = img.properties;
-                  applyObjectProperties(overlay, img.properties);
-                  // --- Додаю застосування opacity ---
-                  if (typeof img.properties.opacity === 'number') {
-                    overlay.setOpacity(img.properties.opacity);
-                  }
-                }
-                const el = overlay.getElement();
-                if (el) {
-                  el.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    overlay.select();
-                  });
-                  // Додаємо подвійний клік для редагування
-                  el.addEventListener('dblclick', function(e) {
-                    e.stopPropagation();
-                    showEditModal(overlay);
-                  });
-                }
-                overlay.select();
-                
-                // Зберігаємо і corners, і bounds, і властивості
-                const savedData = {
-                  url: img.url,
-                  bounds: overlay.getBounds(),
-                  corners: overlay.getCorners ? overlay.getCorners() : img.corners,
-                  properties: img.properties || {}
-                };
-                featureGroup.images.push(savedData);
-                
-                if (!featureGroup.overlays) featureGroup.overlays = [];
-                featureGroup.overlays.push(overlay);
-                
-                overlay.on('edit', () => {
+                const overlay = createImageOverlay(img, map, (ov) => {
                   const idx = featureGroup.images.findIndex(i => i.url === img.url);
                   if (idx !== -1) {
-                    featureGroup.images[idx].bounds = overlay.getBounds();
-                    featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
+                    featureGroup.images[idx].bounds = ov.getBounds();
+                    featureGroup.images[idx].corners = ov.getCorners ? ov.getCorners() : null;
                     saveLayersToStorage();
                   }
                 });
+                if (overlay) {
+                  featureGroup.images.push({
+                    url: img.url,
+                    bounds: overlay.getBounds(),
+                    corners: overlay.getCorners ? overlay.getCorners() : img.corners,
+                    properties: img.properties || {}
+                  });
+                  featureGroup.overlays.push(overlay);
+                }
               });
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true, collapsed: obj.collapsed || false };
@@ -1485,65 +1295,25 @@ importAllInput.onchange = e => {
           // --- Додаю імпорт зображень (images) ---
           if (data.images && Array.isArray(data.images)) {
             featureGroup.images = [];
+            featureGroup.overlays = [];
             data.images.forEach(img => {
-              let overlay;
-              if (img.corners && img.corners.length === 4) {
-                overlay = L.distortableImageOverlay(img.url, { 
-                  corners: img.corners, 
-                  selected: false 
-                }).addTo(map);
-              } else if (img.bounds) {
-                overlay = L.distortableImageOverlay(img.url, { 
-                  bounds: img.bounds, 
-                  selected: false 
-                }).addTo(map);
-              } else {
-                return; // Пропускаємо якщо немає ні corners, ні bounds
-              }
-              overlay._customUrl = img.url;
-              // Відновлюємо властивості зображення
-              if (img.properties) {
-                overlay.properties = img.properties;
-                applyObjectProperties(overlay, img.properties);
-                // --- Додаю застосування opacity ---
-                if (typeof img.properties.opacity === 'number') {
-                  overlay.setOpacity(img.properties.opacity);
-                }
-              }
-              const el = overlay.getElement();
-              if (el) {
-                el.addEventListener('click', function(e) {
-                  e.stopPropagation();
-                  overlay.select();
-                });
-                // Додаємо подвійний клік для редагування
-                el.addEventListener('dblclick', function(e) {
-                  e.stopPropagation();
-                  showEditModal(overlay);
-                });
-              }
-              overlay.select();
-              
-              // Зберігаємо і corners, і bounds, і властивості
-              const savedData = {
-                url: img.url,
-                bounds: overlay.getBounds(),
-                corners: overlay.getCorners ? overlay.getCorners() : img.corners,
-                properties: img.properties || {}
-              };
-              featureGroup.images.push(savedData);
-              
-              if (!featureGroup.overlays) featureGroup.overlays = [];
-              featureGroup.overlays.push(overlay);
-              
-              overlay.on('edit', () => {
+              const overlay = createImageOverlay(img, map, (ov) => {
                 const idx = featureGroup.images.findIndex(i => i.url === img.url);
                 if (idx !== -1) {
-                  featureGroup.images[idx].bounds = overlay.getBounds();
-                  featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
+                  featureGroup.images[idx].bounds = ov.getBounds();
+                  featureGroup.images[idx].corners = ov.getCorners ? ov.getCorners() : null;
                   saveLayersToStorage();
                 }
               });
+              if (overlay) {
+                featureGroup.images.push({
+                  url: img.url,
+                  bounds: overlay.getBounds(),
+                  corners: overlay.getCorners ? overlay.getCorners() : img.corners,
+                  properties: img.properties || {}
+                });
+                featureGroup.overlays.push(overlay);
+              }
             });
           }
           const layerObj = { id: layerId++, tileLayer, featureGroup, tileType, title: data.title || 'Імпортований шар', visible: true, collapsed: data.collapsed || false };
@@ -2640,3 +2410,19 @@ const observeOverlayOpacity = () => {
 };
 observeOverlayOpacity();
 // ...
+
+// Видаляю дубль:
+// map.on(...)
+// ... глобальні обробники кнопок, drag&drop ...
+// ... existing code ...
+// Викликаю:
+import { setupMapEvents, setupButtonEvents } from './events.js';
+setupMapEvents();
+setupButtonEvents();
+// ... existing code ...
+
+// Імпорт функції getLayerIcon з utils.js
+import { getLayerIcon } from './utils.js';
+
+// Імпорт функції exportLayer з layers.js
+import { exportLayer } from './layers.js';
