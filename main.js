@@ -28,6 +28,10 @@ const map = L.map('map', {
   // layers: [baseMap] // прибрано
 });
 
+// ... після створення map ...
+map.attributionControl.addAttribution('<a href="mailto:oleh.dutko@gmail.com">oleh.dutko@gmail.com</a>');
+// ... existing code ...
+
 // --- Користувацькі шари ---
 let layerId = 1;
 let customLayers = [];
@@ -36,6 +40,9 @@ let drawControl = null; // оголошуємо глобально
 
 const layerControlsDiv = document.getElementById('layer-controls');
 const addLayerBtn = document.getElementById('add-layer');
+
+// --- глобальний прапорець для drag & drop тултіпів ---
+let isDraggingObject = false;
 
 // --- Перенесено: Функція для збереження шарів у localStorage ---
 function saveLayersToStorage() {
@@ -102,7 +109,8 @@ function saveLayersToStorage() {
       geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
       images: imagesWithCorners,
       title: l.title || undefined,
-      visible: l.visible !== false
+      visible: l.visible !== false,
+      collapsed: l.collapsed || false // додано збереження collapsed
     };
   });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
@@ -133,7 +141,7 @@ function createTooltip(element, text) {
   let tooltip = null;
   
   element.addEventListener('mouseenter', (e) => {
-    // видалити існуючий тултіп якщо є
+    if (isDraggingObject) return; // не показувати тултіп під час drag
     if (tooltip) {
       document.body.removeChild(tooltip);
     }
@@ -197,15 +205,17 @@ function createLayerControl(layerObj) {
   const titleRow = document.createElement('div');
   titleRow.className = 'layer-card-title-row';
 
-  // --- Drag handle ---
+  // --- Лівий блок іконок ---
+  const iconsLeft = document.createElement('div');
+  iconsLeft.className = 'layer-card-title-icons-left';
+  // Drag handle
   const dragHandle = document.createElement('span');
   dragHandle.className = 'layer-card-drag-handle';
   dragHandle.title = 'Перетягнути шар';
   dragHandle.tabIndex = -1;
   dragHandle.innerHTML = '&#8942;&#8942;'; // ⋮⋮
-  titleRow.appendChild(dragHandle);
-
-  // --- Кнопка згортання ---
+  iconsLeft.appendChild(dragHandle);
+  // Кнопка згортання
   const collapseBtn = document.createElement('button');
   collapseBtn.className = 'layer-card-collapse-btn';
   collapseBtn.innerHTML = collapsed ? '<i class="fa fa-chevron-down"></i>' : '<i class="fa fa-chevron-up"></i>';
@@ -218,18 +228,65 @@ function createLayerControl(layerObj) {
     collapseBtn.title = collapsed ? 'Розгорнути' : 'Згорнути';
     content.style.display = collapsed ? 'none' : '';
     div.classList.toggle('layer-card-collapsed', collapsed);
+    saveLayersToStorage();
   };
-  titleRow.appendChild(collapseBtn);
+  iconsLeft.appendChild(collapseBtn);
 
+  // --- Правий блок іконок ---
+  const iconsRight = document.createElement('div');
+  iconsRight.className = 'layer-card-title-icons-right';
+  // Око (показати/приховати)
+  const eyeBtn = document.createElement('button');
+  eyeBtn.className = 'layer-card-icon-btn';
+  if (layerObj.visible) eyeBtn.classList.add('primary');
+  eyeBtn.innerHTML = layerObj.visible ? '<i class="fa fa-eye"></i>' : '<i class="fa fa-eye-slash"></i>';
+  eyeBtn.title = layerObj.visible ? 'Приховати шар' : 'Показати шар';
+  iconsRight.appendChild(eyeBtn);
+  // Експорт шару
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'layer-card-icon-btn primary';
+  exportBtn.innerHTML = '<i class="fa fa-arrow-up"></i>';
+  exportBtn.title = 'Експортувати шар';
+  iconsRight.appendChild(exportBtn);
+  // Додаю обробник експорту
+  exportBtn.onclick = () => {
+    const data = {
+      title: layerObj.title,
+      geojson: layerObj.featureGroup.toGeoJSON(),
+      images: (layerObj.featureGroup.images || [])
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (layerObj.title || 'layer') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  // Видалити
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'layer-card-icon-btn delete';
+  removeBtn.innerHTML = '<i class="fa fa-trash"></i>';
+  removeBtn.title = 'Видалити';
+  iconsRight.appendChild(removeBtn);
+  // Додати зображення
+  const addImageBtn = document.createElement('button');
+  addImageBtn.className = 'layers-panel-btn';
+  addImageBtn.id = 'add-image';
+  addImageBtn.title = 'Додати зображення';
+  addImageBtn.innerHTML = '<i class="fa fa-image"></i>';
+  iconsRight.appendChild(addImageBtn);
+
+  // --- Додаємо обидва блоки у перший рядок ---
+  titleRow.appendChild(iconsLeft);
+  titleRow.appendChild(iconsRight);
+  div.appendChild(titleRow);
+
+  // --- Другий рядок: назва шару ---
   const titleWrap = document.createElement('span');
   titleWrap.className = 'layer-card-title';
-  titleWrap.style.display = 'block';
-  titleWrap.style.width = '100%';
-  titleWrap.style.boxSizing = 'border-box';
-  titleWrap.style.paddingLeft = '5px';
-  titleWrap.style.paddingRight = '16px';
-  titleWrap.style.overflow = 'hidden';
-  titleWrap.style.textOverflow = 'ellipsis';
   titleWrap.textContent = layerObj.title;
   titleWrap.contentEditable = true;
   titleWrap.spellcheck = false;
@@ -243,128 +300,7 @@ function createLayerControl(layerObj) {
       titleWrap.blur();
     }
   });
-  titleRow.appendChild(titleWrap);
-  div.appendChild(titleRow);
-
-  // --- Верхній рядок: іконки ---
-  const header = document.createElement('div');
-  header.className = 'layer-card-header';
-  header.style.display = 'flex';
-  header.style.justifyContent = 'flex-end';
-  header.style.alignItems = 'center';
-  header.style.gap = '8px';
-
-  // Око (показати/приховати)
-  const eyeBtn = document.createElement('button');
-  eyeBtn.className = 'layer-card-icon-btn';
-  if (layerObj.visible) eyeBtn.classList.add('primary');
-  eyeBtn.innerHTML = layerObj.visible ? '<i class="fa fa-eye"></i>' : '<i class="fa fa-eye-slash"></i>';
-  eyeBtn.title = layerObj.visible ? 'Приховати шар' : 'Показати шар';
-  header.appendChild(eyeBtn);
-
-  // --- Експорт шару ---
-  const exportBtn = document.createElement('button');
-  exportBtn.className = 'layer-card-icon-btn primary';
-  exportBtn.innerHTML = '<i class="fa fa-arrow-up"></i>';
-  exportBtn.title = 'Експортувати шар';
-  header.appendChild(exportBtn);
-
-  exportBtn.onclick = (e) => {
-    e.stopPropagation();
-    const geojson = layerObj.featureGroup.toGeoJSON();
-    const images = layerObj.featureGroup.images || [];
-    const exportData = {
-      title: layerObj.title || `Шар ${id}`,
-      geojson,
-      images
-    };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (layerObj.title || `layer-${id}`) + '.geojson';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Видалити (дозволити для всіх шарів)
-  let removeBtn = null;
-  removeBtn = document.createElement('button');
-  removeBtn.className = 'layer-card-icon-btn delete';
-  removeBtn.innerHTML = '<i class="fa fa-trash"></i>';
-  removeBtn.title = 'Видалити';
-  header.appendChild(removeBtn);
-
-  // --- Додаю кнопку "Додати зображення" у header панелі шарів ---
-  const addImageBtn = document.createElement('button');
-  addImageBtn.className = 'layers-panel-btn';
-  addImageBtn.id = 'add-image';
-  addImageBtn.title = 'Додати зображення';
-  addImageBtn.innerHTML = '<i class="fa fa-image"></i>';
-  header.appendChild(addImageBtn);
-
-  const addImageInput = document.createElement('input');
-  addImageInput.type = 'file';
-  addImageInput.accept = 'image/*';
-  addImageInput.style.display = 'none';
-  addImageBtn.onclick = () => addImageInput.click();
-  addImageInput.onchange = e => {
-    const file = addImageInput.files[0];
-    if (!file || !activeLayer) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      const imgUrl = evt.target.result;
-      // Додаємо зображення у центр карти з дефолтними розмірами через bounds
-      const mapCenter = map.getCenter();
-      const bounds = [
-        [mapCenter.lat - 0.005, mapCenter.lng - 0.01], // southWest
-        [mapCenter.lat + 0.005, mapCenter.lng + 0.01]  // northEast
-      ];
-      const overlay = L.distortableImageOverlay(imgUrl, {
-        bounds: bounds,
-        selected: true
-      }).addTo(map);
-      // overlay.options.url = imgUrl; // обовʼязково!
-      overlay._customUrl = imgUrl;
-      const el = overlay.getElement();
-      if (el) {
-        el.addEventListener('click', function(e) {
-          e.stopPropagation();
-          overlay.select();
-        });
-        // Додаємо подвійний клік для редагування
-        el.addEventListener('dblclick', function(e) {
-          e.stopPropagation();
-          showEditModal(overlay);
-        });
-      }
-      overlay.select(); // одразу показати тулбар
-      if (!activeLayer.images) activeLayer.images = [];
-              // Зберігаємо і corners, і bounds, і властивості
-        const imageData = {
-          url: imgUrl,
-          bounds: overlay.getBounds(),
-          corners: overlay.getCorners ? overlay.getCorners() : null,
-          properties: {} // Порожні властивості для нового зображення
-        };
-      activeLayer.images.push(imageData);
-      // --- Додаю збереження overlay у масив overlays ---
-      if (!activeLayer.overlays) activeLayer.overlays = [];
-      activeLayer.overlays.push(overlay);
-      saveLayersToStorage();
-      overlay.on('edit', () => {
-        const idx = activeLayer.images.findIndex(img => img.url === imgUrl);
-        if (idx !== -1) {
-          activeLayer.images[idx].bounds = overlay.getBounds();
-          activeLayer.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
-          saveLayersToStorage();
-        }
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  div.appendChild(header);
+  div.appendChild(titleWrap);
 
   // --- Контент картки ---
   const content = document.createElement('div');
@@ -461,11 +397,14 @@ function createLayerControl(layerObj) {
     }
     
     // створити елементи списку
-    objects.forEach(obj => {
+    objects.forEach((obj, objIdx) => {
       const objectItem = document.createElement('div');
       objectItem.className = 'layer-object-item';
       if (!obj.visible) objectItem.classList.add('object-hidden');
-      
+      objectItem.setAttribute('draggable', 'true');
+      objectItem.dataset.objIdx = objIdx;
+      objectItem.dataset.layerId = layerObj.id;
+
       // іконка типу об'єкта
       const typeIcon = document.createElement('span');
       typeIcon.className = 'object-type-icon';
@@ -627,7 +566,105 @@ function createLayerControl(layerObj) {
         }
       };
       
+      // --- drag & drop ---
+      objectItem.addEventListener('dragstart', (e) => {
+        isDraggingObject = true;
+        // видалити всі активні тултіпи
+        document.querySelectorAll('.object-tooltip').forEach(t => t.remove());
+        objectItem.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+          fromLayerId: layerObj.id,
+          objIdx: objIdx
+        }));
+      });
+      objectItem.addEventListener('dragend', () => {
+        isDraggingObject = false;
+        objectItem.classList.remove('dragging');
+        document.querySelectorAll('.layer-objects-list.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+    
       objectsList.appendChild(objectItem);
+    });
+    
+    // --- drag & drop на список ---
+    objectsList.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      objectsList.classList.add('drag-over');
+    });
+    objectsList.addEventListener('dragleave', () => {
+      objectsList.classList.remove('drag-over');
+    });
+    objectsList.addEventListener('drop', (e) => {
+      e.preventDefault();
+      isDraggingObject = false;
+      objectsList.classList.remove('drag-over');
+      let data;
+      try {
+        data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      } catch { return; }
+      const fromLayerId = data.fromLayerId;
+      const objIdx = data.objIdx;
+      if (fromLayerId == layerObj.id) return; // не переносити в той самий шар
+      // знайти source та target featureGroup
+      const fromLayerObj = customLayers.find(l => l.id == fromLayerId);
+      if (!fromLayerObj) return;
+      const fromFG = fromLayerObj.featureGroup;
+      const toFG = layerObj.featureGroup;
+      // отримати об'єкт
+      let movedObj = null;
+      let isImage = false;
+      // визначити чи це зображення чи geojson-об'єкт
+      let fromObjects = [];
+      fromFG.eachLayer(l => fromObjects.push(l));
+      if (objIdx < fromObjects.length) {
+        movedObj = fromObjects[objIdx];
+      } else if (fromFG.images && (objIdx - fromObjects.length) < fromFG.images.length) {
+        movedObj = fromFG.images[objIdx - fromObjects.length];
+        isImage = true;
+      }
+      if (!movedObj) return;
+      // видалити з fromFG
+      if (isImage) {
+        // видалити overlay з карти
+        const overlays = fromFG.overlays || [];
+        const imgIdx = fromFG.images.indexOf(movedObj);
+        if (imgIdx !== -1) {
+          const overlay = overlays[imgIdx];
+          if (overlay) map.removeLayer(overlay);
+          fromFG.images.splice(imgIdx, 1);
+          overlays.splice(imgIdx, 1);
+        }
+      } else {
+        fromFG.removeLayer(movedObj);
+      }
+      // додати у toFG
+      if (isImage) {
+        if (!toFG.images) toFG.images = [];
+        toFG.images.push(movedObj);
+        // додати overlay на карту
+        let overlay;
+        if (movedObj.corners && movedObj.corners.length === 4) {
+          overlay = L.distortableImageOverlay(movedObj.url, { corners: movedObj.corners, selected: false }).addTo(map);
+        } else if (movedObj.bounds) {
+          overlay = L.distortableImageOverlay(movedObj.url, { bounds: movedObj.bounds, selected: false }).addTo(map);
+        }
+        if (overlay) {
+          overlay._customUrl = movedObj.url;
+          overlay.properties = movedObj.properties || {};
+          if (!toFG.overlays) toFG.overlays = [];
+          toFG.overlays.push(overlay);
+        }
+      } else {
+        toFG.addLayer(movedObj);
+      }
+      // оновити UI
+      updateObjectsList();
+      if (fromLayerObj && fromLayerObj.featureGroup && fromLayerObj !== layerObj) {
+        // оновити список у source
+        if (fromLayerObj._updateObjectsList) fromLayerObj._updateObjectsList();
+      }
+      saveLayersToStorage();
     });
     
     // показати повідомлення якщо немає об'єктів
@@ -868,6 +905,65 @@ function createLayerControl(layerObj) {
     removeBtn.disabled = true;
   }
 
+  // ... після створення addImageBtn ...
+  const addImageInput = document.createElement('input');
+  addImageInput.type = 'file';
+  addImageInput.accept = 'image/*';
+  addImageInput.style.display = 'none';
+  addImageBtn.onclick = () => addImageInput.click();
+  addImageInput.onchange = e => {
+    const file = addImageInput.files[0];
+    if (!file || !activeLayer) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const imgUrl = evt.target.result;
+      // Додаємо зображення у центр карти з дефолтними розмірами через bounds
+      const mapCenter = map.getCenter();
+      const bounds = [
+        [mapCenter.lat - 0.005, mapCenter.lng - 0.01], // southWest
+        [mapCenter.lat + 0.005, mapCenter.lng + 0.01]  // northEast
+      ];
+      const overlay = L.distortableImageOverlay(imgUrl, {
+        bounds: bounds,
+        selected: true
+      }).addTo(map);
+      overlay._customUrl = imgUrl;
+      const el = overlay.getElement();
+      if (el) {
+        el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          overlay.select();
+        });
+        el.addEventListener('dblclick', function(e) {
+          e.stopPropagation();
+          showEditModal(overlay);
+        });
+      }
+      overlay.select();
+      if (!activeLayer.images) activeLayer.images = [];
+      const imageData = {
+        url: imgUrl,
+        bounds: overlay.getBounds(),
+        corners: overlay.getCorners ? overlay.getCorners() : null,
+        properties: { opacity: overlay.options.opacity ?? 1 }
+      };
+      activeLayer.images.push(imageData);
+      if (!activeLayer.overlays) activeLayer.overlays = [];
+      activeLayer.overlays.push(overlay);
+      saveLayersToStorage();
+      overlay.on('edit', () => {
+        const idx = activeLayer.images.findIndex(img => img.url === imgUrl);
+        if (idx !== -1) {
+          activeLayer.images[idx].bounds = overlay.getBounds();
+          activeLayer.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
+          saveLayersToStorage();
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+  div.appendChild(addImageInput);
+
   return div;
 }
 
@@ -941,7 +1037,8 @@ function updateActiveLayerUI() {
       geojson: l.featureGroup.toGeoJSON(), // GeoJSON вже містить властивості об'єктів
       images: imagesWithCorners,
       title: l.title || undefined,
-      visible: l.visible !== false
+      visible: l.visible !== false,
+      collapsed: l.collapsed || false // додано збереження collapsed
     };
   });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
@@ -1009,13 +1106,11 @@ function loadLayersFromStorage() {
         obj.images.forEach(img => {
           let overlay;
           if (img.corners && img.corners.length === 4) {
-            // Використовуємо corners для відновлення трансформації
             overlay = L.distortableImageOverlay(img.url, { 
               corners: img.corners, 
               selected: false 
             }).addTo(map);
           } else if (img.bounds) {
-            // Fallback на bounds якщо corners немає
             overlay = L.distortableImageOverlay(img.url, { 
               bounds: img.bounds, 
               selected: false 
@@ -1023,12 +1118,15 @@ function loadLayersFromStorage() {
           } else {
             return; // Пропускаємо якщо немає ні corners, ні bounds
           }
-          
           overlay._customUrl = img.url;
           // Відновлюємо властивості зображення
           if (img.properties) {
             overlay.properties = img.properties;
             applyObjectProperties(overlay, img.properties);
+            // --- Додаю застосування opacity ---
+            if (typeof img.properties.opacity === 'number') {
+              overlay.setOpacity(img.properties.opacity);
+            }
           }
           const el = overlay.getElement();
           if (el) {
@@ -1067,7 +1165,7 @@ function loadLayersFromStorage() {
           });
         });
       }
-      const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false };
+      const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.collapsed || false };
       customLayers.push(layerObj);
       const control = createLayerControl(layerObj);
       layerControlsDiv.appendChild(control);
@@ -1300,13 +1398,11 @@ importAllInput.onchange = e => {
               obj.images.forEach(img => {
                 let overlay;
                 if (img.corners && img.corners.length === 4) {
-                  // Використовуємо corners для відновлення трансформації
                   overlay = L.distortableImageOverlay(img.url, { 
                     corners: img.corners, 
                     selected: false 
                   }).addTo(map);
                 } else if (img.bounds) {
-                  // Fallback на bounds якщо corners немає
                   overlay = L.distortableImageOverlay(img.url, { 
                     bounds: img.bounds, 
                     selected: false 
@@ -1314,12 +1410,15 @@ importAllInput.onchange = e => {
                 } else {
                   return; // Пропускаємо якщо немає ні corners, ні bounds
                 }
-                
                 overlay._customUrl = img.url;
                 // Відновлюємо властивості зображення
                 if (img.properties) {
                   overlay.properties = img.properties;
                   applyObjectProperties(overlay, img.properties);
+                  // --- Додаю застосування opacity ---
+                  if (typeof img.properties.opacity === 'number') {
+                    overlay.setOpacity(img.properties.opacity);
+                  }
                 }
                 const el = overlay.getElement();
                 if (el) {
@@ -1357,7 +1456,7 @@ importAllInput.onchange = e => {
                 });
               });
             }
-            const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true };
+            const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: true, collapsed: obj.collapsed || false };
             customLayers.push(layerObj);
           });
           customLayers.forEach(l => l.visible = true);
@@ -1389,13 +1488,11 @@ importAllInput.onchange = e => {
             data.images.forEach(img => {
               let overlay;
               if (img.corners && img.corners.length === 4) {
-                // Використовуємо corners для відновлення трансформації
                 overlay = L.distortableImageOverlay(img.url, { 
                   corners: img.corners, 
                   selected: false 
                 }).addTo(map);
               } else if (img.bounds) {
-                // Fallback на bounds якщо corners немає
                 overlay = L.distortableImageOverlay(img.url, { 
                   bounds: img.bounds, 
                   selected: false 
@@ -1403,12 +1500,15 @@ importAllInput.onchange = e => {
               } else {
                 return; // Пропускаємо якщо немає ні corners, ні bounds
               }
-              
               overlay._customUrl = img.url;
               // Відновлюємо властивості зображення
               if (img.properties) {
                 overlay.properties = img.properties;
                 applyObjectProperties(overlay, img.properties);
+                // --- Додаю застосування opacity ---
+                if (typeof img.properties.opacity === 'number') {
+                  overlay.setOpacity(img.properties.opacity);
+                }
               }
               const el = overlay.getElement();
               if (el) {
@@ -1446,7 +1546,7 @@ importAllInput.onchange = e => {
               });
             });
           }
-          const layerObj = { id: layerId++, tileLayer, featureGroup, tileType, title: data.title || 'Імпортований шар', visible: true };
+          const layerObj = { id: layerId++, tileLayer, featureGroup, tileType, title: data.title || 'Імпортований шар', visible: true, collapsed: data.collapsed || false };
           customLayers.push(layerObj);
           const control = createLayerControl(layerObj);
           layerControlsDiv.appendChild(control);
@@ -2500,3 +2600,43 @@ if (globalSearchInput && globalSearchResults) {
     });
   });
 }
+
+// ... після ініціалізації карти і customLayers ...
+
+// --- Слідкуємо за зміною opacity у leaflet-image-layer і зберігаємо у localStorage ---
+const observeOverlayOpacity = () => {
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+        const img = mutation.target;
+        if (img.classList.contains('leaflet-image-layer')) {
+          const opacity = parseFloat(img.style.opacity);
+          const src = img.src;
+          // знайти відповідний overlay та шар
+          for (const layerObj of customLayers) {
+            if (!layerObj.featureGroup || !layerObj.featureGroup.images) continue;
+            const idx = layerObj.featureGroup.images.findIndex(imgObj => imgObj.url === src);
+            if (idx !== -1) {
+              layerObj.featureGroup.images[idx].properties = layerObj.featureGroup.images[idx].properties || {};
+              layerObj.featureGroup.images[idx].properties.opacity = opacity;
+              saveLayersToStorage();
+              break;
+            }
+          }
+        }
+      }
+    });
+  });
+  // спостерігати за всіма leaflet-image-layer
+  const addObservers = () => {
+    document.querySelectorAll('img.leaflet-image-layer').forEach(img => {
+      observer.observe(img, { attributes: true, attributeFilter: ['style'] });
+    });
+  };
+  addObservers();
+  // також додавати спостерігачі при додаванні нових зображень
+  const imgAddObserver = new MutationObserver(() => addObservers());
+  imgAddObserver.observe(document.body, { childList: true, subtree: true });
+};
+observeOverlayOpacity();
+// ...
