@@ -1107,6 +1107,16 @@ body.blurred > *:not(#confirm-modal) {
   background: #f9fafb;
 }
 
+.layer-objects-list:empty::before {
+  content: 'немає обʼєктів';
+  display: block;
+  color: #9ca3af;
+  font-size: 0.95em;
+  font-style: italic;
+  padding: 12px;
+  text-align: center;
+}
+
 .layer-object-item {
   font-size: 12px;
   display: flex;

@@ -474,12 +474,19 @@ export function createLayerControl(layerObj) {
     // список об'єктів шару
     const objectsListWrap = document.createElement('div');
     objectsListWrap.className = 'layer-objects-list-wrap';
+    objectsListWrap.setAttribute('data-layer-id', layerObj.id);
+    // створити контейнер для sortable
+    const objectsList = document.createElement('div');
+    objectsList.className = 'layer-objects-list';
+    objectsListWrap.appendChild(objectsList);
     function renderObjectsList() {
         console.log('[debug] renderObjectsList called', layerObj);
-        objectsListWrap.innerHTML = '';
+        objectsList.innerHTML = '';
         const objectItems = [];
+        let hasObjects = false;
         layerObj.featureGroup.eachLayer((layer) => {
             var _a;
+            hasObjects = true;
             const type = getObjectType(layer);
             const props = layer.properties || ((_a = layer.feature) === null || _a === void 0 ? void 0 : _a.properties) || {};
             const item = document.createElement('div');
@@ -581,26 +588,36 @@ export function createLayerControl(layerObj) {
                     return;
                 showEditModal(layer);
             });
-            objectsListWrap.appendChild(item);
+            objectsList.appendChild(item);
         });
+        if (!hasObjects) {
+            // нічого не додавати у objectsList
+        }
         // debug: log window.Sortable
         console.log('[debug] window.Sortable:', typeof window.Sortable, window.Sortable);
-        // debug: log objectsListWrap, діти, handle
-        console.log('[debug] objectsListWrap:', objectsListWrap, objectsListWrap.children);
+        // debug: log objectsList, діти, handle
+        console.log('[debug] objectsList:', objectsList, objectsList.children);
         // debug: log для кожного .layer-object-item
-        Array.from(objectsListWrap.children).forEach((el, idx) => {
+        Array.from(objectsList.children).forEach((el, idx) => {
             console.log('[debug] .layer-object-item', idx, el, el.querySelector('.layer-object-drag-icon'));
         });
         // --- SortableJS для drag&drop об'єктів ---
-        if (typeof window !== 'undefined' && window.Sortable && objectsListWrap) {
+        if (typeof window !== 'undefined' && window.Sortable && objectsList) {
             if (!window.objectsSortables)
                 window.objectsSortables = new Map();
             const sortablesMap = window.objectsSortables;
             if (sortablesMap.has(layerObj.id)) {
                 sortablesMap.get(layerObj.id).destroy();
             }
-            console.log('[SortableJS] init for layer', layerObj.id, objectsListWrap);
-            const sortable = new window.Sortable(objectsListWrap, {
+            // debug: log window.Sortable
+            console.log('[debug] window.Sortable:', typeof window.Sortable, window.Sortable);
+            // debug: log objectsList, діти, handle
+            console.log('[debug] objectsList:', objectsList, objectsList.children);
+            // debug: log для кожного .layer-object-item
+            Array.from(objectsList.children).forEach((el, idx) => {
+                console.log('[debug] .layer-object-item', idx, el, el.querySelector('.layer-object-drag-icon'));
+            });
+            const sortable = new window.Sortable(objectsList, {
                 animation: 150,
                 handle: '.layer-object-drag-icon',
                 group: 'objects',
@@ -611,22 +628,12 @@ export function createLayerControl(layerObj) {
                     console.log('[SortableJS] onAdd', evt);
                     // id об'єкта, який переноситься
                     const objectId = evt.item.dataset.objectId;
-                    // знайти з якого шару переносили
-                    let fromLayerObj = null;
-                    for (const l of customLayers) {
-                        if (l.featureGroup && l.featureGroup !== layerObj.featureGroup) {
-                            let found = false;
-                            l.featureGroup.eachLayer((layer) => {
-                                if (layer._leaflet_id == objectId)
-                                    found = true;
-                            });
-                            if (found) {
-                                fromLayerObj = l;
-                                break;
-                            }
-                        }
-                    }
-                    if (!fromLayerObj)
+                    // знайти з якого шару переносили через data-layer-id
+                    const fromLayerId = evt.from.getAttribute('data-layer-id');
+                    const toLayerId = evt.to.getAttribute('data-layer-id');
+                    const fromLayerObj = customLayers.find(l => String(l.id) === fromLayerId);
+                    const toLayerObj = customLayers.find(l => String(l.id) === toLayerId);
+                    if (!fromLayerObj || !toLayerObj)
                         return;
                     // знайти об'єкт
                     let movedLayer = null;
@@ -637,17 +644,19 @@ export function createLayerControl(layerObj) {
                     if (!movedLayer)
                         return;
                     fromLayerObj.featureGroup.removeLayer(movedLayer);
-                    layerObj.featureGroup.addLayer(movedLayer);
+                    toLayerObj.featureGroup.addLayer(movedLayer);
                     saveLayersToStorage();
-                    renderObjectsList();
-                    // оновити список у fromLayerObj
-                    const fromCard = document.querySelector(`[data-layer-id="${fromLayerObj.id}"] .layer-objects-list`);
+                    // оновити обидва списки
+                    const fromCard = document.querySelector(`[data-layer-id="${fromLayerObj.id}"]`);
+                    const toCard = document.querySelector(`[data-layer-id="${toLayerObj.id}"]`);
                     if (fromCard)
                         fromCard.dispatchEvent(new Event('rebuild'));
+                    if (toCard)
+                        toCard.dispatchEvent(new Event('rebuild'));
                 },
                 onEnd: function (evt) {
                     console.log('[SortableJS] onEnd for layer', layerObj.id, evt);
-                    const newOrder = Array.from(objectsListWrap.children).map((el) => el.dataset.objectId);
+                    const newOrder = Array.from(objectsList.children).map((el) => el.dataset.objectId);
                     const layers = [];
                     layerObj.featureGroup.eachLayer((l) => layers.push(l));
                     layers.forEach(l => layerObj.featureGroup.removeLayer(l));
@@ -661,16 +670,16 @@ export function createLayerControl(layerObj) {
                 }
             });
             // rebuild event для оновлення списку після drop
-            objectsListWrap.addEventListener('rebuild', () => renderObjectsList());
+            objectsList.addEventListener('rebuild', () => renderObjectsList());
             sortablesMap.set(layerObj.id, sortable);
         }
         // drag&drop для списку (drop target)
-        objectsListWrap.ondragover = (e) => {
+        objectsList.ondragover = (e) => {
             e.preventDefault();
             if (e.dataTransfer)
                 e.dataTransfer.dropEffect = 'move';
         };
-        objectsListWrap.ondrop = (e) => {
+        objectsList.ondrop = (e) => {
             e.preventDefault();
             if (!e.dataTransfer)
                 return;
@@ -708,7 +717,7 @@ export function createLayerControl(layerObj) {
             // клік — підсвічування (можна додати для overlay)
             // item.onclick = ...
             // подвійний клік — модалка (можна додати, якщо потрібно)
-            objectsListWrap.appendChild(item);
+            objectsList.appendChild(item);
         });
     }
     renderObjectsList();
