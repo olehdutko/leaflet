@@ -473,7 +473,7 @@ export function createLayerControl(layerObj) {
     opacityContainer.appendChild(opacitySlider);
     // список об'єктів шару
     const objectsListWrap = document.createElement('div');
-    objectsListWrap.className = 'layer-objects-list-wrap';
+    objectsListWrap.className = 'layer-objects-list'; // змінюємо з layer-objects-list-wrap на layer-objects-list
     function renderObjectsList() {
         objectsListWrap.innerHTML = '';
         const objectItems = [];
@@ -628,7 +628,7 @@ export function createLayerControl(layerObj) {
             objectsListWrap.classList.add('drag-over');
         });
         objectsListWrap.addEventListener('dragend', () => {
-            document.querySelectorAll('.layer-objects-list-wrap.drag-over').forEach(el => el.classList.remove('drag-over'));
+            document.querySelectorAll('.layer-objects-list.drag-over').forEach(el => el.classList.remove('drag-over'));
         });
         // підсвічування target-списку (залишити як є, або додати якщо немає)
         objectsListWrap.ondragover = (e) => {

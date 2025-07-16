@@ -1322,3 +1322,8 @@ body.blurred > *:not(#confirm-modal) {
 .layer-object-item .material-icons:not(.layer-object-drag-icon),
 .layer-object-item i { pointer-events: none; }
 .layer-object-drag-icon { pointer-events: auto; } 
+
+.layer-objects-list-wrap.drag-over {
+  background: #e0f2fe;
+  border: 2px dashed #1976d2;
+} 
