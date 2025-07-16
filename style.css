@@ -274,21 +274,30 @@ body {
 .layer-card-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 0;
+  gap: 0.5em;
+  padding: 0 0.5em;
+}
+.layer-card-header .layer-card-icon-btn:first-child {
+  margin-left: 0;
+}
+.layer-card-drag-handle {
+  /* order: 1; */
+  /* margin-left: 0.25em; */
 }
 .layer-card-title {
-  font-size: 13px;
-  color: #111827;
+  font-size: 1.2em;
+  font-family: var(--main-font-family);
   font-weight: 700;
+  color: #111827;
   margin: 0;
-  letter-spacing: 0.2px;
+  letter-spacing: 1px;
+  text-align: center;
 }
 .layer-card-actions {
+  flex-grow: 1;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 0.5em;
 }
 .layer-card-icon-btn {
   background: none;
@@ -1046,8 +1055,28 @@ body.blurred > *:not(#confirm-modal) {
   transition: filter 0.2s;
 }
 #confirm-modal {
-  z-index: 9999 !important;
-} 
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 3000 !important;
+  background: rgba(0,0,0,0.18) !important;
+}
+#confirm-modal.hidden {
+  display: none !important;
+}
+#confirm-modal .modal-content {
+  margin: 0 !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+  position: relative !important;
+}
 
 /* --- Стилі для списку об'єктів --- */
 .layer-objects-section {
@@ -1079,15 +1108,22 @@ body.blurred > *:not(#confirm-modal) {
 }
 
 .layer-object-item {
+  font-size: 12px;
   display: flex;
   align-items: center;
-  padding: 6px 8px;
-  border-bottom: 1px solid #e5e7eb;
-  cursor: pointer;
-  transition: background-color 0.15s;
-  gap: 8px;
+  gap: 5px;
+  user-select: none;
 }
-
+.layer-object-drag-icon {
+  font-size: 18px;
+  margin-right: 4px;
+  cursor: grab;
+  color: #888;
+  flex-shrink: 0;
+}
+.layer-object-name {
+  font-size: 12px;
+}
 .layer-object-item:last-child {
   border-bottom: none;
 }
@@ -1283,3 +1319,6 @@ body.blurred > *:not(#confirm-modal) {
   background: #e0f2fe;
   border: 2px dashed #1976d2;
 } 
+.layer-object-item .material-icons:not(.layer-object-drag-icon),
+.layer-object-item i { pointer-events: none; }
+.layer-object-drag-icon { pointer-events: auto; } 

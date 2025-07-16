@@ -114,6 +114,7 @@ function setupMarkerIconAutocomplete() {
   });
 }
 
+
 // --- Додаю підтримку іконки для маркера ---
 function getColoredMarkerIcon(color = "#1976d2", iconName = "place") {
   return L.divIcon({
@@ -745,19 +746,14 @@ function centerGeoSearchBar() {
 }
 
 window.addEventListener('resize', centerGeoSearchBar);
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Initializing application...');
+  loadLayersFromStorage();
+  console.log('[main.ts] customLayers after load:', customLayers);
+  setupMarkerIconAutocomplete();
+  initEditModal();
   centerGeoSearchBar();
-  const drawer = document.getElementById('layers-panel-drawer');
-  const toggle = document.getElementById('layers-panel-toggle');
-  if (drawer && toggle) {
-    toggle.addEventListener('click', function() {
-      (drawer as HTMLElement).classList.toggle('closed');
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-        centerGeoSearchBar();
-      }, 300);
-    });
-  }
+  console.log('Application initialized successfully');
 });
 
 function showConfirmDialog({title = 'Підтвердження', message = '', onConfirm, onCancel}: {title?: string, message?: string, onConfirm?: () => void, onCancel?: () => void}) {
@@ -1064,4 +1060,10 @@ console.log('[main.ts] customLayers after load:', customLayers);
 setupMarkerIconAutocomplete();
 initEditModal();
 centerGeoSearchBar();
+
+// Додаємо обробники подій для кнопок
+if (addLayerBtn) {
+  addLayerBtn.addEventListener('click', addLayer);
+}
+
 console.log('Application initialized successfully');

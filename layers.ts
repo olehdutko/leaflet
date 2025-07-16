@@ -257,10 +257,7 @@ export function loadLayersFromStorage(): boolean {
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.collapsed || false };
       customLayers.push(layerObj);
-      const control = createLayerControl(layerObj);
-      if (layerControlsDiv && control) {
-        layerControlsDiv.appendChild(control);
-      }
+      createLayerControl(layerObj);
       featureGroup.bringToFront();
     });
     console.log('[loadLayersFromStorage] customLayers after load:', customLayers);
@@ -307,10 +304,7 @@ export function addLayer(): void {
   const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true, title: `Шар ${timeStr}` };
   customLayers.push(layerObj);
-  const control = createLayerControl(layerObj);
-  if (layerControlsDiv && control) {
-    layerControlsDiv.appendChild(control);
-  }
+  createLayerControl(layerObj);
       layerId++;
     activeLayer = featureGroup;
     if (state.currentEditingObject) {

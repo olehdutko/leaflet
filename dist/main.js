@@ -41,8 +41,8 @@ const tileLayerOptions = {
 // map.attributionControl.addAttribution('<a href="mailto:oleh.dutko@gmail.com">oleh.dutko@gmail.com</a>');
 // ... existing code ...
 // --- Користувацькі шари ---
-import { customLayers, layerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage } from './layers.js';
-import { layerControlsDiv } from './ui.js';
+import { customLayers, layerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer } from './layers.js';
+import { layerControlsDiv, addLayerBtn } from './ui.js';
 import { materialIcons, currentEditingObject } from './state.js';
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
@@ -784,19 +784,14 @@ function centerGeoSearchBar() {
     bar.style.transform = 'translateX(-50%)';
 }
 window.addEventListener('resize', centerGeoSearchBar);
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing application...');
+    loadLayersFromStorage();
+    console.log('[main.ts] customLayers after load:', customLayers);
+    setupMarkerIconAutocomplete();
+    initEditModal();
     centerGeoSearchBar();
-    const drawer = document.getElementById('layers-panel-drawer');
-    const toggle = document.getElementById('layers-panel-toggle');
-    if (drawer && toggle) {
-        toggle.addEventListener('click', function () {
-            drawer.classList.toggle('closed');
-            setTimeout(() => {
-                window.dispatchEvent(new Event('resize'));
-                centerGeoSearchBar();
-            }, 300);
-        });
-    }
+    console.log('Application initialized successfully');
 });
 function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel }) {
     const modal = document.getElementById('confirm-modal');
@@ -1087,7 +1082,12 @@ observeOverlayOpacity();
 // Ініціалізація
 console.log('Initializing application...');
 loadLayersFromStorage();
+console.log('[main.ts] customLayers after load:', customLayers);
 setupMarkerIconAutocomplete();
 initEditModal();
 centerGeoSearchBar();
+// Додаємо обробники подій для кнопок
+if (addLayerBtn) {
+    addLayerBtn.addEventListener('click', addLayer);
+}
 console.log('Application initialized successfully');

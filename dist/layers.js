@@ -100,6 +100,7 @@ export function loadLayersFromStorage() {
         return false;
     try {
         const arr = JSON.parse(data);
+        console.log('[loadLayersFromStorage] arr:', arr);
         customLayers.forEach(l => {
             map.removeLayer(l.tileLayer);
             map.removeLayer(l.featureGroup);
@@ -219,12 +220,10 @@ export function loadLayersFromStorage() {
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.collapsed || false };
             customLayers.push(layerObj);
-            const control = createLayerControl(layerObj);
-            if (layerControlsDiv && control) {
-                layerControlsDiv.appendChild(control);
-            }
+            createLayerControl(layerObj);
             featureGroup.bringToFront();
         });
+        console.log('[loadLayersFromStorage] customLayers after load:', customLayers);
         const firstVisible = customLayers.find(l => l.visible);
         if (firstVisible) {
             activeLayer = firstVisible.featureGroup;
@@ -254,6 +253,7 @@ export function loadLayersFromStorage() {
         return true;
     }
     catch (e) {
+        console.error('[loadLayersFromStorage] error:', e);
         return false;
     }
 }
@@ -269,10 +269,7 @@ export function addLayer() {
     const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true, title: `Шар ${timeStr}` };
     customLayers.push(layerObj);
-    const control = createLayerControl(layerObj);
-    if (layerControlsDiv && control) {
-        layerControlsDiv.appendChild(control);
-    }
+    createLayerControl(layerObj);
     layerId++;
     activeLayer = featureGroup;
     if (state.currentEditingObject) {
