@@ -623,15 +623,26 @@ export function createLayerControl(layerObj) {
             });
             sortablesMap.set(layerObj.id, sortable);
         }
-        // drag&drop для списку (drop target)
+        // підсвічування source-списку
+        objectsListWrap.addEventListener('dragstart', () => {
+            objectsListWrap.classList.add('drag-over');
+        });
+        objectsListWrap.addEventListener('dragend', () => {
+            document.querySelectorAll('.layer-objects-list-wrap.drag-over').forEach(el => el.classList.remove('drag-over'));
+        });
+        // підсвічування target-списку (залишити як є, або додати якщо немає)
         objectsListWrap.ondragover = (e) => {
             e.preventDefault();
             if (e.dataTransfer)
                 e.dataTransfer.dropEffect = 'move';
-            console.log('[objectsListWrap.ondragover]', e);
+            objectsListWrap.classList.add('drag-over');
+        };
+        objectsListWrap.ondragleave = () => {
+            objectsListWrap.classList.remove('drag-over');
         };
         objectsListWrap.ondrop = (e) => {
             e.preventDefault();
+            objectsListWrap.classList.remove('drag-over');
             if (!e.dataTransfer) {
                 console.warn('[objectsListWrap.ondrop] no dataTransfer', e);
                 return;
