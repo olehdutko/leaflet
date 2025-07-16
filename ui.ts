@@ -443,18 +443,10 @@ export function createLayerControl(layerObj: any) {
   // список об'єктів шару
   const objectsListWrap = document.createElement('div');
   objectsListWrap.className = 'layer-objects-list-wrap';
-  objectsListWrap.setAttribute('data-layer-id', layerObj.id);
-  // створити контейнер для sortable
-  const objectsList = document.createElement('div');
-  objectsList.className = 'layer-objects-list';
-  objectsListWrap.appendChild(objectsList);
   function renderObjectsList() {
-    console.log('[debug] renderObjectsList called', layerObj);
-    objectsList.innerHTML = '';
+    objectsListWrap.innerHTML = '';
     const objectItems: HTMLElement[] = [];
-    let hasObjects = false;
     layerObj.featureGroup.eachLayer((layer: any) => {
-      hasObjects = true;
       const type = getObjectType(layer);
       const props = layer.properties || layer.feature?.properties || {};
       const item = document.createElement('div');
@@ -498,12 +490,16 @@ export function createLayerControl(layerObj: any) {
         dragImg.style.borderRadius = '4px';
         document.body.appendChild(dragImg);
         if (e.dataTransfer) {
-          e.dataTransfer.setData('application/layer-object', JSON.stringify({
+          const dragData = {
             layerId: layerObj.id,
             objectId: layer._leaflet_id
-          }));
+          };
+          console.log('[dragstart] setData', dragData);
+          e.dataTransfer.setData('application/layer-object', JSON.stringify(dragData));
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setDragImage(dragImg, 0, 16);
+        } else {
+          console.warn('[dragstart] no dataTransfer', e);
         }
         setTimeout(() => document.body.removeChild(dragImg), 50);
       };
@@ -515,6 +511,12 @@ export function createLayerControl(layerObj: any) {
       };
       item.ondrop = (e) => {
         console.log('drop', e, item);
+        if (e.dataTransfer) {
+          const data = e.dataTransfer.getData('application/layer-object');
+          console.log('[ondrop] dataTransfer.getData', data);
+        } else {
+          console.warn('[ondrop] no dataTransfer', e);
+        }
       };
       // клік — тільки підсвічування
       let wasDragged = false;
@@ -551,69 +553,22 @@ export function createLayerControl(layerObj: any) {
         if ((e.target as HTMLElement).closest('.layer-object-drag-icon')) return;
         showEditModal(layer);
       });
-      objectsList.appendChild(item);
-    });
-    if (!hasObjects) {
-      // нічого не додавати у objectsList
-    }
-    // debug: log window.Sortable
-    console.log('[debug] window.Sortable:', typeof (window as any).Sortable, (window as any).Sortable);
-    // debug: log objectsList, діти, handle
-    console.log('[debug] objectsList:', objectsList, objectsList.children);
-    // debug: log для кожного .layer-object-item
-    Array.from(objectsList.children).forEach((el, idx) => {
-      console.log('[debug] .layer-object-item', idx, el, el.querySelector('.layer-object-drag-icon'));
+      objectsListWrap.appendChild(item);
     });
     // --- SortableJS для drag&drop об'єктів ---
-    if (typeof window !== 'undefined' && (window as any).Sortable && objectsList) {
+    if (typeof window !== 'undefined' && (window as any).Sortable && objectsListWrap) {
       if (!(window as any).objectsSortables) (window as any).objectsSortables = new Map();
       const sortablesMap = (window as any).objectsSortables as Map<string, any>;
       if (sortablesMap.has(layerObj.id)) {
         sortablesMap.get(layerObj.id).destroy();
       }
-      // debug: log window.Sortable
-      console.log('[debug] window.Sortable:', typeof (window as any).Sortable, (window as any).Sortable);
-      // debug: log objectsList, діти, handle
-      console.log('[debug] objectsList:', objectsList, objectsList.children);
-      // debug: log для кожного .layer-object-item
-      Array.from(objectsList.children).forEach((el, idx) => {
-        console.log('[debug] .layer-object-item', idx, el, el.querySelector('.layer-object-drag-icon'));
-      });
-      const sortable = new (window as any).Sortable(objectsList, {
+      console.log('[SortableJS] init for layer', layerObj.id, objectsListWrap);
+      const sortable = new (window as any).Sortable(objectsListWrap, {
         animation: 150,
         handle: '.layer-object-drag-icon',
-        group: 'objects',
-        onStart: function(evt: any) {
-          console.log('[SortableJS] onStart for layer', layerObj.id, evt);
-        },
-        onAdd: function(evt: any) {
-          console.log('[SortableJS] onAdd', evt);
-          // id об'єкта, який переноситься
-          const objectId = evt.item.dataset.objectId;
-          // знайти з якого шару переносили через data-layer-id
-          const fromLayerId = evt.from.getAttribute('data-layer-id');
-          const toLayerId = evt.to.getAttribute('data-layer-id');
-          const fromLayerObj = customLayers.find(l => String(l.id) === fromLayerId);
-          const toLayerObj = customLayers.find(l => String(l.id) === toLayerId);
-          if (!fromLayerObj || !toLayerObj) return;
-          // знайти об'єкт
-          let movedLayer = null;
-          fromLayerObj.featureGroup.eachLayer((l: any) => {
-            if (l._leaflet_id == objectId) movedLayer = l;
-          });
-          if (!movedLayer) return;
-          fromLayerObj.featureGroup.removeLayer(movedLayer);
-          toLayerObj.featureGroup.addLayer(movedLayer);
-          saveLayersToStorage();
-          // оновити обидва списки
-          const fromCard = document.querySelector(`[data-layer-id="${fromLayerObj.id}"]`);
-          const toCard = document.querySelector(`[data-layer-id="${toLayerObj.id}"]`);
-          if (fromCard) fromCard.dispatchEvent(new Event('rebuild'));
-          if (toCard) toCard.dispatchEvent(new Event('rebuild'));
-        },
         onEnd: function (evt: any) {
           console.log('[SortableJS] onEnd for layer', layerObj.id, evt);
-          const newOrder = Array.from(objectsList.children).map((el: any) => el.dataset.objectId);
+          const newOrder = Array.from(objectsListWrap.children).map((el: any) => el.dataset.objectId);
           const layers: any[] = [];
           layerObj.featureGroup.eachLayer((l: any) => layers.push(l));
           layers.forEach(l => layerObj.featureGroup.removeLayer(l));
@@ -622,38 +577,48 @@ export function createLayerControl(layerObj: any) {
             if (l) layerObj.featureGroup.addLayer(l);
           });
           saveLayersToStorage();
-          // renderObjectsList(); // не викликаємо тут
+          renderObjectsList();
         }
       });
-      // rebuild event для оновлення списку після drop
-      objectsList.addEventListener('rebuild', () => renderObjectsList());
       sortablesMap.set(layerObj.id, sortable);
     }
     // drag&drop для списку (drop target)
-    objectsList.ondragover = (e) => {
+    objectsListWrap.ondragover = (e) => {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      console.log('[objectsListWrap.ondragover]', e);
     };
-    objectsList.ondrop = (e) => {
+    objectsListWrap.ondrop = (e) => {
       e.preventDefault();
-      if (!e.dataTransfer) return;
+      if (!e.dataTransfer) {
+        console.warn('[objectsListWrap.ondrop] no dataTransfer', e);
+        return;
+      }
       const data = e.dataTransfer.getData('application/layer-object');
+      console.log('[objectsListWrap.ondrop] getData', data);
       if (!data) return;
       const { layerId, objectId } = JSON.parse(data);
       if (layerId == layerObj.id) return; // не переносимо у той самий шар
       // знайти старий шар та об'єкт
       const fromLayerObj = customLayers.find(l => l.id == layerId);
-      if (!fromLayerObj) return;
+      if (!fromLayerObj) {
+        console.warn('[objectsListWrap.ondrop] fromLayerObj not found', layerId);
+        return;
+      }
       let movedLayer = null;
       fromLayerObj.featureGroup.eachLayer((l: any) => {
         if (l._leaflet_id == objectId) movedLayer = l;
       });
-      if (!movedLayer) return;
+      if (!movedLayer) {
+        console.warn('[objectsListWrap.ondrop] movedLayer not found', objectId);
+        return;
+      }
       fromLayerObj.featureGroup.removeLayer(movedLayer);
       layerObj.featureGroup.addLayer(movedLayer);
       saveLayersToStorage();
       // оновити UI тільки для поточного шару
       renderObjectsList();
+      console.log('[objectsListWrap.ondrop] moved object', objectId, 'from', layerId, 'to', layerObj.id);
     };
   }
   if (layerObj.featureGroup.images && Array.isArray(layerObj.featureGroup.images)) {
@@ -665,7 +630,7 @@ export function createLayerControl(layerObj: any) {
       // клік — підсвічування (можна додати для overlay)
       // item.onclick = ...
       // подвійний клік — модалка (можна додати, якщо потрібно)
-      objectsList.appendChild(item);
+      objectsListWrap.appendChild(item);
     });
   }
   renderObjectsList();
