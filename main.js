@@ -143,7 +143,10 @@ function createTooltip(element, text) {
   element.addEventListener('mouseenter', (e) => {
     if (isDraggingObject) return; // не показувати тултіп під час drag
     if (tooltip) {
-      document.body.removeChild(tooltip);
+      if (tooltip.parentNode === document.body) {
+        document.body.removeChild(tooltip);
+      }
+      tooltip = null;
     }
     
     // створити новий тултіп
@@ -176,7 +179,9 @@ function createTooltip(element, text) {
   
   element.addEventListener('mouseleave', () => {
     if (tooltip) {
-      document.body.removeChild(tooltip);
+      if (tooltip.parentNode === document.body) {
+        document.body.removeChild(tooltip);
+      }
       tooltip = null;
     }
   });
@@ -614,7 +619,6 @@ function createLayerControl(layerObj) {
       // отримати об'єкт
       let movedObj = null;
       let isImage = false;
-      // визначити чи це зображення чи geojson-об'єкт
       let fromObjects = [];
       fromFG.eachLayer(l => fromObjects.push(l));
       if (objIdx < fromObjects.length) {
@@ -626,7 +630,6 @@ function createLayerControl(layerObj) {
       if (!movedObj) return;
       // видалити з fromFG
       if (isImage) {
-        // видалити overlay з карти
         const overlays = fromFG.overlays || [];
         const imgIdx = fromFG.images.indexOf(movedObj);
         if (imgIdx !== -1) {
@@ -642,7 +645,6 @@ function createLayerControl(layerObj) {
       if (isImage) {
         if (!toFG.images) toFG.images = [];
         toFG.images.push(movedObj);
-        // додати overlay на карту
         let overlay;
         if (movedObj.corners && movedObj.corners.length === 4) {
           overlay = L.distortableImageOverlay(movedObj.url, { corners: movedObj.corners, selected: false }).addTo(map);
@@ -658,12 +660,11 @@ function createLayerControl(layerObj) {
       } else {
         toFG.addLayer(movedObj);
       }
-      // оновити UI
-      updateObjectsList();
-      if (fromLayerObj && fromLayerObj.featureGroup && fromLayerObj !== layerObj) {
-        // оновити список у source
-        if (fromLayerObj._updateObjectsList) fromLayerObj._updateObjectsList();
+      // оновити UI для обох списків
+      if (fromLayerObj !== layerObj && typeof fromLayerObj._updateObjectsList === 'function') {
+        fromLayerObj._updateObjectsList();
       }
+      updateObjectsList();
       saveLayersToStorage();
     });
     
@@ -678,6 +679,8 @@ function createLayerControl(layerObj) {
   
   // оновити список при створенні
   updateObjectsList();
+  // Додаю _updateObjectsList для зовнішнього виклику
+  layerObj._updateObjectsList = updateObjectsList;
   
   // оновлювати список при додаванні/видаленні об'єктів
   const originalAddLayer = featureGroup.addLayer.bind(featureGroup);
