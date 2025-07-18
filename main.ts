@@ -1061,6 +1061,13 @@ setupMarkerIconAutocomplete();
 initEditModal();
 centerGeoSearchBar();
 
+// Імпортуємо draw control функції
+import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
+
+// Ініціалізуємо draw control
+initDrawControl();
+updateDrawControlVisibility();
+
 // Додаємо обробники подій для кнопок
 if (addLayerBtn) {
   addLayerBtn.addEventListener('click', addLayer);

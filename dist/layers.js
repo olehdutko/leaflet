@@ -226,15 +226,12 @@ export function loadLayersFromStorage() {
         console.log('[loadLayersFromStorage] customLayers after load:', customLayers);
         const firstVisible = customLayers.find(l => l.visible);
         if (firstVisible) {
-            activeLayer = firstVisible.featureGroup;
-            if (state.currentEditingObject) {
-                state.currentEditingObject.value = activeLayer;
-            }
+            setActiveLayer(firstVisible.featureGroup);
         }
         else {
             activeLayer = null;
+            updateActiveLayerUI();
         }
-        updateActiveLayerUI();
         if (window.Sortable && layerControlsDiv) {
             if (window.layerControlsSortable)
                 window.layerControlsSortable.destroy();
@@ -271,13 +268,26 @@ export function addLayer() {
     customLayers.push(layerObj);
     createLayerControl(layerObj);
     layerId++;
+    setActiveLayer(featureGroup);
+    featureGroup.bringToFront();
+    saveLayersToStorage();
+    // Оновлюємо видимість draw control
+    import('./draw-control.js').then(({ updateDrawControlVisibility }) => {
+        updateDrawControlVisibility();
+    });
+}
+export function setActiveLayer(featureGroup) {
+    console.log('[setActiveLayer] called with:', featureGroup);
     activeLayer = featureGroup;
     if (state.currentEditingObject) {
         state.currentEditingObject.value = activeLayer;
     }
     updateActiveLayerUI();
-    featureGroup.bringToFront();
-    saveLayersToStorage();
+    // Оновлюємо draw control для нового активного шару
+    import('./draw-control.js').then(({ updateDrawControlForActiveLayer, updateDrawControlVisibility }) => {
+        updateDrawControlForActiveLayer();
+        updateDrawControlVisibility();
+    });
 }
 export function updateActiveLayerUI() {
     if (layerControlsDiv) {

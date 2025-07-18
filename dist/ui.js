@@ -271,6 +271,10 @@ export function addDoubleClickToLayer(layer) {
     // click — підсвічування
     layer.on('click', function (e) {
         var _a;
+        if (layer._wasDblClicked) {
+            layer._wasDblClicked = false;
+            return;
+        }
         const type = getObjectType(layer);
         const props = layer.properties || ((_a = layer.feature) === null || _a === void 0 ? void 0 : _a.properties) || {};
         if (layer.setStyle) {
@@ -291,17 +295,39 @@ export function addDoubleClickToLayer(layer) {
             map.fitBounds(layer.getBounds(), { maxZoom: 17 });
         else if (layer.getLatLng)
             map.setView(layer.getLatLng(), 17);
+        setTimeout(() => { layer._wasDblClicked = false; }, 300);
     });
     // dblclick — модалка
     layer.on('dblclick', function (e) {
         var _a, _b;
+        layer._wasDblClicked = true;
+        console.log('[dblclick] Leaflet event', layer);
         (_b = (_a = e.originalEvent) === null || _a === void 0 ? void 0 : _a.stopPropagation) === null || _b === void 0 ? void 0 : _b.call(_a);
         showEditModal(layer);
     });
+    // Для маркерів — явний DOM-обробник
+    function addDomDblClickHandler(marker) {
+        if (marker._icon) {
+            marker._icon.addEventListener('dblclick', (e) => {
+                marker._wasDblClicked = true;
+                console.log('[dblclick] marker DOM', marker);
+                e.stopPropagation();
+                showEditModal(marker);
+            });
+        }
+        else {
+            // Якщо іконка ще не створена — повторити через 100мс
+            setTimeout(() => addDomDblClickHandler(marker), 100);
+        }
+    }
+    if (layer instanceof L.Marker) {
+        addDomDblClickHandler(layer);
+    }
 }
 export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel }) {
     console.log('showConfirmDialog', title, message);
     const modal = document.getElementById('confirm-modal');
+    const backdrop = document.getElementById('confirm-modal-backdrop');
     const titleEl = document.getElementById('confirm-modal-title');
     const msgEl = document.getElementById('confirm-modal-message');
     const okBtn = document.getElementById('confirm-modal-ok');
@@ -310,11 +336,15 @@ export function showConfirmDialog({ title = 'Підтвердження', messag
         return;
     modal.classList.remove('hidden');
     modal.style.display = 'block';
+    if (backdrop)
+        backdrop.classList.remove('hidden');
     titleEl.textContent = title;
     msgEl.textContent = message;
     function close(result) {
         modal.classList.add('hidden');
         modal.style.display = '';
+        if (backdrop)
+            backdrop.classList.add('hidden');
         okBtn.onclick = null;
         cancelBtn.onclick = null;
         if (result && onConfirm)
@@ -331,54 +361,35 @@ export function createLayerControl(layerObj) {
     const layerCard = document.createElement('div');
     layerCard.className = 'layer-card';
     layerCard.dataset.layerId = layerObj.id.toString();
-    // назва шару окремим рядком
-    const title = document.createElement('h4');
-    title.className = 'layer-card-title';
-    title.textContent = layerObj.title || `Шар ${layerObj.id}`;
-    // drag handle як button
+    // Make layer card draggable
+    layerCard.draggable = true;
+    // Layer selection functionality
+    layerCard.onclick = (e) => {
+        // Don't select if clicking on buttons, drag handle, or objects
+        if (e.target.closest('.layer-card-icon-btn') ||
+            e.target.closest('.layer-object-item') ||
+            e.target.closest('.layer-objects-list')) {
+            return;
+        }
+        // Set this layer as active
+        import('./layers.js').then(({ setActiveLayer }) => {
+            setActiveLayer(layerObj.featureGroup);
+        });
+    };
+    // Header with icons row
+    const headerIcons = document.createElement('div');
+    headerIcons.className = 'layer-card-header-icons';
+    // Drag handle (6 dots) for layer reordering
     const dragHandle = document.createElement('button');
     dragHandle.className = 'layer-card-icon-btn layer-card-drag-handle';
-    dragHandle.title = 'Перетягнути для зміни порядку';
     dragHandle.innerHTML = '<i class="fa fa-grip-vertical"></i>';
-    // expand/collapse button
+    dragHandle.title = 'Перетягнути для зміни порядку';
+    // Expand/collapse button
     const expandBtn = document.createElement('button');
-    expandBtn.className = 'layer-card-icon-btn';
+    expandBtn.className = 'layer-card-icon-btn layer-card-expand-btn';
     expandBtn.innerHTML = '<i class="fa fa-chevron-up"></i>';
-    expandBtn.title = 'Показати/сховати деталі';
-    const header = document.createElement('div');
-    header.className = 'layer-card-header';
-    const actions = document.createElement('div');
-    actions.className = 'layer-card-actions';
-    // export button
-    const exportBtn = document.createElement('button');
-    exportBtn.className = 'layer-card-icon-btn primary';
-    exportBtn.innerHTML = '<i class="fa fa-download"></i>';
-    exportBtn.title = 'Експортувати шар';
-    exportBtn.onclick = (e) => {
-        e.stopPropagation();
-        const data = {
-            id: layerObj.id,
-            tileType: layerObj.tileType,
-            opacity: layerObj.tileLayer.options.opacity,
-            geojson: layerObj.featureGroup.toGeoJSON(),
-            images: (layerObj.featureGroup.images || []),
-            title: layerObj.title,
-            visible: layerObj.visible !== false,
-            collapsed: layerObj.collapsed || false
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = (layerObj.title || `layer_${layerObj.id}`) + '.json';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
-    };
-    // visibility
+    expandBtn.title = 'Згорнути/розгорнути шар';
+    // Eye icon (visibility)
     const visibilityBtn = document.createElement('button');
     visibilityBtn.className = 'layer-card-icon-btn';
     visibilityBtn.innerHTML = layerObj.visible ? '<i class="fa fa-eye"></i>' : '<i class="fa fa-eye-slash"></i>';
@@ -398,8 +409,10 @@ export function createLayerControl(layerObj) {
             visibilityBtn.innerHTML = '<i class="fa fa-eye-slash"></i>';
             visibilityBtn.title = 'Показати шар';
         }
+        // Оновлюємо видимість draw control
+        updateDrawControlVisibility();
     };
-    // delete
+    // Trash icon (delete)
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'layer-card-icon-btn delete';
     deleteBtn.innerHTML = '<i class="fa fa-trash"></i>';
@@ -418,20 +431,29 @@ export function createLayerControl(layerObj) {
                     customLayers.splice(index, 1);
                     saveLayersToStorage();
                 }
+                // Оновлюємо видимість draw control
+                updateDrawControlVisibility();
             }
         });
     };
-    actions.appendChild(exportBtn);
-    actions.appendChild(visibilityBtn);
-    actions.appendChild(deleteBtn);
-    // порядок: drag, expand, actions (праворуч)
-    header.appendChild(dragHandle);
-    header.appendChild(expandBtn);
-    actions.style.flexGrow = '1';
-    actions.style.display = 'flex';
-    actions.style.justifyContent = 'flex-end';
-    header.appendChild(actions);
-    // select type
+    // Gallery icon (picture)
+    const galleryBtn = document.createElement('button');
+    galleryBtn.className = 'layer-card-icon-btn';
+    galleryBtn.innerHTML = '<i class="fa fa-image"></i>';
+    galleryBtn.title = 'Галерея';
+    // Add icons to header
+    headerIcons.appendChild(dragHandle);
+    headerIcons.appendChild(expandBtn);
+    headerIcons.appendChild(visibilityBtn);
+    headerIcons.appendChild(deleteBtn);
+    headerIcons.appendChild(galleryBtn);
+    // Layer title with timestamp
+    const title = document.createElement('h4');
+    title.className = 'layer-card-title';
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    title.textContent = `Шар ${layerObj.id}:${timeString}`;
+    // Plan dropdown with blue bookmark icon
     const selectContainer = document.createElement('div');
     selectContainer.className = 'layer-card-select';
     const select = document.createElement('select');
@@ -451,12 +473,31 @@ export function createLayerControl(layerObj) {
         }
         saveLayersToStorage();
     };
+    // Add bookmark icon to select container
+    const bookmarkIcon = document.createElement('i');
+    bookmarkIcon.className = 'fa fa-bookmark';
+    bookmarkIcon.style.color = '#1976d2';
+    bookmarkIcon.style.marginRight = '8px';
+    selectContainer.appendChild(bookmarkIcon);
     selectContainer.appendChild(select);
-    // opacity
+    // Geonames checkbox with note
+    const geonamesContainer = document.createElement('div');
+    geonamesContainer.className = 'layer-card-checkbox';
+    const geonamesCheckbox = document.createElement('input');
+    geonamesCheckbox.type = 'checkbox';
+    geonamesCheckbox.checked = true;
+    geonamesCheckbox.disabled = true;
+    const geonamesLabel = document.createElement('label');
+    geonamesLabel.textContent = 'Геоназви';
+    const geonamesNote = document.createElement('span');
+    geonamesNote.className = 'note';
+    geonamesNote.textContent = '(неможливо вимкнути для OSM)';
+    geonamesContainer.appendChild(geonamesCheckbox);
+    geonamesContainer.appendChild(geonamesLabel);
+    geonamesContainer.appendChild(geonamesNote);
+    // Opacity slider
     const opacityContainer = document.createElement('div');
-    opacityContainer.className = 'layer-card-checkbox';
-    const opacityLabel = document.createElement('label');
-    opacityLabel.textContent = 'Прозорість: ';
+    opacityContainer.className = 'layer-card-slider-container';
     const opacitySlider = document.createElement('input');
     opacitySlider.type = 'range';
     opacitySlider.min = '0';
@@ -469,11 +510,19 @@ export function createLayerControl(layerObj) {
         layerObj.tileLayer.setOpacity(opacity);
         saveLayersToStorage();
     };
-    opacityContainer.appendChild(opacityLabel);
     opacityContainer.appendChild(opacitySlider);
+    // Objects section header
+    const objectsHeader = document.createElement('div');
+    objectsHeader.className = 'layer-objects-header';
+    const objectsIcon = document.createElement('i');
+    objectsIcon.className = 'fa fa-list';
+    const objectsTitle = document.createElement('span');
+    objectsTitle.textContent = 'Об\'єкти';
+    objectsHeader.appendChild(objectsIcon);
+    objectsHeader.appendChild(objectsTitle);
     // список об'єктів шару
     const objectsListWrap = document.createElement('div');
-    objectsListWrap.className = 'layer-objects-list'; // змінюємо з layer-objects-list-wrap на layer-objects-list
+    objectsListWrap.className = 'layer-objects-list';
     function renderObjectsList() {
         objectsListWrap.innerHTML = '';
         const objectItems = [];
@@ -506,6 +555,7 @@ export function createLayerControl(layerObj) {
                 console.log('mouseup', e, item);
             };
             item.ondragstart = (e) => {
+                e.stopPropagation();
                 console.log('drag start', e, item);
                 // кастомний drag image
                 const dragImg = document.createElement('span');
@@ -535,12 +585,15 @@ export function createLayerControl(layerObj) {
                 setTimeout(() => document.body.removeChild(dragImg), 50);
             };
             item.ondragend = (e) => {
+                e.stopPropagation();
                 console.log('drag end', e, item);
             };
             item.ondragover = (e) => {
+                e.stopPropagation();
                 console.log('dragover', e, item);
             };
             item.ondrop = (e) => {
+                e.stopPropagation();
                 console.log('drop', e, item);
                 if (e.dataTransfer) {
                     const data = e.dataTransfer.getData('application/layer-object');
@@ -606,6 +659,10 @@ export function createLayerControl(layerObj) {
             const sortable = new window.Sortable(objectsListWrap, {
                 animation: 150,
                 handle: '.layer-object-drag-icon',
+                preventOnFilter: false,
+                onStart: function (evt) {
+                    console.log('[SortableJS] onStart for layer', layerObj.id, evt);
+                },
                 onEnd: function (evt) {
                     console.log('[SortableJS] onEnd for layer', layerObj.id, evt);
                     const newOrder = Array.from(objectsListWrap.children).map((el) => el.dataset.objectId);
@@ -628,17 +685,23 @@ export function createLayerControl(layerObj) {
             objectsListWrap.classList.add('drag-over');
         });
         objectsListWrap.addEventListener('dragend', () => {
-            document.querySelectorAll('.layer-objects-list.drag-over').forEach(el => el.classList.remove('drag-over'));
+            document.querySelectorAll('.layer-objects-list.drag-over, .layer-objects-list-wrap.drag-over').forEach(el => el.classList.remove('drag-over'));
         });
-        // підсвічування target-списку (залишити як є, або додати якщо немає)
+        // підсвічування target-списку
         objectsListWrap.ondragover = (e) => {
             e.preventDefault();
             if (e.dataTransfer)
                 e.dataTransfer.dropEffect = 'move';
             objectsListWrap.classList.add('drag-over');
         };
-        objectsListWrap.ondragleave = () => {
-            objectsListWrap.classList.remove('drag-over');
+        objectsListWrap.ondragleave = (e) => {
+            // Only remove drag-over if we're leaving the entire list area
+            const rect = objectsListWrap.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                objectsListWrap.classList.remove('drag-over');
+            }
         };
         objectsListWrap.ondrop = (e) => {
             e.preventDefault();
@@ -693,18 +756,17 @@ export function createLayerControl(layerObj) {
     renderObjectsList();
     // --- expand/collapse logic ---
     let expanded = true;
+    const expandableElements = [selectContainer, geonamesContainer, opacityContainer, objectsHeader, objectsListWrap];
     function updateExpandCollapse() {
         if (expanded) {
-            selectContainer.style.display = '';
-            opacityContainer.style.display = '';
-            objectsListWrap.style.display = '';
+            expandableElements.forEach(el => el.style.display = '');
             expandBtn.innerHTML = '<i class="fa fa-chevron-up"></i>';
+            expandBtn.title = 'Згорнути шар';
         }
         else {
-            selectContainer.style.display = 'none';
-            opacityContainer.style.display = 'none';
-            objectsListWrap.style.display = 'none';
+            expandableElements.forEach(el => el.style.display = 'none');
             expandBtn.innerHTML = '<i class="fa fa-chevron-down"></i>';
+            expandBtn.title = 'Розгорнути шар';
         }
     }
     expandBtn.onclick = (e) => {
@@ -714,12 +776,49 @@ export function createLayerControl(layerObj) {
     };
     updateExpandCollapse();
     // --- порядок додавання у layerCard ---
-    layerCard.appendChild(title); // назва першою
-    layerCard.appendChild(header); // іконки під назвою
+    layerCard.appendChild(headerIcons);
+    layerCard.appendChild(title);
     layerCard.appendChild(selectContainer);
+    layerCard.appendChild(geonamesContainer);
     layerCard.appendChild(opacityContainer);
+    layerCard.appendChild(objectsHeader);
     layerCard.appendChild(objectsListWrap);
+    // Drag & drop event handlers for layer reordering
+    layerCard.ondragstart = (e) => {
+        var _a;
+        (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', layerObj.id.toString());
+        e.dataTransfer.effectAllowed = 'move';
+        layerCard.classList.add('dragging');
+    };
+    layerCard.ondragend = () => {
+        layerCard.classList.remove('dragging');
+    };
+    layerCard.ondragover = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+    layerCard.ondrop = (e) => {
+        var _a;
+        e.preventDefault();
+        const draggedLayerId = (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData('text/plain');
+        if (draggedLayerId && draggedLayerId !== layerObj.id.toString()) {
+            // Reorder layers
+            const draggedLayerIndex = customLayers.findIndex(l => l.id.toString() === draggedLayerId);
+            const currentLayerIndex = customLayers.findIndex(l => l.id === layerObj.id);
+            if (draggedLayerIndex !== -1 && currentLayerIndex !== -1) {
+                const [draggedLayer] = customLayers.splice(draggedLayerIndex, 1);
+                customLayers.splice(currentLayerIndex, 0, draggedLayer);
+                // Re-render all layers to update order
+                layerControlsDiv.innerHTML = '';
+                customLayers.forEach(layer => {
+                    createLayerControl(layer);
+                });
+                saveLayersToStorage();
+            }
+        }
+    };
     layerControlsDiv.appendChild(layerCard);
+    return layerCard;
 }
 export const layerControlsDiv = document.getElementById('layer-controls');
 export const addLayerBtn = document.getElementById('add-layer');
@@ -727,6 +826,64 @@ export const exportAllBtn = document.getElementById('export-all');
 export const importAllBtn = document.getElementById('import-all');
 export const importAllInput = document.getElementById('import-all-input');
 export let isDraggingObject = false;
+// Function to get currently selected layer
+export function getSelectedLayer() {
+    const selectedCard = document.querySelector('.layer-card.active');
+    if (selectedCard) {
+        const layerId = selectedCard.getAttribute('data-layer-id');
+        return customLayers.find(layer => layer.id.toString() === layerId);
+    }
+    return null;
+}
+// Function to select layer by ID
+export function selectLayer(layerId) {
+    document.querySelectorAll('.layer-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    const targetCard = document.querySelector(`[data-layer-id="${layerId}"]`);
+    if (targetCard) {
+        targetCard.classList.add('active');
+    }
+}
 // Додаємо необхідні імпорти
 import { customLayers, createTileLayer } from './layers.js';
 import { map } from './map-init.js';
+import { updateDrawControlVisibility } from './draw-control.js';
+// Робимо renderObjectsList глобально доступною
+// (window as any).renderObjectsList = renderObjectsList; // більше не потрібно
+// --- Додаю оновлення списку об'єктів після збереження змін у модалці ---
+const saveObjectBtn = document.getElementById('save-object');
+if (saveObjectBtn) {
+    saveObjectBtn.addEventListener('click', () => {
+        // Оновлюємо картку активного шару після збереження змін
+        import('./layers.js').then(({ customLayers, activeLayer }) => {
+            const layerObj = customLayers.find((l) => l.featureGroup === activeLayer);
+            if (layerObj) {
+                // Знаходимо стару картку і замінюємо її новою
+                const oldCard = document.querySelector('.layer-card.active');
+                if (oldCard && oldCard.parentNode) {
+                    import('./ui.js').then(({ createLayerControl }) => {
+                        const newCard = createLayerControl(layerObj);
+                        if (newCard && oldCard.parentNode) {
+                            oldCard.parentNode.replaceChild(newCard, oldCard);
+                        }
+                    });
+                }
+            }
+        });
+    });
+}
+// Панель шарів: приховування/показ
+const layersPanelDrawer = document.getElementById('layers-panel-drawer');
+const layersPanelToggle = document.getElementById('layers-panel-toggle');
+if (layersPanelDrawer && layersPanelToggle) {
+    layersPanelToggle.addEventListener('click', () => {
+        const isClosed = layersPanelDrawer.classList.toggle('closed');
+        const icon = layersPanelToggle.querySelector('.material-icons');
+        if (icon) {
+            icon.textContent = isClosed ? 'chevron_right' : 'chevron_left';
+        }
+        setTimeout(() => { map.invalidateSize(); }, 300); // даємо CSS анімації завершитись
+    });
+}
+window.addDoubleClickToLayer = addDoubleClickToLayer;

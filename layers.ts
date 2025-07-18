@@ -262,15 +262,12 @@ export function loadLayersFromStorage(): boolean {
     });
     console.log('[loadLayersFromStorage] customLayers after load:', customLayers);
     const firstVisible = customLayers.find(l => l.visible);
-          if (firstVisible) {
-        activeLayer = firstVisible.featureGroup;
-        if (state.currentEditingObject) {
-          state.currentEditingObject.value = activeLayer;
-        }
-      } else {
+    if (firstVisible) {
+      setActiveLayer(firstVisible.featureGroup);
+    } else {
       activeLayer = null;
+      updateActiveLayerUI();
     }
-    updateActiveLayerUI();
     if ((window as any).Sortable && layerControlsDiv) {
       if ((window as any).layerControlsSortable) (window as any).layerControlsSortable.destroy();
       (window as any).layerControlsSortable = new (window as any).Sortable(layerControlsDiv, {
@@ -305,14 +302,30 @@ export function addLayer(): void {
   const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true, title: `Шар ${timeStr}` };
   customLayers.push(layerObj);
   createLayerControl(layerObj);
-      layerId++;
-    activeLayer = featureGroup;
-    if (state.currentEditingObject) {
-      state.currentEditingObject.value = activeLayer;
-    }
-    updateActiveLayerUI();
+  layerId++;
+  setActiveLayer(featureGroup);
   featureGroup.bringToFront();
   saveLayersToStorage();
+  
+  // Оновлюємо видимість draw control
+  import('./draw-control.js').then(({ updateDrawControlVisibility }) => {
+    updateDrawControlVisibility();
+  });
+}
+
+export function setActiveLayer(featureGroup: any): void {
+  console.log('[setActiveLayer] called with:', featureGroup);
+  activeLayer = featureGroup;
+  if (state.currentEditingObject) {
+    state.currentEditingObject.value = activeLayer;
+  }
+  updateActiveLayerUI();
+  
+  // Оновлюємо draw control для нового активного шару
+  import('./draw-control.js').then(({ updateDrawControlForActiveLayer, updateDrawControlVisibility }) => {
+    updateDrawControlForActiveLayer();
+    updateDrawControlVisibility();
+  });
 }
 
 export function updateActiveLayerUI(): void {
