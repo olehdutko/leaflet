@@ -60,18 +60,23 @@ import { getObjectType, getObjectProperties } from './utils.js';
 import { createLayerControl } from './ui.js';
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
-    const input = document.getElementById('marker-icon');
+    var _a;
+    let input = document.getElementById('marker-icon');
     const list = document.getElementById('marker-icon-autocomplete');
     const preview = document.getElementById('marker-icon-preview');
     if (!input || !list || !preview)
         return;
+    // Клонуємо input, щоб скинути всі старі обробники
+    const newInput = input.cloneNode(true);
+    (_a = input.parentNode) === null || _a === void 0 ? void 0 : _a.replaceChild(newInput, input);
+    input = newInput;
     let currentFocus = -1;
-    input.oninput = function () {
+    input.addEventListener('input', function () {
         const val = input.value.trim().toLowerCase();
         list.innerHTML = '';
-        if (!val)
-            return;
+        preview.textContent = input.value;
         const matches = materialIcons.filter(name => name.includes(val)).slice(0, 10);
+        currentFocus = -1;
         matches.forEach(name => {
             const item = document.createElement('div');
             item.className = 'autocomplete-item';
@@ -88,6 +93,29 @@ function setupMarkerIconAutocomplete() {
             };
             list.appendChild(item);
         });
+    });
+    input.onkeydown = function (e) {
+        const items = list.querySelectorAll('.autocomplete-item');
+        if (e.key === 'ArrowDown') {
+            currentFocus++;
+            if (currentFocus >= items.length)
+                currentFocus = 0;
+            items.forEach((el, i) => el.classList.toggle('active', i === currentFocus));
+            e.preventDefault();
+        }
+        else if (e.key === 'ArrowUp') {
+            currentFocus--;
+            if (currentFocus < 0)
+                currentFocus = items.length - 1;
+            items.forEach((el, i) => el.classList.toggle('active', i === currentFocus));
+            e.preventDefault();
+        }
+        else if (e.key === 'Enter') {
+            if (currentFocus > -1 && items[currentFocus]) {
+                items[currentFocus].click();
+                e.preventDefault();
+            }
+        }
     };
     input.onfocus = input.oninput;
     input.onkeydown = function (e) {
@@ -117,6 +145,22 @@ function setupMarkerIconAutocomplete() {
         if (e.target !== input)
             list.innerHTML = '';
     });
+}
+// --- Додаю глобальний флаг для готовності іконок ---
+window.materialIconsReady = false;
+// --- Патч для state.ts: після fetch ---
+// (цей код треба додати у state.ts після fetch)
+// fetch('material-icons-list.json')
+//   .then(res => res.json())
+//   .then(list => { materialIcons.splice(0, materialIcons.length, ...list); (window as any).materialIconsReady = true; });
+// --- Додаю очікування готовності іконок перед автокомплітом ---
+function waitForMaterialIconsAndInitAutocomplete() {
+    if (window.materialIconsReady) {
+        setupMarkerIconAutocomplete();
+    }
+    else {
+        setTimeout(waitForMaterialIconsAndInitAutocomplete, 100);
+    }
 }
 // --- Додаю підтримку іконки для маркера ---
 function getColoredMarkerIcon(color = "#1976d2", iconName = "place") {
@@ -210,9 +254,10 @@ function showEditModal(layer) {
         if (markerIconInput && markerIconPreview) {
             markerIconInput.value = properties.icon || 'place';
             markerIconPreview.textContent = markerIconInput.value;
-            markerIconInput.oninput = function () {
-                markerIconPreview.textContent = markerIconInput.value;
-            };
+            // не перевизначаю oninput тут, бо це ламає автокомпліт
+            // (markerIconInput as HTMLInputElement).oninput = function() {
+            //   (markerIconPreview as HTMLElement).textContent = (markerIconInput as HTMLInputElement).value;
+            // };
         }
         // Показати/заповнити координати
         const coordsGroup = document.querySelector('.marker-coords-group');
@@ -225,6 +270,8 @@ function showEditModal(layer) {
             latInput.value = latlng.lat.toString();
             lngInput.value = latlng.lng.toString();
         }
+        // --- Додаю повторну ініціалізацію автокомпліта ---
+        setupMarkerIconAutocomplete();
     }
     else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
         if (colorPickerGroup)
@@ -796,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Initializing application...');
     loadLayersFromStorage();
     console.log('[main.ts] customLayers after load:', customLayers);
-    setupMarkerIconAutocomplete();
+    waitForMaterialIconsAndInitAutocomplete();
     initEditModal();
     centerGeoSearchBar();
     console.log('Application initialized successfully');
@@ -1091,7 +1138,7 @@ observeOverlayOpacity();
 console.log('Initializing application...');
 loadLayersFromStorage();
 console.log('[main.ts] customLayers after load:', customLayers);
-setupMarkerIconAutocomplete();
+waitForMaterialIconsAndInitAutocomplete();
 initEditModal();
 centerGeoSearchBar();
 // Імпортуємо draw control функції
