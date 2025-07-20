@@ -585,6 +585,10 @@ body {
   background-color: #1e3a8a;
 }
 
+.layer-card.layer-card-inactive {
+  opacity: 0.3;
+}
+
 .layers-panel-header {
   display: flex;
   align-items: center;
@@ -1617,4 +1621,8 @@ body.blurred > *:not(#confirm-modal) {
 .modal-backdrop.hidden {
   opacity: 0;
   pointer-events: none;
+} 
+
+.layer-card-icon-btn.blue i {
+  color: #1976d2 !important;
 } 

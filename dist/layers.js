@@ -100,7 +100,9 @@ export function loadLayersFromStorage() {
     if (!data)
         return false;
     try {
-        const arr = JSON.parse(data);
+        let arr = JSON.parse(data);
+        if (!Array.isArray(arr))
+            arr = [arr];
         customLayers.forEach(l => {
             map.removeLayer(l.tileLayer);
             map.removeLayer(l.featureGroup);

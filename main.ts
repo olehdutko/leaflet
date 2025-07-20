@@ -1178,8 +1178,59 @@ if (importAllBtn && importAllInput) {
     reader.onload = function(evt) {
       if (!evt.target) return;
       try {
-        localStorage.setItem('lefleat_layers', evt.target.result as string);
-        location.reload();
+        let imported = JSON.parse(evt.target.result as string);
+        if (!Array.isArray(imported)) imported = [imported];
+        // для кожного імпортованого шару перевіряємо на дублікати
+        function importLayerObj(obj: any) {
+          const existsIdx = customLayers.findIndex(l => l.title === obj.title);
+          if (existsIdx !== -1) {
+            showConfirmDialog({
+              title: `Шар "${obj.title}" вже існує`,
+              message: `Шар з назвою "${obj.title}" вже існує. Що зробити?`,
+              onConfirm: (action?: string) => {
+                if (action === 'duplicate') {
+                  // Дублювати з новою назвою
+                  let copyTitle = obj.title + ' (копія)';
+                  let n = 2;
+                  while (customLayers.some(l => l.title === copyTitle)) {
+                    copyTitle = obj.title + ` (копія ${n++})`;
+                  }
+                  obj.title = copyTitle;
+                  actuallyImportLayer(obj);
+                } else if (action === 'overwrite') {
+                  // Перезаписати: видалити старий і додати новий
+                  const oldLayer = customLayers[existsIdx];
+                  if (oldLayer && oldLayer.featureGroup) {
+                    map.removeLayer(oldLayer.featureGroup);
+                  }
+                  customLayers.splice(existsIdx, 1);
+                  if (layerControlsDiv) {
+                    layerControlsDiv.innerHTML = '';
+                    customLayers.forEach(layer => createLayerControl(layer));
+                  }
+                  actuallyImportLayer(obj);
+                } // cancel — нічого не робити
+              },
+              buttons: [
+                { text: 'Дублювати', action: 'duplicate', className: 'btn-primary' },
+                { text: 'Перезаписати', action: 'overwrite', className: 'btn-danger' },
+                { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+              ]
+            });
+          } else {
+            actuallyImportLayer(obj);
+          }
+        }
+        function actuallyImportLayer(obj: any) {
+          // Додаємо шар у localStorage
+          let arr = JSON.parse(localStorage.getItem('lefleat_layers') || '[]');
+          if (!Array.isArray(arr)) arr = [arr];
+          arr.push(obj);
+          localStorage.setItem('lefleat_layers', JSON.stringify(arr));
+          location.reload();
+        }
+        // імпортуємо всі шари по черзі
+        imported.forEach(importLayerObj);
       } catch (err) {
         alert('Помилка імпорту: ' + err);
       }

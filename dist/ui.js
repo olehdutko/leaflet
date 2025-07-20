@@ -462,16 +462,28 @@ export function createLayerControl(layerObj) {
             layerObj.featureGroup.addTo(map);
             visibilityBtn.innerHTML = '<i class="fa fa-eye"></i>';
             visibilityBtn.title = 'Сховати шар';
+            visibilityBtn.classList.add('blue');
+            layerCard.classList.remove('layer-card-inactive');
         }
         else {
             map.removeLayer(layerObj.tileLayer);
             map.removeLayer(layerObj.featureGroup);
             visibilityBtn.innerHTML = '<i class="fa fa-eye-slash"></i>';
             visibilityBtn.title = 'Показати шар';
+            visibilityBtn.classList.remove('blue');
+            layerCard.classList.add('layer-card-inactive');
         }
         // Оновлюємо видимість draw control
         updateDrawControlVisibility();
     };
+    if (!layerObj.visible) {
+        visibilityBtn.classList.remove('blue');
+        layerCard.classList.add('layer-card-inactive');
+    }
+    else {
+        visibilityBtn.classList.add('blue');
+        layerCard.classList.remove('layer-card-inactive');
+    }
     // Trash icon (delete)
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'layer-card-icon-btn delete';
@@ -507,7 +519,6 @@ export function createLayerControl(layerObj) {
     galleryBtn.className = 'layer-card-icon-btn';
     galleryBtn.innerHTML = '<i class="fa fa-image"></i>';
     galleryBtn.title = 'Галерея';
-    // --- Додаю обробник для додавання зображення до шару ---
     galleryBtn.onclick = () => {
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -554,16 +565,123 @@ export function createLayerControl(layerObj) {
         };
         fileInput.click();
     };
+    galleryBtn.classList.add('blue');
+    // Export button (upload icon)
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'layer-card-icon-btn export';
+    exportBtn.innerHTML = '<i class="fa fa-upload"></i>';
+    exportBtn.title = 'Експортувати цей шар';
+    exportBtn.onclick = () => {
+        // Формуємо дані для експорту цього шару
+        const l = layerObj;
+        // @ts-ignore
+        const images = l.featureGroup.images || [];
+        const imagesWithCorners = images.map((img) => {
+            var _a;
+            // @ts-ignore
+            const overlay = (_a = l.featureGroup.overlays) === null || _a === void 0 ? void 0 : _a.find((o) => { var _a; return o._customUrl === img.url || o._url === img.url || ((_a = o._image) === null || _a === void 0 ? void 0 : _a.src) === img.url; });
+            if (overlay && overlay.getCorners) {
+                return Object.assign(Object.assign({}, img), { corners: overlay.getCorners(), bounds: overlay.getBounds(), properties: overlay.properties || {} });
+            }
+            return Object.assign(Object.assign({}, img), { properties: img.properties || {} });
+        });
+        const layerData = {
+            id: l.id,
+            tileType: l.tileType,
+            opacity: l.tileLayer.options.opacity,
+            // @ts-ignore
+            showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
+            geojson: l.featureGroup.toGeoJSON(),
+            images: imagesWithCorners,
+            title: l.title || undefined,
+            visible: l.visible !== false,
+            collapsed: l.collapsed || false
+        };
+        const blob = new Blob([JSON.stringify(layerData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        // Дозволяємо пробіли, кирилицю, але прибираємо заборонені символи
+        let safeTitle = l.title ? l.title.replace(/[\\/:*?"<>|]+/g, '') : 'layer';
+        a.download = safeTitle + '.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    };
+    exportBtn.classList.add('blue');
     // Add icons to header
     headerIcons.appendChild(dragHandle);
     headerIcons.appendChild(expandBtn);
     headerIcons.appendChild(visibilityBtn);
+    headerIcons.appendChild(exportBtn);
     headerIcons.appendChild(deleteBtn);
     headerIcons.appendChild(galleryBtn);
     // Layer title
     const title = document.createElement('h4');
     title.className = 'layer-card-title';
     title.textContent = layerObj.title || `Шар ${layerObj.id}`;
+    title.style.cursor = 'pointer';
+    title.ondblclick = function () {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = layerObj.title || '';
+        input.className = 'layer-card-title-input';
+        input.style.fontSize = '14px';
+        input.style.fontWeight = '600';
+        input.style.width = '90%';
+        input.style.margin = '0';
+        input.style.padding = '2px 4px';
+        input.style.borderRadius = '4px';
+        input.style.border = '1px solid #d1d5db';
+        input.onblur = save;
+        input.onkeydown = function (e) {
+            if (e.key === 'Enter') {
+                input.blur();
+            }
+            else if (e.key === 'Escape') {
+                title.textContent = layerObj.title || `Шар ${layerObj.id}`;
+            }
+        };
+        title.replaceWith(input);
+        input.focus();
+        input.select();
+        function save() {
+            const newTitle = input.value.trim();
+            if (newTitle && newTitle !== layerObj.title) {
+                // перевірка на унікальність
+                if (customLayers.some(l => l.title === newTitle && l.id !== layerObj.id)) {
+                    showConfirmDialog({
+                        title: 'Помилка',
+                        message: 'Шар з такою назвою вже існує. Виберіть іншу назву.',
+                        buttons: [
+                            { text: 'OK', action: 'ok', className: 'btn-primary' }
+                        ],
+                        onConfirm: () => {
+                            input.focus();
+                            input.select();
+                        }
+                    });
+                    return;
+                }
+                layerObj.title = newTitle;
+                saveLayersToStorage();
+                // Оновити картку шару (перегенерувати)
+                if (layerCard.parentNode) {
+                    const newCard = createLayerControl(layerObj);
+                    if (newCard && layerCard.parentNode) {
+                        layerCard.parentNode.replaceChild(newCard, layerCard);
+                    }
+                }
+            }
+            else {
+                input.replaceWith(title);
+                title.textContent = layerObj.title || `Шар ${layerObj.id}`;
+            }
+        }
+    };
     // Plan dropdown with blue bookmark icon
     const selectContainer = document.createElement('div');
     selectContainer.className = 'layer-card-select';
@@ -963,12 +1081,10 @@ if (saveObjectBtn) {
                 // Знаходимо стару картку і замінюємо її новою
                 const oldCard = document.querySelector('.layer-card.active');
                 if (oldCard && oldCard.parentNode) {
-                    import('./ui.js').then(({ createLayerControl }) => {
-                        const newCard = createLayerControl(layerObj);
-                        if (newCard && oldCard.parentNode) {
-                            oldCard.parentNode.replaceChild(newCard, oldCard);
-                        }
-                    });
+                    const newCard = createLayerControl(layerObj);
+                    if (newCard && oldCard.parentNode) {
+                        oldCard.parentNode.replaceChild(newCard, oldCard);
+                    }
                 }
             }
         });
