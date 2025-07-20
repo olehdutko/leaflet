@@ -382,7 +382,7 @@ function showEditModal(layer: L.Layer) {
 }
 
 // Функція для закриття модального вікна
-function closeEditModal() {
+export function closeEditModal() {
   const editModal = document.getElementById('edit-object-modal');
   if (editModal) (editModal as HTMLElement).classList.add('hidden');
   currentEditingObject.value = null;
@@ -611,6 +611,7 @@ function addDoubleClickToLayer(layer: L.Layer) {
       if (el) {
         el.addEventListener('dblclick', function(e: any) { // @ts-ignore
           e.stopPropagation();
+          e.preventDefault();
           showEditModal(layer);
         });
       }
@@ -619,12 +620,16 @@ function addDoubleClickToLayer(layer: L.Layer) {
     if (el) {
       el.addEventListener('dblclick', function(e: any) { // @ts-ignore
         e.stopPropagation();
+        e.preventDefault();
         showEditModal(layer);
       });
     }
   } else {
     layer.on('dblclick', function(e: any) { // @ts-ignore
-      if (e.originalEvent) e.originalEvent.stopPropagation();
+      if (e.originalEvent) {
+        e.originalEvent.stopPropagation();
+        e.originalEvent.preventDefault();
+      }
       showEditModal(layer);
     });
   }
@@ -728,6 +733,10 @@ let searchMarker: any = null;
           shadowSize: [41, 41]
         })
       }).addTo(map);
+      // додати обробник подвійного кліку
+      import('./ui.js').then(({ addDoubleClickToLayer }) => {
+        addDoubleClickToLayer((window as any).searchMarker);
+      });
       // @ts-ignore
       (window as any).searchMarker.bindPopup(item.display_name).openPopup();
     }

@@ -1,7 +1,17 @@
 import { currentEditingObject } from './state.js';
+import { closeEditModal } from './main.js';
 import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './utils.js';
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
+import { updateActiveLayerUI } from './layers.js';
+export const layerIdToRenderObjectsList = new Map();
+export function updateObjectsListForLayer(layerObj) {
+    console.log('[updateObjectsListForLayer] called for layer:', layerObj.id);
+    const fn = layerIdToRenderObjectsList.get(layerObj.id);
+    console.log('[updateObjectsListForLayer] found function:', !!fn);
+    if (fn)
+        fn();
+}
 export function showEditModal(layer) {
     currentEditingObject.value = layer;
     const type = getObjectType(layer);
@@ -258,8 +268,23 @@ export function showEditModal(layer) {
                 title: 'Видалення обʼєкта',
                 message: 'Ви дійсно хочете видалити цей обʼєкт?',
                 onConfirm: () => {
-                    // тут має бути логіка видалення обʼєкта (layer)
-                    // (реалізуй згідно з твоєю структурою)
+                    if (!currentEditingObject.value)
+                        return;
+                    // Знаходимо відповідний customLayer
+                    const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value));
+                    console.log('[deleteObject] found layerObj:', layerObj === null || layerObj === void 0 ? void 0 : layerObj.id);
+                    if (layerObj && layerObj.featureGroup) {
+                        layerObj.featureGroup.removeLayer(currentEditingObject.value);
+                    }
+                    map.removeLayer(currentEditingObject.value);
+                    saveLayersToStorage();
+                    updateObjectsListForLayer(layerObj); // оновити список об'єктів після видалення
+                    // clean up renderObjectsList reference if no objects left
+                    if (layerObj && layerObj.featureGroup.getLayers().length === 0) {
+                        layerIdToRenderObjectsList.delete(layerObj.id);
+                    }
+                    updateActiveLayerUI();
+                    closeEditModal();
                 }
             });
         };
@@ -268,41 +293,13 @@ export function showEditModal(layer) {
 export function addDoubleClickToLayer(layer) {
     if (!layer)
         return;
-    // click — підсвічування
-    layer.on('click', function (e) {
-        var _a;
-        if (layer._wasDblClicked) {
-            layer._wasDblClicked = false;
-            return;
-        }
-        const type = getObjectType(layer);
-        const props = layer.properties || ((_a = layer.feature) === null || _a === void 0 ? void 0 : _a.properties) || {};
-        if (layer.setStyle) {
-            const prev = Object.assign({}, (layer.options || {}));
-            layer.setStyle({ color: '#cd1d1d', weight: 8 });
-            setTimeout(() => layer.setStyle(prev), 1500);
-        }
-        else if (layer.setIcon) {
-            const prevIcon = layer.getIcon();
-            layer.setIcon(getColoredMarkerIcon('#cd1d1d', props.icon || 'place'));
-            setTimeout(() => layer.setIcon(prevIcon), 1500);
-        }
-        else if (layer.getElement && layer.getElement()) {
-            layer.getElement().classList.add('global-object-search-highlight');
-            setTimeout(() => layer.getElement().classList.remove('global-object-search-highlight'), 1500);
-        }
-        if (layer.getBounds)
-            map.fitBounds(layer.getBounds(), { maxZoom: 17 });
-        else if (layer.getLatLng)
-            map.setView(layer.getLatLng(), 17);
-        setTimeout(() => { layer._wasDblClicked = false; }, 300);
-    });
     // dblclick — модалка
     layer.on('dblclick', function (e) {
-        var _a, _b;
+        var _a, _b, _c, _d;
         layer._wasDblClicked = true;
         console.log('[dblclick] Leaflet event', layer);
         (_b = (_a = e.originalEvent) === null || _a === void 0 ? void 0 : _a.stopPropagation) === null || _b === void 0 ? void 0 : _b.call(_a);
+        (_d = (_c = e.originalEvent) === null || _c === void 0 ? void 0 : _c.preventDefault) === null || _d === void 0 ? void 0 : _d.call(_c);
         showEditModal(layer);
     });
     // Для маркерів — явний DOM-обробник
@@ -312,6 +309,7 @@ export function addDoubleClickToLayer(layer) {
                 marker._wasDblClicked = true;
                 console.log('[dblclick] marker DOM', marker);
                 e.stopPropagation();
+                e.preventDefault();
                 showEditModal(marker);
             });
         }
@@ -322,6 +320,14 @@ export function addDoubleClickToLayer(layer) {
     }
     if (layer instanceof L.Marker) {
         addDomDblClickHandler(layer);
+        // Дублюючий обробник для leaflet-івенту
+        layer.on('dblclick', function (e) {
+            var _a, _b, _c, _d;
+            layer._wasDblClicked = true;
+            (_b = (_a = e.originalEvent) === null || _a === void 0 ? void 0 : _a.stopPropagation) === null || _b === void 0 ? void 0 : _b.call(_a);
+            (_d = (_c = e.originalEvent) === null || _c === void 0 ? void 0 : _c.preventDefault) === null || _d === void 0 ? void 0 : _d.call(_c);
+            showEditModal(layer);
+        });
     }
 }
 export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel }) {
@@ -431,6 +437,8 @@ export function createLayerControl(layerObj) {
                     customLayers.splice(index, 1);
                     saveLayersToStorage();
                 }
+                // Clean up renderObjectsList reference
+                layerIdToRenderObjectsList.delete(layerObj.id);
                 // Оновлюємо видимість draw control
                 updateDrawControlVisibility();
             }
@@ -524,6 +532,7 @@ export function createLayerControl(layerObj) {
     const objectsListWrap = document.createElement('div');
     objectsListWrap.className = 'layer-objects-list';
     function renderObjectsList() {
+        console.log('[renderObjectsList] called for layer:', layerObj.id);
         objectsListWrap.innerHTML = '';
         const objectItems = [];
         layerObj.featureGroup.eachLayer((layer) => {
@@ -647,6 +656,7 @@ export function createLayerControl(layerObj) {
             });
             objectsListWrap.appendChild(item);
         });
+        console.log('[renderObjectsList] rendered', objectItems.length, 'objects for layer:', layerObj.id);
         // --- SortableJS для drag&drop об'єктів ---
         if (typeof window !== 'undefined' && window.Sortable && objectsListWrap) {
             if (!window.objectsSortables)
@@ -753,6 +763,9 @@ export function createLayerControl(layerObj) {
             objectsListWrap.appendChild(item);
         });
     }
+    // Register the renderObjectsList for this layer
+    layerIdToRenderObjectsList.set(layerObj.id, renderObjectsList);
+    console.log('[createLayerControl] registered renderObjectsList for layer:', layerObj.id);
     renderObjectsList();
     // --- expand/collapse logic ---
     let expanded = true;
@@ -887,3 +900,25 @@ if (layersPanelDrawer && layersPanelToggle) {
     });
 }
 window.addDoubleClickToLayer = addDoubleClickToLayer;
+// --- Глобальний MutationObserver для маркерів ---
+if (typeof window !== 'undefined' && typeof L !== 'undefined') {
+    const markerObserver = new MutationObserver(() => {
+        // Знаходимо всі leaflet-marker-icon
+        document.querySelectorAll('.leaflet-marker-icon').forEach(icon => {
+            // Знаходимо відповідний leaflet-обʼєкт
+            const marker = Object.values(map._layers).find((l) => l._icon === icon);
+            const iconEl = icon;
+            if (marker && !iconEl.__dblclickHandlerAttached) {
+                iconEl.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    showEditModal(marker);
+                });
+                iconEl.__dblclickHandlerAttached = true;
+            }
+        });
+    });
+    const mapEl = document.getElementById('map');
+    if (mapEl)
+        markerObserver.observe(mapEl, { childList: true, subtree: true });
+}

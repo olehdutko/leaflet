@@ -1,8 +1,19 @@
 import { materialIcons, currentEditingObject } from './state.js';
+import { closeEditModal } from './main.js';
 declare const L: any;
 import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './utils.js';
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
+import { updateActiveLayerUI } from './layers.js';
+
+export const layerIdToRenderObjectsList = new Map();
+
+export function updateObjectsListForLayer(layerObj: any) {
+  console.log('[updateObjectsListForLayer] called for layer:', layerObj.id);
+  const fn = layerIdToRenderObjectsList.get(layerObj.id);
+  console.log('[updateObjectsListForLayer] found function:', !!fn);
+  if (fn) fn();
+}
 
 export function showEditModal(layer: any) {
   currentEditingObject.value = layer;
@@ -222,8 +233,22 @@ export function showEditModal(layer: any) {
         title: 'Видалення обʼєкта',
         message: 'Ви дійсно хочете видалити цей обʼєкт?',
         onConfirm: () => {
-          // тут має бути логіка видалення обʼєкта (layer)
-          // (реалізуй згідно з твоєю структурою)
+          if (!currentEditingObject.value) return;
+          // Знаходимо відповідний customLayer
+          const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value as L.Layer));
+          console.log('[deleteObject] found layerObj:', layerObj?.id);
+          if (layerObj && layerObj.featureGroup) {
+            layerObj.featureGroup.removeLayer(currentEditingObject.value as L.Layer);
+          }
+          map.removeLayer(currentEditingObject.value as L.Layer);
+          saveLayersToStorage();
+          updateObjectsListForLayer(layerObj); // оновити список об'єктів після видалення
+          // clean up renderObjectsList reference if no objects left
+          if (layerObj && layerObj.featureGroup.getLayers().length === 0) {
+            layerIdToRenderObjectsList.delete(layerObj.id);
+          }
+          updateActiveLayerUI();
+          closeEditModal();
         }
       });
     };
@@ -232,35 +257,12 @@ export function showEditModal(layer: any) {
 
 export function addDoubleClickToLayer(layer: any) {
   if (!layer) return;
-  // click — підсвічування
-  layer.on('click', function(e: any) {
-    if (layer._wasDblClicked) {
-      layer._wasDblClicked = false;
-      return;
-    }
-    const type = getObjectType(layer);
-    const props = layer.properties || layer.feature?.properties || {};
-    if (layer.setStyle) {
-      const prev = { ...(layer.options || {}) };
-      layer.setStyle({ color: '#cd1d1d', weight: 8 });
-      setTimeout(() => layer.setStyle(prev), 1500);
-    } else if (layer.setIcon) {
-      const prevIcon = layer.getIcon();
-      layer.setIcon(getColoredMarkerIcon('#cd1d1d', props.icon || 'place'));
-      setTimeout(() => layer.setIcon(prevIcon), 1500);
-    } else if (layer.getElement && layer.getElement()) {
-      (layer.getElement() as HTMLElement).classList.add('global-object-search-highlight');
-      setTimeout(() => (layer.getElement() as HTMLElement).classList.remove('global-object-search-highlight'), 1500);
-    }
-    if (layer.getBounds) map.fitBounds(layer.getBounds(), { maxZoom: 17 });
-    else if (layer.getLatLng) map.setView(layer.getLatLng(), 17);
-    setTimeout(() => { layer._wasDblClicked = false; }, 300);
-  });
   // dblclick — модалка
   layer.on('dblclick', function(e: any) {
     layer._wasDblClicked = true;
     console.log('[dblclick] Leaflet event', layer);
     e.originalEvent?.stopPropagation?.();
+    e.originalEvent?.preventDefault?.();
     showEditModal(layer);
   });
   // Для маркерів — явний DOM-обробник
@@ -270,6 +272,7 @@ export function addDoubleClickToLayer(layer: any) {
         marker._wasDblClicked = true;
         console.log('[dblclick] marker DOM', marker);
         e.stopPropagation();
+        e.preventDefault();
         showEditModal(marker);
       });
     } else {
@@ -279,6 +282,13 @@ export function addDoubleClickToLayer(layer: any) {
   }
   if (layer instanceof L.Marker) {
     addDomDblClickHandler(layer);
+    // Дублюючий обробник для leaflet-івенту
+    layer.on('dblclick', function(e: any) {
+      layer._wasDblClicked = true;
+      e.originalEvent?.stopPropagation?.();
+      e.originalEvent?.preventDefault?.();
+      showEditModal(layer);
+    });
   }
 }
 
@@ -394,6 +404,9 @@ export function createLayerControl(layerObj: any) {
           saveLayersToStorage();
         }
         
+        // Clean up renderObjectsList reference
+        layerIdToRenderObjectsList.delete(layerObj.id);
+        
         // Оновлюємо видимість draw control
         updateDrawControlVisibility();
       }
@@ -498,6 +511,7 @@ export function createLayerControl(layerObj: any) {
   const objectsListWrap = document.createElement('div');
   objectsListWrap.className = 'layer-objects-list';
   function renderObjectsList() {
+    console.log('[renderObjectsList] called for layer:', layerObj.id);
     objectsListWrap.innerHTML = '';
     const objectItems: HTMLElement[] = [];
     layerObj.featureGroup.eachLayer((layer: any) => {
@@ -613,6 +627,7 @@ export function createLayerControl(layerObj: any) {
       });
       objectsListWrap.appendChild(item);
     });
+    console.log('[renderObjectsList] rendered', objectItems.length, 'objects for layer:', layerObj.id);
     // --- SortableJS для drag&drop об'єктів ---
     if (typeof window !== 'undefined' && (window as any).Sortable && objectsListWrap) {
       if (!(window as any).objectsSortables) (window as any).objectsSortables = new Map();
@@ -714,6 +729,11 @@ export function createLayerControl(layerObj: any) {
       objectsListWrap.appendChild(item);
     });
   }
+  
+  // Register the renderObjectsList for this layer
+  layerIdToRenderObjectsList.set(layerObj.id, renderObjectsList);
+  console.log('[createLayerControl] registered renderObjectsList for layer:', layerObj.id);
+  
   renderObjectsList();
 
   // --- expand/collapse logic ---
@@ -867,3 +887,25 @@ if (layersPanelDrawer && layersPanelToggle) {
 }
 
 (window as any).addDoubleClickToLayer = addDoubleClickToLayer;
+
+// --- Глобальний MutationObserver для маркерів ---
+if (typeof window !== 'undefined' && typeof L !== 'undefined') {
+  const markerObserver = new MutationObserver(() => {
+    // Знаходимо всі leaflet-marker-icon
+    document.querySelectorAll('.leaflet-marker-icon').forEach(icon => {
+      // Знаходимо відповідний leaflet-обʼєкт
+      const marker = Object.values(map._layers).find((l: any) => l._icon === icon);
+      const iconEl = icon as HTMLElement & { __dblclickHandlerAttached?: boolean };
+      if (marker && !iconEl.__dblclickHandlerAttached) {
+        iconEl.addEventListener('dblclick', (e: any) => {
+          e.stopPropagation();
+          e.preventDefault();
+          showEditModal(marker);
+        });
+        iconEl.__dblclickHandlerAttached = true;
+      }
+    });
+  });
+  const mapEl = document.getElementById('map');
+  if (mapEl) markerObserver.observe(mapEl, { childList: true, subtree: true });
+}

@@ -20,7 +20,7 @@ export function applyObjectProperties(layer, properties) {
         const iconName = properties.icon || 'place';
         layer.setIcon(L.divIcon({
             className: 'custom-marker-icon',
-            html: `<div style="background:${properties.color};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="material-icons" style="color:#fff;font-size:20px;">${iconName}</i></div>`,
+            html: `<div style="background:${properties.color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="material-icons" style="color:#fff;font-size:20px;transform:rotate(45deg);">${iconName}</i></div>`,
             iconSize: [28, 28],
             iconAnchor: [14, 28]
         }));
