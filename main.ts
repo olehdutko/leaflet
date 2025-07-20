@@ -805,13 +805,10 @@ function centerGeoSearchBar() {
 window.addEventListener('resize', centerGeoSearchBar);
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Initializing application...');
   loadLayersFromStorage();
-  console.log('[main.ts] customLayers after load:', customLayers);
   waitForMaterialIconsAndInitAutocomplete();
   initEditModal();
   centerGeoSearchBar();
-  console.log('Application initialized successfully');
 });
 
 function showConfirmDialog({title = 'Підтвердження', message = '', onConfirm, onCancel}: {title?: string, message?: string, onConfirm?: () => void, onCancel?: () => void}) {
@@ -926,8 +923,6 @@ async function handleKmzFile(file: File) {
     if (featureGroup.getBounds().isValid()) {
       (map as any).fitBounds(featureGroup.getBounds());
     }
-    
-    console.log(`KMZ файл "${file.name}" успішно імпортовано`);
     
   } catch (error: any) {
     console.error('Помилка при імпорті KMZ:', error);
@@ -1112,9 +1107,7 @@ const observeOverlayOpacity = () => {
 observeOverlayOpacity();
 
 // Ініціалізація
-console.log('Initializing application...');
 loadLayersFromStorage();
-console.log('[main.ts] customLayers after load:', customLayers);
 waitForMaterialIconsAndInitAutocomplete();
 initEditModal();
 centerGeoSearchBar();
@@ -1131,4 +1124,42 @@ if (addLayerBtn) {
   addLayerBtn.addEventListener('click', addLayer);
 }
 
-console.log('Application initialized successfully');
+if (exportAllBtn) {
+  exportAllBtn.addEventListener('click', () => {
+    const data = localStorage.getItem('lefleat_layers');
+    if (!data) return alert('Немає даних для експорту');
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'lefleat_layers.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  });
+}
+
+if (importAllBtn && importAllInput) {
+  importAllBtn.addEventListener('click', () => {
+    (importAllInput as HTMLInputElement).value = '';
+    (importAllInput as HTMLInputElement).click();
+  });
+  (importAllInput as HTMLInputElement).addEventListener('change', (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      if (!evt.target) return;
+      try {
+        localStorage.setItem('lefleat_layers', evt.target.result as string);
+        location.reload();
+      } catch (err) {
+        alert('Помилка імпорту: ' + err);
+      }
+    };
+    reader.readAsText(file);
+  });
+}

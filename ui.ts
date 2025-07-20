@@ -9,9 +9,7 @@ import { updateActiveLayerUI } from './layers.js';
 export const layerIdToRenderObjectsList = new Map();
 
 export function updateObjectsListForLayer(layerObj: any) {
-  console.log('[updateObjectsListForLayer] called for layer:', layerObj.id);
   const fn = layerIdToRenderObjectsList.get(layerObj.id);
-  console.log('[updateObjectsListForLayer] found function:', !!fn);
   if (fn) fn();
 }
 
@@ -236,7 +234,6 @@ export function showEditModal(layer: any) {
           if (!currentEditingObject.value) return;
           // Знаходимо відповідний customLayer
           const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value as L.Layer));
-          console.log('[deleteObject] found layerObj:', layerObj?.id);
           if (layerObj && layerObj.featureGroup) {
             layerObj.featureGroup.removeLayer(currentEditingObject.value as L.Layer);
           }
@@ -260,7 +257,6 @@ export function addDoubleClickToLayer(layer: any) {
   // dblclick — модалка
   layer.on('dblclick', function(e: any) {
     layer._wasDblClicked = true;
-    console.log('[dblclick] Leaflet event', layer);
     e.originalEvent?.stopPropagation?.();
     e.originalEvent?.preventDefault?.();
     showEditModal(layer);
@@ -270,7 +266,6 @@ export function addDoubleClickToLayer(layer: any) {
     if (marker._icon) {
       marker._icon.addEventListener('dblclick', (e: any) => {
         marker._wasDblClicked = true;
-        console.log('[dblclick] marker DOM', marker);
         e.stopPropagation();
         e.preventDefault();
         showEditModal(marker);
@@ -293,7 +288,6 @@ export function addDoubleClickToLayer(layer: any) {
 }
 
 export function showConfirmDialog({title = 'Підтвердження', message = '', onConfirm, onCancel}: {title?: string, message?: string, onConfirm?: () => void, onCancel?: () => void}) {
-  console.log('showConfirmDialog', title, message);
   const modal = document.getElementById('confirm-modal');
   const backdrop = document.getElementById('confirm-modal-backdrop');
   const titleEl = document.getElementById('confirm-modal-title');
@@ -418,6 +412,48 @@ export function createLayerControl(layerObj: any) {
   galleryBtn.className = 'layer-card-icon-btn';
   galleryBtn.innerHTML = '<i class="fa fa-image"></i>';
   galleryBtn.title = 'Галерея';
+  // --- Додаю обробник для додавання зображення до шару ---
+  galleryBtn.onclick = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        if (!evt.target) return;
+        // Додаємо зображення до масиву images шару
+        if (!layerObj.featureGroup.images) layerObj.featureGroup.images = [];
+        // --- Додаю overlay на мапу ---
+        const bounds = map.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        const overlay = (L as any).distortableImageOverlay(evt.target.result, {
+          bounds: [
+            [sw.lat + (ne.lat - sw.lat) * 0.2, sw.lng + (ne.lng - sw.lng) * 0.2],
+            [ne.lat - (ne.lat - sw.lat) * 0.2, ne.lng - (ne.lng - sw.lng) * 0.2]
+          ],
+          selected: true
+        }).addTo(map);
+        overlay._customUrl = evt.target.result;
+        overlay.properties = { name: file.name };
+        if (!layerObj.featureGroup.overlays) layerObj.featureGroup.overlays = [];
+        layerObj.featureGroup.overlays.push(overlay);
+        // Додаємо у images для збереження
+        layerObj.featureGroup.images.push({
+          url: evt.target.result,
+          bounds: overlay.getBounds(),
+          corners: overlay.getCorners ? overlay.getCorners() : undefined,
+          properties: { name: file.name }
+        });
+        saveLayersToStorage();
+        if (typeof renderObjectsList === 'function') renderObjectsList();
+      };
+      reader.readAsDataURL(file);
+    };
+    fileInput.click();
+  };
   
   // Add icons to header
   headerIcons.appendChild(dragHandle);
@@ -511,7 +547,6 @@ export function createLayerControl(layerObj: any) {
   const objectsListWrap = document.createElement('div');
   objectsListWrap.className = 'layer-objects-list';
   function renderObjectsList() {
-    console.log('[renderObjectsList] called for layer:', layerObj.id);
     objectsListWrap.innerHTML = '';
     const objectItems: HTMLElement[] = [];
     layerObj.featureGroup.eachLayer((layer: any) => {
@@ -538,14 +573,11 @@ export function createLayerControl(layerObj: any) {
       item.draggable = true;
       item.tabIndex = 0;
       item.onmousedown = (e) => {
-        console.log('mousedown', e, item);
       };
       item.onmouseup = (e) => {
-        console.log('mouseup', e, item);
       };
       item.ondragstart = (e) => {
         e.stopPropagation();
-        console.log('drag start', e, item);
         // кастомний drag image
         const dragImg = document.createElement('span');
         dragImg.textContent = props.name || '[обʼєкт]';
@@ -563,7 +595,6 @@ export function createLayerControl(layerObj: any) {
             layerId: layerObj.id,
             objectId: layer._leaflet_id
           };
-          console.log('[dragstart] setData', dragData);
           e.dataTransfer.setData('application/layer-object', JSON.stringify(dragData));
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setDragImage(dragImg, 0, 16);
@@ -574,18 +605,14 @@ export function createLayerControl(layerObj: any) {
       };
       item.ondragend = (e) => {
         e.stopPropagation();
-        console.log('drag end', e, item);
       };
       item.ondragover = (e) => {
         e.stopPropagation();
-        console.log('dragover', e, item);
       };
       item.ondrop = (e) => {
         e.stopPropagation();
-        console.log('drop', e, item);
         if (e.dataTransfer) {
           const data = e.dataTransfer.getData('application/layer-object');
-          console.log('[ondrop] dataTransfer.getData', data);
         } else {
           console.warn('[ondrop] no dataTransfer', e);
         }
@@ -616,8 +643,8 @@ export function createLayerControl(layerObj: any) {
       // drag-іконка не запускає підсвічування
       const dragIcon = item.querySelector('.layer-object-drag-icon');
       if (dragIcon) {
-        dragIcon.addEventListener('mousedown', e => { console.log('[drag-icon] mousedown', e, item); });
-        dragIcon.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); console.log('[drag-icon] click', e, item); });
+        dragIcon.addEventListener('mousedown', e => { });
+        dragIcon.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); });
         dragIcon.addEventListener('dblclick', e => { e.stopPropagation(); e.preventDefault(); });
       }
       // подвійний клік — модалка
@@ -627,7 +654,6 @@ export function createLayerControl(layerObj: any) {
       });
       objectsListWrap.appendChild(item);
     });
-    console.log('[renderObjectsList] rendered', objectItems.length, 'objects for layer:', layerObj.id);
     // --- SortableJS для drag&drop об'єктів ---
     if (typeof window !== 'undefined' && (window as any).Sortable && objectsListWrap) {
       if (!(window as any).objectsSortables) (window as any).objectsSortables = new Map();
@@ -635,16 +661,11 @@ export function createLayerControl(layerObj: any) {
       if (sortablesMap.has(layerObj.id)) {
         sortablesMap.get(layerObj.id).destroy();
       }
-      console.log('[SortableJS] init for layer', layerObj.id, objectsListWrap);
       const sortable = new (window as any).Sortable(objectsListWrap, {
         animation: 150,
         handle: '.layer-object-drag-icon',
         preventOnFilter: false,
-        onStart: function (evt: any) {
-          console.log('[SortableJS] onStart for layer', layerObj.id, evt);
-        },
         onEnd: function (evt: any) {
-          console.log('[SortableJS] onEnd for layer', layerObj.id, evt);
           const newOrder = Array.from(objectsListWrap.children).map((el: any) => el.dataset.objectId);
           const layers: any[] = [];
           layerObj.featureGroup.eachLayer((l: any) => layers.push(l));
@@ -691,7 +712,6 @@ export function createLayerControl(layerObj: any) {
         return;
       }
       const data = e.dataTransfer.getData('application/layer-object');
-      console.log('[objectsListWrap.ondrop] getData', data);
       if (!data) return;
       const { layerId, objectId } = JSON.parse(data);
       if (layerId == layerObj.id) return; // не переносимо у той самий шар
@@ -714,7 +734,6 @@ export function createLayerControl(layerObj: any) {
       saveLayersToStorage();
       // оновити UI тільки для поточного шару
       renderObjectsList();
-      console.log('[objectsListWrap.ondrop] moved object', objectId, 'from', layerId, 'to', layerObj.id);
     };
   }
   if (layerObj.featureGroup.images && Array.isArray(layerObj.featureGroup.images)) {
@@ -732,7 +751,6 @@ export function createLayerControl(layerObj: any) {
   
   // Register the renderObjectsList for this layer
   layerIdToRenderObjectsList.set(layerObj.id, renderObjectsList);
-  console.log('[createLayerControl] registered renderObjectsList for layer:', layerObj.id);
   
   renderObjectsList();
 

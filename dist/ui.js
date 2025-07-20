@@ -6,9 +6,7 @@ import { applyObjectProperties } from './objects.js';
 import { updateActiveLayerUI } from './layers.js';
 export const layerIdToRenderObjectsList = new Map();
 export function updateObjectsListForLayer(layerObj) {
-    console.log('[updateObjectsListForLayer] called for layer:', layerObj.id);
     const fn = layerIdToRenderObjectsList.get(layerObj.id);
-    console.log('[updateObjectsListForLayer] found function:', !!fn);
     if (fn)
         fn();
 }
@@ -272,7 +270,6 @@ export function showEditModal(layer) {
                         return;
                     // Знаходимо відповідний customLayer
                     const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value));
-                    console.log('[deleteObject] found layerObj:', layerObj === null || layerObj === void 0 ? void 0 : layerObj.id);
                     if (layerObj && layerObj.featureGroup) {
                         layerObj.featureGroup.removeLayer(currentEditingObject.value);
                     }
@@ -297,7 +294,6 @@ export function addDoubleClickToLayer(layer) {
     layer.on('dblclick', function (e) {
         var _a, _b, _c, _d;
         layer._wasDblClicked = true;
-        console.log('[dblclick] Leaflet event', layer);
         (_b = (_a = e.originalEvent) === null || _a === void 0 ? void 0 : _a.stopPropagation) === null || _b === void 0 ? void 0 : _b.call(_a);
         (_d = (_c = e.originalEvent) === null || _c === void 0 ? void 0 : _c.preventDefault) === null || _d === void 0 ? void 0 : _d.call(_c);
         showEditModal(layer);
@@ -307,7 +303,6 @@ export function addDoubleClickToLayer(layer) {
         if (marker._icon) {
             marker._icon.addEventListener('dblclick', (e) => {
                 marker._wasDblClicked = true;
-                console.log('[dblclick] marker DOM', marker);
                 e.stopPropagation();
                 e.preventDefault();
                 showEditModal(marker);
@@ -331,7 +326,6 @@ export function addDoubleClickToLayer(layer) {
     }
 }
 export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel }) {
-    console.log('showConfirmDialog', title, message);
     const modal = document.getElementById('confirm-modal');
     const backdrop = document.getElementById('confirm-modal-backdrop');
     const titleEl = document.getElementById('confirm-modal-title');
@@ -449,6 +443,53 @@ export function createLayerControl(layerObj) {
     galleryBtn.className = 'layer-card-icon-btn';
     galleryBtn.innerHTML = '<i class="fa fa-image"></i>';
     galleryBtn.title = 'Галерея';
+    // --- Додаю обробник для додавання зображення до шару ---
+    galleryBtn.onclick = () => {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file)
+                return;
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                if (!evt.target)
+                    return;
+                // Додаємо зображення до масиву images шару
+                if (!layerObj.featureGroup.images)
+                    layerObj.featureGroup.images = [];
+                // --- Додаю overlay на мапу ---
+                const bounds = map.getBounds();
+                const sw = bounds.getSouthWest();
+                const ne = bounds.getNorthEast();
+                const overlay = L.distortableImageOverlay(evt.target.result, {
+                    bounds: [
+                        [sw.lat + (ne.lat - sw.lat) * 0.2, sw.lng + (ne.lng - sw.lng) * 0.2],
+                        [ne.lat - (ne.lat - sw.lat) * 0.2, ne.lng - (ne.lng - sw.lng) * 0.2]
+                    ],
+                    selected: true
+                }).addTo(map);
+                overlay._customUrl = evt.target.result;
+                overlay.properties = { name: file.name };
+                if (!layerObj.featureGroup.overlays)
+                    layerObj.featureGroup.overlays = [];
+                layerObj.featureGroup.overlays.push(overlay);
+                // Додаємо у images для збереження
+                layerObj.featureGroup.images.push({
+                    url: evt.target.result,
+                    bounds: overlay.getBounds(),
+                    corners: overlay.getCorners ? overlay.getCorners() : undefined,
+                    properties: { name: file.name }
+                });
+                saveLayersToStorage();
+                if (typeof renderObjectsList === 'function')
+                    renderObjectsList();
+            };
+            reader.readAsDataURL(file);
+        };
+        fileInput.click();
+    };
     // Add icons to header
     headerIcons.appendChild(dragHandle);
     headerIcons.appendChild(expandBtn);
@@ -532,7 +573,6 @@ export function createLayerControl(layerObj) {
     const objectsListWrap = document.createElement('div');
     objectsListWrap.className = 'layer-objects-list';
     function renderObjectsList() {
-        console.log('[renderObjectsList] called for layer:', layerObj.id);
         objectsListWrap.innerHTML = '';
         const objectItems = [];
         layerObj.featureGroup.eachLayer((layer) => {
@@ -558,14 +598,11 @@ export function createLayerControl(layerObj) {
             item.draggable = true;
             item.tabIndex = 0;
             item.onmousedown = (e) => {
-                console.log('mousedown', e, item);
             };
             item.onmouseup = (e) => {
-                console.log('mouseup', e, item);
             };
             item.ondragstart = (e) => {
                 e.stopPropagation();
-                console.log('drag start', e, item);
                 // кастомний drag image
                 const dragImg = document.createElement('span');
                 dragImg.textContent = props.name || '[обʼєкт]';
@@ -583,7 +620,6 @@ export function createLayerControl(layerObj) {
                         layerId: layerObj.id,
                         objectId: layer._leaflet_id
                     };
-                    console.log('[dragstart] setData', dragData);
                     e.dataTransfer.setData('application/layer-object', JSON.stringify(dragData));
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setDragImage(dragImg, 0, 16);
@@ -595,18 +631,14 @@ export function createLayerControl(layerObj) {
             };
             item.ondragend = (e) => {
                 e.stopPropagation();
-                console.log('drag end', e, item);
             };
             item.ondragover = (e) => {
                 e.stopPropagation();
-                console.log('dragover', e, item);
             };
             item.ondrop = (e) => {
                 e.stopPropagation();
-                console.log('drop', e, item);
                 if (e.dataTransfer) {
                     const data = e.dataTransfer.getData('application/layer-object');
-                    console.log('[ondrop] dataTransfer.getData', data);
                 }
                 else {
                     console.warn('[ondrop] no dataTransfer', e);
@@ -644,8 +676,8 @@ export function createLayerControl(layerObj) {
             // drag-іконка не запускає підсвічування
             const dragIcon = item.querySelector('.layer-object-drag-icon');
             if (dragIcon) {
-                dragIcon.addEventListener('mousedown', e => { console.log('[drag-icon] mousedown', e, item); });
-                dragIcon.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); console.log('[drag-icon] click', e, item); });
+                dragIcon.addEventListener('mousedown', e => { });
+                dragIcon.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); });
                 dragIcon.addEventListener('dblclick', e => { e.stopPropagation(); e.preventDefault(); });
             }
             // подвійний клік — модалка
@@ -656,7 +688,6 @@ export function createLayerControl(layerObj) {
             });
             objectsListWrap.appendChild(item);
         });
-        console.log('[renderObjectsList] rendered', objectItems.length, 'objects for layer:', layerObj.id);
         // --- SortableJS для drag&drop об'єктів ---
         if (typeof window !== 'undefined' && window.Sortable && objectsListWrap) {
             if (!window.objectsSortables)
@@ -665,16 +696,11 @@ export function createLayerControl(layerObj) {
             if (sortablesMap.has(layerObj.id)) {
                 sortablesMap.get(layerObj.id).destroy();
             }
-            console.log('[SortableJS] init for layer', layerObj.id, objectsListWrap);
             const sortable = new window.Sortable(objectsListWrap, {
                 animation: 150,
                 handle: '.layer-object-drag-icon',
                 preventOnFilter: false,
-                onStart: function (evt) {
-                    console.log('[SortableJS] onStart for layer', layerObj.id, evt);
-                },
                 onEnd: function (evt) {
-                    console.log('[SortableJS] onEnd for layer', layerObj.id, evt);
                     const newOrder = Array.from(objectsListWrap.children).map((el) => el.dataset.objectId);
                     const layers = [];
                     layerObj.featureGroup.eachLayer((l) => layers.push(l));
@@ -721,7 +747,6 @@ export function createLayerControl(layerObj) {
                 return;
             }
             const data = e.dataTransfer.getData('application/layer-object');
-            console.log('[objectsListWrap.ondrop] getData', data);
             if (!data)
                 return;
             const { layerId, objectId } = JSON.parse(data);
@@ -747,7 +772,6 @@ export function createLayerControl(layerObj) {
             saveLayersToStorage();
             // оновити UI тільки для поточного шару
             renderObjectsList();
-            console.log('[objectsListWrap.ondrop] moved object', objectId, 'from', layerId, 'to', layerObj.id);
         };
     }
     if (layerObj.featureGroup.images && Array.isArray(layerObj.featureGroup.images)) {
@@ -765,7 +789,6 @@ export function createLayerControl(layerObj) {
     }
     // Register the renderObjectsList for this layer
     layerIdToRenderObjectsList.set(layerObj.id, renderObjectsList);
-    console.log('[createLayerControl] registered renderObjectsList for layer:', layerObj.id);
     renderObjectsList();
     // --- expand/collapse logic ---
     let expanded = !layerObj.collapsed;

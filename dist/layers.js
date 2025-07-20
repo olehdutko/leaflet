@@ -100,7 +100,6 @@ export function loadLayersFromStorage() {
         return false;
     try {
         const arr = JSON.parse(data);
-        console.log('[loadLayersFromStorage] arr:', arr);
         customLayers.forEach(l => {
             map.removeLayer(l.tileLayer);
             map.removeLayer(l.featureGroup);
@@ -223,7 +222,6 @@ export function loadLayersFromStorage() {
             createLayerControl(layerObj);
             featureGroup.bringToFront();
         });
-        console.log('[loadLayersFromStorage] customLayers after load:', customLayers);
         const firstVisible = customLayers.find(l => l.visible);
         if (firstVisible) {
             setActiveLayer(firstVisible.featureGroup);
@@ -277,7 +275,6 @@ export function addLayer() {
     });
 }
 export function setActiveLayer(featureGroup) {
-    console.log('[setActiveLayer] called with:', featureGroup);
     activeLayer = featureGroup;
     if (state.currentEditingObject) {
         state.currentEditingObject.value = activeLayer;

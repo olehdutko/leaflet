@@ -114,7 +114,6 @@ export function initDrawControl() {
 }
 
 export function setDrawButtonsEnabled(enabled: boolean) {
-  console.log('setDrawButtonsEnabled:', enabled, 'activeLayer:', activeLayer);
   // disable/enable all draw buttons
   const drawBtns = document.querySelectorAll('.leaflet-draw-toolbar a');
   drawBtns.forEach(btn => {
@@ -132,7 +131,6 @@ export function updateDrawControlVisibility() {
   const hasVisibleLayers = customLayers.some(layer => layer.visible);
   // виправлена перевірка: activeLayer має бути FeatureGroup
   const hasActiveLayer = !!(activeLayer && typeof L.FeatureGroup !== 'undefined' && activeLayer instanceof L.FeatureGroup);
-  console.log('[updateDrawControlVisibility] hasVisibleLayers:', hasVisibleLayers, 'hasActiveLayer:', hasActiveLayer, 'activeLayer:', activeLayer);
   if (hasVisibleLayers) {
     if (!drawControl) {
       initDrawControl();

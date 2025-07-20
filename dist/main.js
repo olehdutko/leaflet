@@ -42,7 +42,7 @@ const tileLayerOptions = {
 // ... existing code ...
 // --- Користувацькі шари ---
 import { customLayers, layerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer } from './layers.js';
-import { layerControlsDiv, addLayerBtn } from './ui.js';
+import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput } from './ui.js';
 import { materialIcons, currentEditingObject } from './state.js';
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
@@ -840,13 +840,10 @@ function centerGeoSearchBar() {
 }
 window.addEventListener('resize', centerGeoSearchBar);
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing application...');
     loadLayersFromStorage();
-    console.log('[main.ts] customLayers after load:', customLayers);
     waitForMaterialIconsAndInitAutocomplete();
     initEditModal();
     centerGeoSearchBar();
-    console.log('Application initialized successfully');
 });
 function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel }) {
     const modal = document.getElementById('confirm-modal');
@@ -953,7 +950,6 @@ function handleKmzFile(file) {
             if (featureGroup.getBounds().isValid()) {
                 map.fitBounds(featureGroup.getBounds());
             }
-            console.log(`KMZ файл "${file.name}" успішно імпортовано`);
         }
         catch (error) {
             console.error('Помилка при імпорті KMZ:', error);
@@ -1135,9 +1131,7 @@ const observeOverlayOpacity = () => {
 };
 observeOverlayOpacity();
 // Ініціалізація
-console.log('Initializing application...');
 loadLayersFromStorage();
-console.log('[main.ts] customLayers after load:', customLayers);
 waitForMaterialIconsAndInitAutocomplete();
 initEditModal();
 centerGeoSearchBar();
@@ -1150,4 +1144,45 @@ updateDrawControlVisibility();
 if (addLayerBtn) {
     addLayerBtn.addEventListener('click', addLayer);
 }
-console.log('Application initialized successfully');
+if (exportAllBtn) {
+    exportAllBtn.addEventListener('click', () => {
+        const data = localStorage.getItem('lefleat_layers');
+        if (!data)
+            return alert('Немає даних для експорту');
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'lefleat_layers.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    });
+}
+if (importAllBtn && importAllInput) {
+    importAllBtn.addEventListener('click', () => {
+        importAllInput.value = '';
+        importAllInput.click();
+    });
+    importAllInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file)
+            return;
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+            if (!evt.target)
+                return;
+            try {
+                localStorage.setItem('lefleat_layers', evt.target.result);
+                location.reload();
+            }
+            catch (err) {
+                alert('Помилка імпорту: ' + err);
+            }
+        };
+        reader.readAsText(file);
+    });
+}
