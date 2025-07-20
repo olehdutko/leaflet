@@ -218,7 +218,7 @@ export function loadLayersFromStorage() {
                     });
                 });
             }
-            const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.collapsed || false };
+            const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
             customLayers.push(layerObj);
             createLayerControl(layerObj);
             featureGroup.bringToFront();

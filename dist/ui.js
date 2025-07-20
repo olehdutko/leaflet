@@ -768,19 +768,22 @@ export function createLayerControl(layerObj) {
     console.log('[createLayerControl] registered renderObjectsList for layer:', layerObj.id);
     renderObjectsList();
     // --- expand/collapse logic ---
-    let expanded = true;
+    let expanded = !layerObj.collapsed;
     const expandableElements = [selectContainer, geonamesContainer, opacityContainer, objectsHeader, objectsListWrap];
     function updateExpandCollapse() {
         if (expanded) {
             expandableElements.forEach(el => el.style.display = '');
             expandBtn.innerHTML = '<i class="fa fa-chevron-up"></i>';
             expandBtn.title = 'Згорнути шар';
+            layerObj.collapsed = false;
         }
         else {
             expandableElements.forEach(el => el.style.display = 'none');
             expandBtn.innerHTML = '<i class="fa fa-chevron-down"></i>';
             expandBtn.title = 'Розгорнути шар';
+            layerObj.collapsed = true;
         }
+        saveLayersToStorage();
     }
     expandBtn.onclick = (e) => {
         e.stopPropagation();
