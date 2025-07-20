@@ -41,6 +41,7 @@ export interface LayerObj {
 export let customLayers: LayerObj[] = [];
 export let activeLayer: any = null;
 export let layerId = 1;
+export function getNextLayerId() { return layerId++; }
 
 /**
  * Створює TileLayer для заданого типу підкладки

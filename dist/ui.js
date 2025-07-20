@@ -254,7 +254,11 @@ export function showEditModal(layer) {
                         currentEditingObject.value.properties = currentEditingObject.value.properties || {};
                         delete currentEditingObject.value.properties.image;
                     }
-                }
+                },
+                buttons: [
+                    { text: 'Видалити', action: 'delete', className: 'btn-danger' },
+                    { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+                ]
             });
         };
     }
@@ -262,8 +266,28 @@ export function showEditModal(layer) {
     const deleteObjectBtn = document.getElementById('delete-object');
     if (deleteObjectBtn) {
         deleteObjectBtn.onclick = function () {
+            let typeName = 'обʼєкта';
+            if (currentEditingObject.value) {
+                const type = getObjectType(currentEditingObject.value);
+                if (type === 'marker')
+                    typeName = 'маркеру';
+                else if (type === 'polygon')
+                    typeName = 'полігону';
+                else if (type === 'polyline')
+                    typeName = 'лінії';
+                else if (type === 'rectangle')
+                    typeName = 'прямокутника';
+                else if (type === 'circle')
+                    typeName = 'кола';
+            }
+            let objectName = typeName;
+            if (currentEditingObject.value) {
+                const properties = getObjectProperties(currentEditingObject.value);
+                if (properties.name)
+                    objectName = `"${properties.name}"`;
+            }
             showConfirmDialog({
-                title: 'Видалення обʼєкта',
+                title: `Видалення ${typeName}: ${objectName}`,
                 message: 'Ви дійсно хочете видалити цей обʼєкт?',
                 onConfirm: () => {
                     if (!currentEditingObject.value)
@@ -282,7 +306,11 @@ export function showEditModal(layer) {
                     }
                     updateActiveLayerUI();
                     closeEditModal();
-                }
+                },
+                buttons: [
+                    { text: 'Видалити', action: 'delete', className: 'btn-danger' },
+                    { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+                ]
             });
         };
     }
@@ -325,14 +353,13 @@ export function addDoubleClickToLayer(layer) {
         });
     }
 }
-export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel }) {
+export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel, buttons }) {
     const modal = document.getElementById('confirm-modal');
     const backdrop = document.getElementById('confirm-modal-backdrop');
     const titleEl = document.getElementById('confirm-modal-title');
     const msgEl = document.getElementById('confirm-modal-message');
-    const okBtn = document.getElementById('confirm-modal-ok');
-    const cancelBtn = document.getElementById('confirm-modal-cancel');
-    if (!modal || !titleEl || !msgEl || !okBtn || !cancelBtn)
+    const footer = modal === null || modal === void 0 ? void 0 : modal.querySelector('.modal-footer');
+    if (!modal || !titleEl || !msgEl || !footer)
         return;
     modal.classList.remove('hidden');
     modal.style.display = 'block';
@@ -340,20 +367,53 @@ export function showConfirmDialog({ title = 'Підтвердження', messag
         backdrop.classList.remove('hidden');
     titleEl.textContent = title;
     msgEl.textContent = message;
-    function close(result) {
-        modal.classList.add('hidden');
-        modal.style.display = '';
-        if (backdrop)
-            backdrop.classList.add('hidden');
-        okBtn.onclick = null;
-        cancelBtn.onclick = null;
-        if (result && onConfirm)
-            onConfirm();
-        if (!result && onCancel)
-            onCancel();
+    // Очищаємо футер
+    footer.innerHTML = '';
+    if (buttons && buttons.length) {
+        buttons.forEach(btn => {
+            const button = document.createElement('button');
+            button.textContent = btn.text;
+            button.className = btn.className || '';
+            button.onclick = () => {
+                modal.classList.add('hidden');
+                modal.style.display = '';
+                if (backdrop)
+                    backdrop.classList.add('hidden');
+                if (btn.action === 'cancel' && onCancel)
+                    onCancel();
+                if (btn.action !== 'cancel' && onConfirm)
+                    onConfirm(btn.action);
+            };
+            footer.appendChild(button);
+        });
     }
-    okBtn.onclick = () => close(true);
-    cancelBtn.onclick = () => close(false);
+    else {
+        // Стандартні кнопки
+        const okBtn = document.createElement('button');
+        okBtn.textContent = 'OK';
+        okBtn.className = 'btn-primary';
+        okBtn.onclick = () => {
+            modal.classList.add('hidden');
+            modal.style.display = '';
+            if (backdrop)
+                backdrop.classList.add('hidden');
+            if (onConfirm)
+                onConfirm();
+        };
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Скасувати';
+        cancelBtn.className = 'btn-secondary';
+        cancelBtn.onclick = () => {
+            modal.classList.add('hidden');
+            modal.style.display = '';
+            if (backdrop)
+                backdrop.classList.add('hidden');
+            if (onCancel)
+                onCancel();
+        };
+        footer.appendChild(okBtn);
+        footer.appendChild(cancelBtn);
+    }
 }
 export function createLayerControl(layerObj) {
     if (!layerControlsDiv)
@@ -420,8 +480,8 @@ export function createLayerControl(layerObj) {
     deleteBtn.onclick = (e) => {
         e.stopPropagation();
         showConfirmDialog({
-            title: 'Видалення шару',
-            message: 'Ви дійсно хочете видалити цей шар?',
+            title: `Видалення шару: ${layerObj.title}`,
+            message: `Ви дійсно хочете видалити шар "${layerObj.title}"?`,
             onConfirm: () => {
                 map.removeLayer(layerObj.tileLayer);
                 map.removeLayer(layerObj.featureGroup);
@@ -435,7 +495,11 @@ export function createLayerControl(layerObj) {
                 layerIdToRenderObjectsList.delete(layerObj.id);
                 // Оновлюємо видимість draw control
                 updateDrawControlVisibility();
-            }
+            },
+            buttons: [
+                { text: 'Видалити', action: 'delete', className: 'btn-danger' },
+                { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+            ]
         });
     };
     // Gallery icon (picture)
@@ -496,12 +560,10 @@ export function createLayerControl(layerObj) {
     headerIcons.appendChild(visibilityBtn);
     headerIcons.appendChild(deleteBtn);
     headerIcons.appendChild(galleryBtn);
-    // Layer title with timestamp
+    // Layer title
     const title = document.createElement('h4');
     title.className = 'layer-card-title';
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    title.textContent = `Шар ${layerObj.id}:${timeString}`;
+    title.textContent = layerObj.title || `Шар ${layerObj.id}`;
     // Plan dropdown with blue bookmark icon
     const selectContainer = document.createElement('div');
     selectContainer.className = 'layer-card-select';

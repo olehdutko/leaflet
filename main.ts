@@ -37,10 +37,11 @@ const tileLayerOptions = {
 // ... existing code ...
 
 // --- Користувацькі шари ---
-import { customLayers, activeLayer, layerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer, updateActiveLayerUI } from './layers.js';
+import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer, updateActiveLayerUI } from './layers.js';
 
 import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput } from './ui.js';
 import { materialIcons, currentEditingObject } from './state.js';
+import { showConfirmDialog } from './ui.js';
 
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
@@ -517,20 +518,25 @@ function initEditModal() {
     else if (type === 'polyline') typeName = 'полілінію';
     else if (type === 'rectangle') typeName = 'прямокутник';
     else if (type === 'circle') typeName = 'коло';
-    closeEditModal(); // закриваємо модалку перед діалогом
+    const properties = getObjectProperties(currentEditingObject.value as L.Layer);
+    const objectName = properties.name ? `"${properties.name}"` : typeName;
+    closeEditModal();
     showConfirmDialog({
-      title: 'Видалити?',
-      message: `Ви дійсно хочете видалити ${typeName}?`,
-      onConfirm: function() {
+      title: `Видалення об'єкта: ${objectName}`,
+      message: `Ви дійсно хочете видалити об'єкт ${objectName}?`,
+      onConfirm: function(action?: string) {
         if (!currentEditingObject.value) return;
-        // Знаходимо відповідний customLayer
         const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value as L.Layer));
         if (layerObj && layerObj.featureGroup) {
           layerObj.featureGroup.removeLayer(currentEditingObject.value as L.Layer);
         }
         map.removeLayer(currentEditingObject.value as L.Layer);
         saveLayersToStorage();
-      }
+      },
+      buttons: [
+        { text: 'Видалити', action: 'delete', className: 'btn-danger' },
+        { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+      ]
     });
   };
   
@@ -811,30 +817,6 @@ document.addEventListener('DOMContentLoaded', () => {
   centerGeoSearchBar();
 });
 
-function showConfirmDialog({title = 'Підтвердження', message = '', onConfirm, onCancel}: {title?: string, message?: string, onConfirm?: () => void, onCancel?: () => void}) {
-  const modal = document.getElementById('confirm-modal');
-  const titleEl = document.getElementById('confirm-modal-title');
-  const msgEl = document.getElementById('confirm-modal-message');
-  const okBtn = document.getElementById('confirm-modal-ok');
-  const cancelBtn = document.getElementById('confirm-modal-cancel');
-  if (!modal || !titleEl || !msgEl || !okBtn || !cancelBtn) return;
-  (titleEl as HTMLElement).textContent = title;
-  (msgEl as HTMLElement).textContent = message;
-  (modal as HTMLElement).classList.remove('hidden');
-  document.body.classList.add('blurred'); // Додаємо розмиття
-
-  function close(result: boolean) {
-    (modal as HTMLElement).classList.add('hidden');
-    (okBtn as HTMLButtonElement).onclick = null;
-    (cancelBtn as HTMLButtonElement).onclick = null;
-    document.body.classList.remove('blurred'); // Прибираємо розмиття
-    if (result && typeof onConfirm === 'function') onConfirm();
-    if (!result && typeof onCancel === 'function') onCancel();
-  }
-  (okBtn as HTMLButtonElement).onclick = () => close(true);
-  (cancelBtn as HTMLButtonElement).onclick = () => close(false);
-}
-
 // --- функція для обробки KMZ файлів ---
 async function handleKmzFile(file: File) {
   try {
@@ -900,28 +882,64 @@ async function handleKmzFile(file: File) {
       }
     });
     
-    // створити об'єкт шару
-    const layerObj = { 
-      id: (layerId as any)++, // @ts-ignore
-      tileLayer, 
-      featureGroup, 
-      tileType, 
-      title: `KMZ: ${file.name.replace('.kmz', '')}`, 
-      visible: true 
-    };
-    
-    customLayers.push(layerObj);
-    
-    // додати контроль шару
-    const control = createLayerControl(layerObj);
-    if (layerControlsDiv) (layerControlsDiv as HTMLElement).appendChild(control as any); // @ts-ignore
-    
-    // зберегти в localStorage
-    saveLayersToStorage();
-    
-    // центрувати карту на об'єктах з KMZ
-    if (featureGroup.getBounds().isValid()) {
-      (map as any).fitBounds(featureGroup.getBounds());
+    // створити ім'я шару за іменем файлу
+    const layerTitle = file.name.replace(/\.(kmz|kml)$/i, '');
+    // перевірити, чи вже є шар з таким ім'ям
+    const existsIdx = customLayers.findIndex(l => l.title === layerTitle);
+    if (existsIdx !== -1) {
+      showConfirmDialog({
+        title: `Шар "${layerTitle}" вже існує`,
+        message: `Шар з назвою "${layerTitle}" вже існує. Що зробити?`,
+        onConfirm: (action?: string) => {
+          if (action === 'duplicate') {
+            // Дублювати з новою назвою
+            let copyTitle = layerTitle + ' (копія)';
+            let n = 2;
+            while (customLayers.some(l => l.title === copyTitle)) {
+              copyTitle = layerTitle + ` (копія ${n++})`;
+            }
+            actuallyAddKmzLayer(copyTitle);
+          } else if (action === 'overwrite') {
+            // Перезаписати: видалити старий і додати новий
+            const oldLayer = customLayers[existsIdx];
+            if (oldLayer && oldLayer.featureGroup) {
+              map.removeLayer(oldLayer.featureGroup);
+            }
+            customLayers.splice(existsIdx, 1);
+            if (layerControlsDiv) {
+              layerControlsDiv.innerHTML = '';
+              customLayers.forEach(layer => createLayerControl(layer));
+            }
+            actuallyAddKmzLayer(layerTitle);
+          } // cancel — нічого не робити
+        },
+        buttons: [
+          { text: 'Дублювати', action: 'duplicate', className: 'btn-primary' },
+          { text: 'Перезаписати', action: 'overwrite', className: 'btn-danger' },
+          { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+        ]
+      });
+      return;
+    } else {
+      actuallyAddKmzLayer(layerTitle);
+    }
+
+    function actuallyAddKmzLayer(title: string) {
+      const layerObj = {
+        id: getNextLayerId(),
+        tileLayer,
+        featureGroup,
+        tileType,
+        title,
+        visible: true
+      };
+      customLayers.push(layerObj);
+      const control = createLayerControl(layerObj);
+      if (layerControlsDiv) (layerControlsDiv as HTMLElement).appendChild(control as any);
+      saveLayersToStorage();
+      if (featureGroup.getBounds().isValid()) {
+        (map as any).fitBounds(featureGroup.getBounds());
+      }
     }
     
   } catch (error: any) {
@@ -1150,6 +1168,12 @@ if (importAllBtn && importAllInput) {
   (importAllInput as HTMLInputElement).addEventListener('change', (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'kmz' || ext === 'kml') {
+      // Імпорт KMZ/KML через leaflet-omnivore
+      handleKmzFile(file);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = function(evt) {
       if (!evt.target) return;
