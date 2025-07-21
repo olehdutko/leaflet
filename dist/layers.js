@@ -77,7 +77,8 @@ export function saveLayersToStorage() {
                 return ({
                     url: img.url,
                     bounds: img.bounds,
-                    opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1
+                    opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1,
+                    corners: img.corners // Додаємо corners для збереження трансформацій
                 });
             });
         }
@@ -159,25 +160,51 @@ export function loadLayersFromStorage() {
             // Відновлюємо overlays (зображення)
             if (obj.overlays && Array.isArray(obj.overlays)) {
                 featureGroup.overlays = [];
-                obj.overlays.forEach((img) => {
+                featureGroup.overlayInstances = [];
+                obj.overlays.forEach((img, idx) => {
                     var _a, _b;
                     if (!img.bounds)
                         return;
-                    // @ts-ignore
-                    const overlay = L.distortableImageOverlay(img.url, {
+                    const exists = featureGroup.overlayInstances[idx];
+                    if (exists)
+                        return;
+                    // Формуємо опції для overlay
+                    const overlayOptions = {
                         bounds: img.bounds,
                         selected: false
-                    }).addTo(featureGroup);
+                    };
+                    if (img.corners && Array.isArray(img.corners) && img.corners.length === 4) {
+                        overlayOptions.corners = img.corners.map((c) => L.latLng(c.lat, c.lng));
+                    }
+                    // @ts-ignore
+                    const overlay = L.distortableImageOverlay(img.url, overlayOptions);
                     overlay.setOpacity((_a = img.opacity) !== null && _a !== void 0 ? _a : 1);
-                    featureGroup.overlays.push({ url: img.url, bounds: img.bounds, opacity: (_b = img.opacity) !== null && _b !== void 0 ? _b : 1 });
-                    // Оновлюємо bounds при редагуванні
-                    overlay.on('edit', () => {
-                        const idx = featureGroup.overlays.findIndex((i) => i.url === img.url);
-                        if (idx !== -1) {
-                            featureGroup.overlays[idx].bounds = overlay.getBounds();
+                    // Додаю обробники подій для збереження змін
+                    const updateOverlayState = () => {
+                        const idx2 = featureGroup.overlays.findIndex((i) => i.url === img.url);
+                        if (idx2 !== -1) {
+                            featureGroup.overlays[idx2].bounds = overlay.getBounds();
+                            if (overlay.getCorners) {
+                                featureGroup.overlays[idx2].corners = overlay.getCorners();
+                            }
                             saveLayersToStorage();
                         }
+                    };
+                    overlay.on('edit', updateOverlayState);
+                    overlay.on('dragend', updateOverlayState);
+                    overlay.on('resizeend', updateOverlayState);
+                    overlay.on('rotateend', updateOverlayState);
+                    featureGroup.overlayInstances[idx] = overlay;
+                    featureGroup.overlays.push({
+                        url: img.url,
+                        bounds: img.bounds,
+                        opacity: (_b = img.opacity) !== null && _b !== void 0 ? _b : 1,
+                        corners: img.corners
                     });
+                    // Додаю overlay на карту, якщо шар активний
+                    if (obj.visible !== false) {
+                        overlay.addTo(map);
+                    }
                 });
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
@@ -296,4 +323,16 @@ export function updateActiveLayerUI() {
             }
         });
     });
+}
+// Перед видаленням featureGroup або шару — видаляю всі overlay з featureGroup і з карти
+export function removeFeatureGroupAndOverlays(featureGroup) {
+    if (featureGroup && featureGroup.overlays) {
+        featureGroup.getLayers().forEach((l) => {
+            if (l._url && featureGroup.overlays.some((img) => img.url === l._url)) {
+                l.off(); // Відписуємо всі події
+                featureGroup.removeLayer(l);
+            }
+        });
+        featureGroup.overlays = [];
+    }
 }

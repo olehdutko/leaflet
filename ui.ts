@@ -353,15 +353,12 @@ export function createLayerControl(layerObj: any) {
     if (layerObj.visible) {
       layerObj.tileLayer.addTo(map);
       layerObj.featureGroup.addTo(map);
-      // Показати overlays
-      if (layerObj.featureGroup.overlays) {
-        layerObj.featureGroup.overlays.forEach((img: any) => {
-          // @ts-ignore
-          const overlay = L.distortableImageOverlay(img.url, {
-            bounds: img.bounds,
-            selected: false
-          }).addTo(layerObj.featureGroup);
-          overlay.setOpacity(img.opacity ?? layerObj.tileLayer.options.opacity);
+      // Показати overlays (додаємо на карту overlayInstances, якщо вони ще не додані)
+      if (layerObj.featureGroup.overlayInstances) {
+        layerObj.featureGroup.overlayInstances.forEach((overlay: any) => {
+          if (overlay && !map.hasLayer(overlay)) {
+            overlay.addTo(map);
+          }
         });
       }
       visibilityBtn.innerHTML = '<i class="fa fa-eye"></i>';
@@ -370,15 +367,17 @@ export function createLayerControl(layerObj: any) {
       layerCard.classList.remove('layer-card-inactive');
     } else {
       map.removeLayer(layerObj.tileLayer);
-      map.removeLayer(layerObj.featureGroup);
-      // Приховати overlays (видалити з карти)
-      if (layerObj.featureGroup.overlays) {
-        layerObj.featureGroup.overlays.forEach((img: any) => {
-          // Знаходимо overlay у featureGroup
-          const overlays = layerObj.featureGroup.getLayers().filter((l: any) => l._url === img.url);
-          overlays.forEach((ov: any) => layerObj.featureGroup.removeLayer(ov));
+      // Знімаю overlays з карти, але не видаляю з пам'яті
+      if (layerObj.featureGroup.overlayInstances) {
+        layerObj.featureGroup.overlayInstances.forEach((overlay: any) => {
+          if (overlay && map.hasLayer(overlay)) {
+            map.removeLayer(overlay);
+          }
         });
       }
+      import('./layers.js').then(({ removeFeatureGroupAndOverlays }) => {
+        map.removeLayer(layerObj.featureGroup);
+      });
       visibilityBtn.innerHTML = '<i class="fa fa-eye-slash"></i>';
       visibilityBtn.title = 'Показати шар';
       visibilityBtn.classList.remove('blue');
@@ -454,20 +453,31 @@ export function createLayerControl(layerObj: any) {
         const overlay = L.distortableImageOverlay(imgUrl, {
           bounds: bounds,
           selected: true
-        }).addTo(layerObj.featureGroup);
+        }).addTo(map);
         // Масив overlays для шару
         if (!layerObj.featureGroup.overlays) layerObj.featureGroup.overlays = [];
+        if (!layerObj.featureGroup.overlayInstances) layerObj.featureGroup.overlayInstances = [];
         layerObj.featureGroup.overlays.push({ url: imgUrl, bounds, opacity: 1 });
+        layerObj.featureGroup.overlayInstances.push(overlay);
         // Зберігаємо в localStorage
         import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
-        // Оновлюємо bounds при редагуванні
-        overlay.on('edit', () => {
+        // Оновлюємо bounds при будь-якій зміні (drag/resize/move/rotate)
+        const updateOverlayState = () => {
           const idx = layerObj.featureGroup.overlays.findIndex((img: any) => img.url === imgUrl);
           if (idx !== -1) {
             layerObj.featureGroup.overlays[idx].bounds = overlay.getBounds();
+            // Якщо потрібні кути для експорту:
+            if (overlay.getCorners) {
+              const corners = overlay.getCorners();
+              layerObj.featureGroup.overlays[idx].corners = corners.map((c: any) => ({ lat: c.lat, lng: c.lng }));
+            }
             import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
           }
-        });
+        };
+        overlay.on('edit', updateOverlayState);
+        overlay.on('dragend', updateOverlayState);
+        overlay.on('resizeend', updateOverlayState);
+        overlay.on('rotateend', updateOverlayState);
         // Оновлення opacity при зміні прозорості шару
         overlay.setOpacity(layerObj.tileLayer.options.opacity);
       };
