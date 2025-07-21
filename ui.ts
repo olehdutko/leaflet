@@ -32,10 +32,9 @@ export function showEditModal(layer: any) {
   const lineWidthGroup = document.getElementById('line-width-group') as HTMLElement | null;
   const styleGroup = document.getElementById('style-group') as HTMLElement | null;
   const opacityGroup = document.getElementById('opacity-group') as HTMLElement | null;
-  const imageGroup = document.getElementById('image-group') as HTMLElement | null;
   const markerIconGroup = document.getElementById('marker-icon-group') as HTMLElement | null;
   // Приховуємо всі групи
-  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, imageGroup, markerIconGroup].forEach(group => {
+  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
   });
   // Показуємо відповідні групи залежно від типу
@@ -77,11 +76,7 @@ export function showEditModal(layer: any) {
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
   } else if (type === 'image') {
-    if (imageGroup) imageGroup.style.display = 'block';
-    if (opacityGroup) opacityGroup.style.display = 'block';
-    // Приховати координати для не-маркерів
-    const coordsGroup = document.querySelector('.marker-coords-group');
-    if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
+    // видалено: логіка для imageGroup, opacityGroup, coordsGroup
   }
   // Заповнюємо значення контролів
   // Колір
@@ -170,63 +165,7 @@ export function showEditModal(layer: any) {
   const editModal = document.getElementById('edit-object-modal');
   if (editModal) (editModal as HTMLElement).classList.remove('hidden');
   // --- Зображення ---
-  const imageInput = document.getElementById('object-image');
-  const imagePreviewContainer = document.getElementById('object-image-preview-container');
-  const imagePreview = document.getElementById('object-image-preview');
-  const imageRemoveBtn = document.getElementById('object-image-remove');
-  // показати preview, якщо є
-  if (properties.image) {
-    (imagePreview as HTMLImageElement).src = properties.image;
-    (imagePreviewContainer as HTMLElement).classList.remove('hidden');
-    if (imageInput) (imageInput as HTMLInputElement).classList.add('hidden');
-  } else {
-    (imagePreview as HTMLImageElement).src = '';
-    (imagePreviewContainer as HTMLElement).classList.add('hidden');
-    if (imageInput) (imageInput as HTMLInputElement).classList.remove('hidden');
-  }
-  // вибір нового зображення
-  if (imageInput) {
-    (imageInput as HTMLInputElement).value = '';
-    (imageInput as HTMLInputElement).onchange = function(e) {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        if (evt.target) {
-          (imagePreview as HTMLImageElement).src = (evt.target as any).result;
-        }
-        (imagePreviewContainer as HTMLElement).classList.remove('hidden');
-        if (imageInput) (imageInput as HTMLInputElement).classList.add('hidden');
-        if (currentEditingObject.value) {
-          (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-          if (evt.target) (currentEditingObject.value as any).properties.image = (evt.target as any).result;
-        }
-      };
-      reader.readAsDataURL(file);
-    };
-  }
-  // видалення зображення
-  if (imageRemoveBtn) {
-    (imageRemoveBtn as HTMLElement).onclick = function() {
-      showConfirmDialog({
-        title: 'Видалення зображення',
-        message: 'Ви дійсно хочете видалити це зображення?',
-        onConfirm: () => {
-          (imagePreview as HTMLImageElement).src = '';
-          (imagePreviewContainer as HTMLElement).classList.add('hidden');
-          if (imageInput) (imageInput as HTMLInputElement).classList.remove('hidden');
-          if (currentEditingObject.value) {
-            (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-            delete (currentEditingObject.value as any).properties.image;
-          }
-        },
-        buttons: [
-          { text: 'Видалити', action: 'delete', className: 'btn-danger' },
-          { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
-        ]
-      });
-    };
-  }
+  // видалено: imageInput, imagePreviewContainer, imagePreview, imageRemoveBtn, preview, вибір, видалення зображення
   // видалення об'єкта
   const deleteObjectBtn = document.getElementById('delete-object');
   if (deleteObjectBtn) {
@@ -482,37 +421,7 @@ export function createLayerControl(layerObj: any) {
     fileInput.onchange = (e: any) => {
       const file = e.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        if (!evt.target) return;
-        // Додаємо зображення до масиву images шару
-        if (!layerObj.featureGroup.images) layerObj.featureGroup.images = [];
-        // --- Додаю overlay на мапу ---
-        const bounds = map.getBounds();
-        const sw = bounds.getSouthWest();
-        const ne = bounds.getNorthEast();
-        const overlay = (L as any).distortableImageOverlay(evt.target.result, {
-          bounds: [
-            [sw.lat + (ne.lat - sw.lat) * 0.2, sw.lng + (ne.lng - sw.lng) * 0.2],
-            [ne.lat - (ne.lat - sw.lat) * 0.2, ne.lng - (ne.lng - sw.lng) * 0.2]
-          ],
-          selected: true
-        }).addTo(map);
-        overlay._customUrl = evt.target.result;
-        overlay.properties = { name: file.name };
-        if (!layerObj.featureGroup.overlays) layerObj.featureGroup.overlays = [];
-        layerObj.featureGroup.overlays.push(overlay);
-        // Додаємо у images для збереження
-        layerObj.featureGroup.images.push({
-          url: evt.target.result,
-          bounds: overlay.getBounds(),
-          corners: overlay.getCorners ? overlay.getCorners() : undefined,
-          properties: { name: file.name }
-        });
-        saveLayersToStorage();
-        if (typeof renderObjectsList === 'function') renderObjectsList();
-      };
-      reader.readAsDataURL(file);
+      // видалено: додавання зображення до шару, overlay, images, distortableImageOverlay
     };
     fileInput.click();
   };

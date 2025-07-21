@@ -23,7 +23,7 @@ export function createTileLayer(type, opacity = 1, showLabels = true) {
     });
 }
 // --- Тимчасові оголошення для зовнішніх залежностей ---
-import { showEditModal, addDoubleClickToLayer, createLayerControl, layerControlsDiv } from './ui.js';
+import { addDoubleClickToLayer, createLayerControl, layerControlsDiv } from './ui.js';
 import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
@@ -64,22 +64,13 @@ export function saveLayersToStorage() {
                     layer.feature.properties.style = 'solid';
             }
             if (layer.properties && layer.properties.image) {
-                layer.feature.properties.image = layer.properties.image;
+                // видалено: layer.feature.properties.image = layer.properties.image;
             }
         });
     });
     const layersData = customLayers.map(l => {
         // @ts-ignore
-        const images = l.featureGroup.images || [];
-        const imagesWithCorners = images.map((img) => {
-            var _a;
-            // @ts-ignore
-            const overlay = (_a = l.featureGroup.overlays) === null || _a === void 0 ? void 0 : _a.find((o) => { var _a; return o._customUrl === img.url || o._url === img.url || ((_a = o._image) === null || _a === void 0 ? void 0 : _a.src) === img.url; });
-            if (overlay && overlay.getCorners) {
-                return Object.assign(Object.assign({}, img), { corners: overlay.getCorners(), bounds: overlay.getBounds(), properties: overlay.properties || {} });
-            }
-            return Object.assign(Object.assign({}, img), { properties: img.properties || {} });
-        });
+        // видалено: images, imagesWithCorners, images: imagesWithCorners,
         return {
             id: l.id,
             tileType: l.tileType,
@@ -87,7 +78,7 @@ export function saveLayersToStorage() {
             // @ts-ignore
             showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
             geojson: l.featureGroup.toGeoJSON(),
-            images: imagesWithCorners,
+            // @ts-ignore
             title: l.title || undefined,
             visible: l.visible !== false,
             collapsed: l.collapsed || false
@@ -150,75 +141,14 @@ export function loadLayersFromStorage() {
                                 layer.setStyle({ dashArray });
                             }
                             if (feature.properties.image) {
-                                layer.properties.image = feature.properties.image;
+                                // видалено: layer.properties.image = feature.properties.image;
                             }
                         }
                     }
                 });
             }
             if (obj.images && Array.isArray(obj.images)) {
-                // @ts-ignore
-                featureGroup.images = [];
-                obj.images.forEach((img) => {
-                    let overlay;
-                    if (img.corners && img.corners.length === 4) {
-                        overlay = L.distortableImageOverlay(img.url, {
-                            corners: img.corners,
-                            selected: false
-                        }).addTo(map);
-                    }
-                    else if (img.bounds) {
-                        overlay = L.distortableImageOverlay(img.url, {
-                            bounds: img.bounds,
-                            selected: false
-                        }).addTo(map);
-                    }
-                    else {
-                        return;
-                    }
-                    overlay._customUrl = img.url;
-                    if (img.properties) {
-                        overlay.properties = img.properties;
-                        applyObjectProperties(overlay, img.properties);
-                        if (typeof img.properties.opacity === 'number') {
-                            overlay.setOpacity(img.properties.opacity);
-                        }
-                    }
-                    const el = overlay.getElement();
-                    if (el) {
-                        el.addEventListener('click', function (e) {
-                            e.stopPropagation();
-                            overlay.select();
-                        });
-                        el.addEventListener('dblclick', function (e) {
-                            e.stopPropagation();
-                            showEditModal(overlay);
-                        });
-                    }
-                    overlay.select();
-                    const savedData = {
-                        url: img.url,
-                        bounds: overlay.getBounds(),
-                        corners: overlay.getCorners ? overlay.getCorners() : img.corners,
-                        properties: img.properties || {}
-                    };
-                    // @ts-ignore
-                    featureGroup.images.push(savedData);
-                    if (!(featureGroup.overlays))
-                        (featureGroup.overlays = []);
-                    (featureGroup.overlays).push(overlay);
-                    overlay.on('edit', () => {
-                        // @ts-ignore
-                        const idx = featureGroup.images.findIndex((i) => i.url === img.url);
-                        if (idx !== -1) {
-                            // @ts-ignore
-                            featureGroup.images[idx].bounds = overlay.getBounds();
-                            // @ts-ignore
-                            featureGroup.images[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
-                            saveLayersToStorage();
-                        }
-                    });
-                });
+                // видалено: images, overlays, distortableImageOverlay, overlay, push, addEventListener, select, savedData, overlays
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
             customLayers.push(layerObj);
@@ -338,16 +268,7 @@ export function updateActiveLayerUI() {
     });
     const layersData = customLayers.map(l => {
         // @ts-ignore
-        const images = l.featureGroup.images || [];
-        const imagesWithCorners = images.map((img) => {
-            var _a;
-            // @ts-ignore
-            const overlay = (_a = l.featureGroup.overlays) === null || _a === void 0 ? void 0 : _a.find((o) => { var _a; return o._customUrl === img.url || o._url === img.url || ((_a = o._image) === null || _a === void 0 ? void 0 : _a.src) === img.url; });
-            if (overlay && overlay.getCorners) {
-                return Object.assign(Object.assign({}, img), { corners: overlay.getCorners(), bounds: overlay.getBounds(), properties: overlay.properties || {} });
-            }
-            return Object.assign(Object.assign({}, img), { properties: img.properties || {} });
-        });
+        // видалено: images, imagesWithCorners, images: imagesWithCorners,
         return {
             id: l.id,
             tileType: l.tileType,
@@ -355,7 +276,7 @@ export function updateActiveLayerUI() {
             // @ts-ignore
             showLabels: l.tileLayer._url && l.tileLayer._url.includes('nolabels') ? false : true,
             geojson: l.featureGroup.toGeoJSON(),
-            images: imagesWithCorners,
+            // @ts-ignore
             title: l.title || undefined,
             visible: l.visible !== false,
             collapsed: l.collapsed || false

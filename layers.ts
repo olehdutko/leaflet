@@ -14,14 +14,6 @@ export interface ObjectProperties {
   [key: string]: any;
 }
 
-export interface ImageOverlayData {
-  url: string;
-  bounds?: any;
-  corners?: any;
-  properties?: ObjectProperties;
-  visible?: boolean;
-}
-
 export interface OverlayData {
   // Додайте потрібні поля для overlay, якщо потрібно
   [key: string]: any;
@@ -30,12 +22,12 @@ export interface OverlayData {
 export interface LayerObj {
   id: number;
   tileLayer: L.TileLayer;
-  featureGroup: any & { images?: ImageOverlayData[]; overlays?: OverlayData[] };
+  featureGroup: any & { overlays?: OverlayData[] };
   tileType: string;
   visible: boolean;
   title: string;
   collapsed?: boolean;
-  images?: ImageOverlayData[];
+  // images?: ImageOverlayData[]; // Removed as per edit hint
 }
 
 export let customLayers: LayerObj[] = [];
@@ -98,31 +90,13 @@ export function saveLayersToStorage(): void {
         else layer.feature.properties.style = 'solid';
       }
       if (layer.properties && layer.properties.image) {
-        layer.feature.properties.image = layer.properties.image;
+        // видалено: layer.feature.properties.image = layer.properties.image;
       }
     });
   });
   const layersData = customLayers.map(l => {
     // @ts-ignore
-    const images = (l.featureGroup as any).images || [];
-    const imagesWithCorners = images.map((img: any) => {
-      // @ts-ignore
-      const overlay = (l.featureGroup as any).overlays?.find((o: any) => 
-        o._customUrl === img.url || o._url === img.url || o._image?.src === img.url
-      );
-      if (overlay && overlay.getCorners) {
-        return {
-          ...img,
-          corners: overlay.getCorners(),
-          bounds: overlay.getBounds(),
-          properties: overlay.properties || {}
-        };
-      }
-      return {
-        ...img,
-        properties: img.properties || {}
-      };
-    });
+    // видалено: images, imagesWithCorners, images: imagesWithCorners,
     return {
       id: l.id,
       tileType: l.tileType,
@@ -130,7 +104,7 @@ export function saveLayersToStorage(): void {
       // @ts-ignore
       showLabels: (l.tileLayer as any)._url && (l.tileLayer as any)._url.includes('nolabels') ? false : true,
       geojson: l.featureGroup.toGeoJSON(),
-      images: imagesWithCorners,
+      // @ts-ignore
       title: l.title || undefined,
       visible: l.visible !== false,
       collapsed: l.collapsed || false
@@ -189,72 +163,14 @@ export function loadLayersFromStorage(): boolean {
                 layer.setStyle({ dashArray });
               }
               if (feature.properties.image) {
-                layer.properties.image = feature.properties.image;
+                // видалено: layer.properties.image = feature.properties.image;
               }
             }
           }
         });
       }
       if (obj.images && Array.isArray(obj.images)) {
-        // @ts-ignore
-        (featureGroup as any).images = [];
-        obj.images.forEach((img: any) => {
-          let overlay;
-          if (img.corners && img.corners.length === 4) {
-            overlay = (L as any).distortableImageOverlay(img.url, { 
-              corners: img.corners, 
-              selected: false 
-            }).addTo(map);
-          } else if (img.bounds) {
-            overlay = (L as any).distortableImageOverlay(img.url, { 
-              bounds: img.bounds, 
-              selected: false 
-            }).addTo(map);
-          } else {
-            return;
-          }
-          overlay._customUrl = img.url;
-          if (img.properties) {
-            overlay.properties = img.properties;
-            applyObjectProperties(overlay, img.properties);
-            if (typeof img.properties.opacity === 'number') {
-              overlay.setOpacity(img.properties.opacity);
-            }
-          }
-          const el = overlay.getElement();
-          if (el) {
-            el.addEventListener('click', function(e: any) {
-              e.stopPropagation();
-              overlay.select();
-            });
-            el.addEventListener('dblclick', function(e: any) {
-              e.stopPropagation();
-              showEditModal(overlay);
-            });
-          }
-          overlay.select();
-          const savedData = {
-            url: img.url,
-            bounds: overlay.getBounds(),
-            corners: overlay.getCorners ? overlay.getCorners() : img.corners,
-            properties: img.properties || {}
-          };
-          // @ts-ignore
-          (featureGroup as any).images.push(savedData);
-          if (!((featureGroup as any).overlays)) ((featureGroup as any).overlays = []);
-          ((featureGroup as any).overlays).push(overlay);
-          overlay.on('edit', () => {
-            // @ts-ignore
-            const idx = ((featureGroup as any).images as any[]).findIndex((i: any) => i.url === img.url);
-            if (idx !== -1) {
-              // @ts-ignore
-              ((featureGroup as any).images as any[])[idx].bounds = overlay.getBounds();
-              // @ts-ignore
-              ((featureGroup as any).images as any[])[idx].corners = overlay.getCorners ? overlay.getCorners() : null;
-              saveLayersToStorage();
-            }
-          });
-        });
+        // видалено: images, overlays, distortableImageOverlay, overlay, push, addEventListener, select, savedData, overlays
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
       customLayers.push(layerObj);
@@ -367,25 +283,7 @@ export function updateActiveLayerUI(): void {
   });
   const layersData = customLayers.map(l => {
     // @ts-ignore
-    const images = (l.featureGroup as any).images || [];
-    const imagesWithCorners = images.map((img: any) => {
-      // @ts-ignore
-      const overlay = (l.featureGroup as any).overlays?.find((o: any) => 
-        o._customUrl === img.url || o._url === img.url || o._image?.src === img.url
-      );
-      if (overlay && overlay.getCorners) {
-        return {
-          ...img,
-          corners: overlay.getCorners(),
-          bounds: overlay.getBounds(),
-          properties: overlay.properties || {}
-        };
-      }
-      return {
-        ...img,
-        properties: img.properties || {}
-      };
-    });
+    // видалено: images, imagesWithCorners, images: imagesWithCorners,
     return {
       id: l.id,
       tileType: l.tileType,
@@ -393,7 +291,7 @@ export function updateActiveLayerUI(): void {
       // @ts-ignore
       showLabels: (l.tileLayer as any)._url && (l.tileLayer as any)._url.includes('nolabels') ? false : true,
       geojson: l.featureGroup.toGeoJSON(),
-      images: imagesWithCorners,
+      // @ts-ignore
       title: l.title || undefined,
       visible: l.visible !== false,
       collapsed: l.collapsed || false
