@@ -353,6 +353,17 @@ export function createLayerControl(layerObj: any) {
     if (layerObj.visible) {
       layerObj.tileLayer.addTo(map);
       layerObj.featureGroup.addTo(map);
+      // Показати overlays
+      if (layerObj.featureGroup.overlays) {
+        layerObj.featureGroup.overlays.forEach((img: any) => {
+          // @ts-ignore
+          const overlay = L.distortableImageOverlay(img.url, {
+            bounds: img.bounds,
+            selected: false
+          }).addTo(layerObj.featureGroup);
+          overlay.setOpacity(img.opacity ?? layerObj.tileLayer.options.opacity);
+        });
+      }
       visibilityBtn.innerHTML = '<i class="fa fa-eye"></i>';
       visibilityBtn.title = 'Сховати шар';
       visibilityBtn.classList.add('blue');
@@ -360,6 +371,14 @@ export function createLayerControl(layerObj: any) {
     } else {
       map.removeLayer(layerObj.tileLayer);
       map.removeLayer(layerObj.featureGroup);
+      // Приховати overlays (видалити з карти)
+      if (layerObj.featureGroup.overlays) {
+        layerObj.featureGroup.overlays.forEach((img: any) => {
+          // Знаходимо overlay у featureGroup
+          const overlays = layerObj.featureGroup.getLayers().filter((l: any) => l._url === img.url);
+          overlays.forEach((ov: any) => layerObj.featureGroup.removeLayer(ov));
+        });
+      }
       visibilityBtn.innerHTML = '<i class="fa fa-eye-slash"></i>';
       visibilityBtn.title = 'Показати шар';
       visibilityBtn.classList.remove('blue');
@@ -421,7 +440,38 @@ export function createLayerControl(layerObj: any) {
     fileInput.onchange = (e: any) => {
       const file = e.target.files[0];
       if (!file) return;
-      // видалено: додавання зображення до шару, overlay, images, distortableImageOverlay
+      const reader = new FileReader();
+      reader.onload = (evt: any) => {
+        const imgUrl = evt.target.result;
+        // Додаємо зображення у центр карти з дефолтними розмірами
+        const mapCenter = map.getCenter();
+        const bounds = [
+          [mapCenter.lat - 0.005, mapCenter.lng - 0.01],
+          [mapCenter.lat + 0.005, mapCenter.lng + 0.01]
+        ];
+        // Додаємо overlay на карту
+        // @ts-ignore
+        const overlay = L.distortableImageOverlay(imgUrl, {
+          bounds: bounds,
+          selected: true
+        }).addTo(layerObj.featureGroup);
+        // Масив overlays для шару
+        if (!layerObj.featureGroup.overlays) layerObj.featureGroup.overlays = [];
+        layerObj.featureGroup.overlays.push({ url: imgUrl, bounds, opacity: 1 });
+        // Зберігаємо в localStorage
+        import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
+        // Оновлюємо bounds при редагуванні
+        overlay.on('edit', () => {
+          const idx = layerObj.featureGroup.overlays.findIndex((img: any) => img.url === imgUrl);
+          if (idx !== -1) {
+            layerObj.featureGroup.overlays[idx].bounds = overlay.getBounds();
+            import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
+          }
+        });
+        // Оновлення opacity при зміні прозорості шару
+        overlay.setOpacity(layerObj.tileLayer.options.opacity);
+      };
+      reader.readAsDataURL(file);
     };
     fileInput.click();
   };
@@ -607,13 +657,22 @@ export function createLayerControl(layerObj: any) {
   opacitySlider.type = 'range';
   opacitySlider.min = '0';
   opacitySlider.max = '1';
-  opacitySlider.step = '0.1';
-  opacitySlider.value = layerObj.tileLayer.options.opacity.toString();
+  opacitySlider.step = '0.01';
+  opacitySlider.value = layerObj.tileLayer.options.opacity;
   opacitySlider.className = 'layer-card-slider';
-  opacitySlider.oninput = (e) => {
-    const opacity = parseFloat((e.target as HTMLInputElement).value);
-    layerObj.tileLayer.setOpacity(opacity);
-    saveLayersToStorage();
+  opacitySlider.oninput = () => {
+    const value = parseFloat(opacitySlider.value);
+    layerObj.tileLayer.setOpacity(value);
+    // Оновити opacity overlays
+    if (layerObj.featureGroup.overlays) {
+      layerObj.featureGroup.overlays.forEach((img: any) => {
+        // Знаходимо overlay у featureGroup
+        const overlays = layerObj.featureGroup.getLayers().filter((l: any) => l._url === img.url);
+        overlays.forEach((ov: any) => ov.setOpacity(value));
+        img.opacity = value;
+      });
+    }
+    import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
   };
   opacityContainer.appendChild(opacitySlider);
 

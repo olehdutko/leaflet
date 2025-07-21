@@ -95,19 +95,25 @@ export function saveLayersToStorage(): void {
     });
   });
   const layersData = customLayers.map(l => {
-    // @ts-ignore
-    // видалено: images, imagesWithCorners, images: imagesWithCorners,
+    // Зберігаємо overlays (зображення)
+    let overlays = [];
+    if (l.featureGroup.overlays && Array.isArray(l.featureGroup.overlays)) {
+      overlays = l.featureGroup.overlays.map((img: any) => ({
+        url: img.url,
+        bounds: img.bounds,
+        opacity: img.opacity ?? 1
+      }));
+    }
     return {
       id: l.id,
       tileType: l.tileType,
       opacity: l.tileLayer.options.opacity,
-      // @ts-ignore
       showLabels: (l.tileLayer as any)._url && (l.tileLayer as any)._url.includes('nolabels') ? false : true,
       geojson: l.featureGroup.toGeoJSON(),
-      // @ts-ignore
       title: l.title || undefined,
       visible: l.visible !== false,
-      collapsed: l.collapsed || false
+      collapsed: l.collapsed || false,
+      overlays
     };
   });
   localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
@@ -169,8 +175,27 @@ export function loadLayersFromStorage(): boolean {
           }
         });
       }
-      if (obj.images && Array.isArray(obj.images)) {
-        // видалено: images, overlays, distortableImageOverlay, overlay, push, addEventListener, select, savedData, overlays
+      // Відновлюємо overlays (зображення)
+      if (obj.overlays && Array.isArray(obj.overlays)) {
+        featureGroup.overlays = [];
+        obj.overlays.forEach((img: any) => {
+          if (!img.bounds) return;
+          // @ts-ignore
+          const overlay = L.distortableImageOverlay(img.url, {
+            bounds: img.bounds,
+            selected: false
+          }).addTo(featureGroup);
+          overlay.setOpacity(img.opacity ?? 1);
+          featureGroup.overlays.push({ url: img.url, bounds: img.bounds, opacity: img.opacity ?? 1 });
+          // Оновлюємо bounds при редагуванні
+          overlay.on('edit', () => {
+            const idx = featureGroup.overlays.findIndex((i: any) => i.url === img.url);
+            if (idx !== -1) {
+              featureGroup.overlays[idx].bounds = overlay.getBounds();
+              saveLayersToStorage();
+            }
+          });
+        });
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
       customLayers.push(layerObj);
@@ -281,23 +306,6 @@ export function updateActiveLayerUI(): void {
       }
     });
   });
-  const layersData = customLayers.map(l => {
-    // @ts-ignore
-    // видалено: images, imagesWithCorners, images: imagesWithCorners,
-    return {
-      id: l.id,
-      tileType: l.tileType,
-      opacity: l.tileLayer.options.opacity,
-      // @ts-ignore
-      showLabels: (l.tileLayer as any)._url && (l.tileLayer as any)._url.includes('nolabels') ? false : true,
-      geojson: l.featureGroup.toGeoJSON(),
-      // @ts-ignore
-      title: l.title || undefined,
-      visible: l.visible !== false,
-      collapsed: l.collapsed || false
-    };
-  });
-  localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
 }
 
 // ... інші функції, повʼязані з шарами ...

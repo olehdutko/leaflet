@@ -180,13 +180,6 @@ function createLayerControl(layerObj) {
       }).addTo(activeLayer);
       if (!activeLayer.images) activeLayer.images = [];
       activeLayer.images.push({ url: imgUrl, bounds });
-      // оновлюємо images у customLayers по id
-      for (const l of customLayers) {
-        if (l.featureGroup && l.id === (activeLayer._layerId || activeLayer._leaflet_id || l.id)) {
-          l.featureGroup.images = activeLayer.images;
-          break;
-        }
-      }
       saveLayersToStorage();
       overlay.on('edit', () => {
         const idx = activeLayer.images.findIndex(img => img.url === imgUrl);
@@ -416,11 +409,7 @@ function updateActiveLayerUI() {
 // --- Оновлюю saveLayersToStorage ---
 function saveLayersToStorage() {
   const layersData = customLayers.map(l => {
-    // серіалізуємо всі зображення (url вже у base64)
-    const images = (l.featureGroup.images || []).map(img => ({
-      url: img.url, // dataURL (base64)
-      bounds: img.bounds
-    }));
+    const images = l.featureGroup.images || [];
     return {
       id: l.id,
       tileType: l.tileType,
@@ -469,7 +458,6 @@ function loadLayersFromStorage() {
             bounds = [southWest, northEast];
           }
           if (!bounds) return;
-          // url - це dataURL (base64)
           const overlay = L.distortableImageOverlay(img.url, { bounds, selected: false }).addTo(featureGroup);
           featureGroup.images.push({ url: img.url, bounds });
           overlay.on('edit', () => {
