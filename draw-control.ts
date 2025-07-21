@@ -90,12 +90,7 @@ export function initDrawControl() {
       
       // Оновлюємо UI
       updateActiveLayerUI();
-    } else {
-      console.warn('No active layer to add drawn object to');
     }
-    
-    // Видаляємо з drawnItems
-    drawnItems.clearLayers();
   });
   
   map.on('draw:edited', function(e: any) {

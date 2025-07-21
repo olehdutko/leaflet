@@ -200,7 +200,7 @@ export function loadLayersFromStorage(): boolean {
     }
     return true;
   } catch (e) {
-    console.error('[loadLayersFromStorage] error:', e);
+    saveLayersToStorage();
     return false;
   }
 }

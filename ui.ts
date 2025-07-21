@@ -683,7 +683,7 @@ export function createLayerControl(layerObj: any) {
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setDragImage(dragImg, 0, 16);
         } else {
-          console.warn('[dragstart] no dataTransfer', e);
+          // [dragstart] no dataTransfer', e);
         }
         setTimeout(() => document.body.removeChild(dragImg), 50);
       };
@@ -698,7 +698,7 @@ export function createLayerControl(layerObj: any) {
         if (e.dataTransfer) {
           const data = e.dataTransfer.getData('application/layer-object');
         } else {
-          console.warn('[ondrop] no dataTransfer', e);
+          // [ondrop] no dataTransfer', e);
         }
       };
       // клік — тільки підсвічування
@@ -792,7 +792,7 @@ export function createLayerControl(layerObj: any) {
       e.preventDefault();
       objectsListWrap.classList.remove('drag-over');
       if (!e.dataTransfer) {
-        console.warn('[objectsListWrap.ondrop] no dataTransfer', e);
+        // [objectsListWrap.ondrop] no dataTransfer', e);
         return;
       }
       const data = e.dataTransfer.getData('application/layer-object');
@@ -802,7 +802,7 @@ export function createLayerControl(layerObj: any) {
       // знайти старий шар та об'єкт
       const fromLayerObj = customLayers.find(l => l.id == layerId);
       if (!fromLayerObj) {
-        console.warn('[objectsListWrap.ondrop] fromLayerObj not found', layerId);
+        // [objectsListWrap.ondrop] fromLayerObj not found', layerId);
         return;
       }
       let movedLayer = null;
@@ -810,7 +810,7 @@ export function createLayerControl(layerObj: any) {
         if (l._leaflet_id == objectId) movedLayer = l;
       });
       if (!movedLayer) {
-        console.warn('[objectsListWrap.ondrop] movedLayer not found', objectId);
+        // [objectsListWrap.ondrop] movedLayer not found', objectId);
         return;
       }
       fromLayerObj.featureGroup.removeLayer(movedLayer);

@@ -943,7 +943,6 @@ async function handleKmzFile(file: File) {
     }
     
   } catch (error: any) {
-    console.error('Помилка при імпорті KMZ:', error);
     alert('Помилка при імпорті KMZ файлу: ' + error.message); // @ts-ignore
   }
 }
