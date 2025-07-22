@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
   <meta charset="utf-8" />
   <title>Мапа Львова на Leaflet</title>
@@ -10,9 +11,11 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-distortableimage@0.20.7/dist/leaflet.distortableimage.min.css" />
+  <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/leaflet-distortableimage@0.20.7/dist/leaflet.distortableimage.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 </head>
+
 <body>
   <div id="geosearch-bar">
     <input type="text" id="geosearch-input" placeholder="Пошук по геоназвах..." autocomplete="off" />
@@ -23,14 +26,17 @@
     <button id="dark-theme">Темна</button>
   </div> -->
   <div id="layers-panel-drawer">
-    <button id="layers-panel-toggle" class="toggle-panel-btn" title="Сховати панель шарів"><span class="material-icons">chevron_left</span></button>
+    <button id="layers-panel-toggle" class="toggle-panel-btn" title="Сховати панель шарів"><span
+        class="material-icons">chevron_left</span></button>
     <div id="layers-panel">
       <div class="layers-panel-header">
         <span class="layers-panel-title">Шари</span>
         <span class="layers-panel-actions">
-          <button class="layers-panel-btn" id="export-all" title="Експортувати всі шари"><i class="fa fa-upload"></i></button>
+          <button class="layers-panel-btn" id="export-all" title="Експортувати всі шари"><i
+              class="fa fa-upload"></i></button>
           <input type="file" id="import-all-input" accept=".json,.geojson,.kmz" style="display:none">
-          <button class="layers-panel-btn" id="import-all" title="Імпортувати шари"><i class="fa fa-download"></i></button>
+          <button class="layers-panel-btn" id="import-all" title="Імпортувати шари"><i
+              class="fa fa-download"></i></button>
           <button class="layers-panel-btn" id="add-layer" title="Новий шар"><i class="fa fa-plus"></i></button>
         </span>
       </div>
@@ -43,7 +49,7 @@
     </div>
   </div>
   <div id="map"></div>
-  
+
   <!-- Модальне вікно для редагування об'єктів -->
   <div id="edit-object-modal" class="modal hidden">
     <div class="modal-content modal-content-narrow">
@@ -72,7 +78,8 @@
           <input type="file" id="object-image" accept="image/*">
           <div id="object-image-preview-container" class="image-preview-container hidden">
             <img id="object-image-preview" class="image-preview" src="" alt="preview" />
-            <button type="button" id="object-image-remove" class="btn-secondary" style="margin-left:8px;">Видалити зображення</button>
+            <button type="button" id="object-image-remove" class="btn-secondary" style="margin-left:8px;">Видалити
+              зображення</button>
           </div>
         </div>
         <div class="form-group" id="color-picker-group" class="hidden">
@@ -138,12 +145,14 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
   <script>console.log('L before toolbar', window.L);</script>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.js"></script>  
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.js"></script>
   <script src="./leaflet.distortableimage.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <!-- Додаємо бібліотеки для KMZ імпорту -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+  <script src="./debug-overlay.js"></script>
   <script type="module" src="./dist/main.js"></script>
 </body>
-</html> 
+
+</html>

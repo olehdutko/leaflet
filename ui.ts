@@ -47,7 +47,7 @@ export function showEditModal(layer: any) {
     if (markerIconInput && markerIconPreview) {
       (markerIconInput as HTMLInputElement).value = properties.icon || 'place';
       (markerIconPreview as HTMLElement).textContent = (markerIconInput as HTMLInputElement).value;
-      (markerIconInput as HTMLInputElement).oninput = function() {
+      (markerIconInput as HTMLInputElement).oninput = function () {
         (markerIconPreview as HTMLElement).textContent = (markerIconInput as HTMLInputElement).value;
       };
     }
@@ -108,7 +108,7 @@ export function showEditModal(layer: any) {
     if (colorPalette && objectColorInput) {
       // Клік по swatch
       (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(swatch => {
-        (swatch as HTMLElement).onclick = function() {
+        (swatch as HTMLElement).onclick = function () {
           (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(s => (s as HTMLElement).classList.remove('selected'));
           (swatch as HTMLElement).classList.add('selected');
           (objectColorInput as HTMLInputElement).value = (swatch as HTMLElement).dataset.color || '';
@@ -123,7 +123,7 @@ export function showEditModal(layer: any) {
         };
       });
       // Зміна через color picker
-      (objectColorInput as HTMLInputElement).oninput = function(e) {
+      (objectColorInput as HTMLInputElement).oninput = function (e) {
         (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(s => (s as HTMLElement).classList.remove('selected'));
         if (currentEditingObject.value) {
           (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
@@ -140,7 +140,7 @@ export function showEditModal(layer: any) {
   if (type === 'polyline') {
     const lineStyle = document.getElementById('line-style');
     if (lineStyle && currentEditingObject.value) {
-      (lineStyle as HTMLInputElement).onchange = function(e) {
+      (lineStyle as HTMLInputElement).onchange = function (e) {
         if (!e.target) return;
         const target = e.target as HTMLInputElement | null;
         let dashArray: string | undefined = undefined;
@@ -169,7 +169,7 @@ export function showEditModal(layer: any) {
   // видалення об'єкта
   const deleteObjectBtn = document.getElementById('delete-object');
   if (deleteObjectBtn) {
-    deleteObjectBtn.onclick = function() {
+    deleteObjectBtn.onclick = function () {
       let typeName = 'обʼєкта';
       if (currentEditingObject.value) {
         const type = getObjectType(currentEditingObject.value as L.Layer);
@@ -216,7 +216,7 @@ export function showEditModal(layer: any) {
 export function addDoubleClickToLayer(layer: any) {
   if (!layer) return;
   // dblclick — модалка
-  layer.on('dblclick', function(e: any) {
+  layer.on('dblclick', function (e: any) {
     layer._wasDblClicked = true;
     e.originalEvent?.stopPropagation?.();
     e.originalEvent?.preventDefault?.();
@@ -239,7 +239,7 @@ export function addDoubleClickToLayer(layer: any) {
   if (layer instanceof L.Marker) {
     addDomDblClickHandler(layer);
     // Дублюючий обробник для leaflet-івенту
-    layer.on('dblclick', function(e: any) {
+    layer.on('dblclick', function (e: any) {
       layer._wasDblClicked = true;
       e.originalEvent?.stopPropagation?.();
       e.originalEvent?.preventDefault?.();
@@ -248,7 +248,7 @@ export function addDoubleClickToLayer(layer: any) {
   }
 }
 
-export function showConfirmDialog({title = 'Підтвердження', message = '', onConfirm, onCancel, buttons}: {title?: string, message?: string, onConfirm?: (action?: string) => void, onCancel?: () => void, buttons?: {text: string, action: string, className?: string}[]}) {
+export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel, buttons }: { title?: string, message?: string, onConfirm?: (action?: string) => void, onCancel?: () => void, buttons?: { text: string, action: string, className?: string }[] }) {
   const modal = document.getElementById('confirm-modal');
   const backdrop = document.getElementById('confirm-modal-backdrop');
   const titleEl = document.getElementById('confirm-modal-title');
@@ -307,19 +307,19 @@ export function createLayerControl(layerObj: any) {
   const layerCard = document.createElement('div');
   layerCard.className = 'layer-card';
   layerCard.dataset.layerId = layerObj.id.toString();
-  
+
   // Make layer card draggable
   layerCard.draggable = true;
-  
+
   // Layer selection functionality
   layerCard.onclick = (e) => {
     // Don't select if clicking on buttons, drag handle, or objects
-    if ((e.target as HTMLElement).closest('.layer-card-icon-btn') || 
-        (e.target as HTMLElement).closest('.layer-object-item') ||
-        (e.target as HTMLElement).closest('.layer-objects-list')) {
+    if ((e.target as HTMLElement).closest('.layer-card-icon-btn') ||
+      (e.target as HTMLElement).closest('.layer-object-item') ||
+      (e.target as HTMLElement).closest('.layer-objects-list')) {
       return;
     }
-    
+
     // Set this layer as active
     import('./layers.js').then(({ setActiveLayer }) => {
       setActiveLayer(layerObj.featureGroup);
@@ -329,19 +329,19 @@ export function createLayerControl(layerObj: any) {
   // Header with icons row
   const headerIcons = document.createElement('div');
   headerIcons.className = 'layer-card-header-icons';
-  
+
   // Drag handle (6 dots) for layer reordering
   const dragHandle = document.createElement('button');
   dragHandle.className = 'layer-card-icon-btn layer-card-drag-handle';
   dragHandle.innerHTML = '<i class="fa fa-grip-vertical"></i>';
   dragHandle.title = 'Перетягнути для зміни порядку';
-  
+
   // Expand/collapse button
   const expandBtn = document.createElement('button');
   expandBtn.className = 'layer-card-icon-btn layer-card-expand-btn';
   expandBtn.innerHTML = '<i class="fa fa-chevron-up"></i>';
   expandBtn.title = 'Згорнути/розгорнути шар';
-  
+
   // Eye icon (visibility)
   const visibilityBtn = document.createElement('button');
   visibilityBtn.className = 'layer-card-icon-btn';
@@ -393,7 +393,7 @@ export function createLayerControl(layerObj: any) {
     visibilityBtn.classList.add('blue');
     layerCard.classList.remove('layer-card-inactive');
   }
-  
+
   // Trash icon (delete)
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'layer-card-icon-btn delete';
@@ -413,10 +413,10 @@ export function createLayerControl(layerObj: any) {
           customLayers.splice(index, 1);
           saveLayersToStorage();
         }
-        
+
         // Clean up renderObjectsList reference
         layerIdToRenderObjectsList.delete(layerObj.id);
-        
+
         // Оновлюємо видимість draw control
         updateDrawControlVisibility();
       },
@@ -426,7 +426,7 @@ export function createLayerControl(layerObj: any) {
       ]
     });
   };
-  
+
   // Gallery icon (picture)
   const galleryBtn = document.createElement('button');
   galleryBtn.className = 'layer-card-icon-btn';
@@ -454,30 +454,106 @@ export function createLayerControl(layerObj: any) {
           bounds: bounds,
           selected: true
         }).addTo(map);
-        // Масив overlays для шару
+        // Додаємо унікальний ідентифікатор для overlay
+        overlay._overlayId = `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        overlay._customUrl = imgUrl;
+
+        console.log(`🆕 Додаємо нове зображення через галерею`, {
+          overlayId: overlay._overlayId,
+          url: imgUrl.substring(0, 50) + '...',
+          bounds
+        });
+
+        // Ініціалізуємо масиви якщо потрібно
         if (!layerObj.featureGroup.overlays) layerObj.featureGroup.overlays = [];
+        if (!layerObj.featureGroup.images) layerObj.featureGroup.images = [];
         if (!layerObj.featureGroup.overlayInstances) layerObj.featureGroup.overlayInstances = [];
-        layerObj.featureGroup.overlays.push({ url: imgUrl, bounds, opacity: 1 });
+
+        // Перевіряємо, чи не існує вже таке зображення (запобігаємо дублікатам)
+        const existingImageIdx = layerObj.featureGroup.images.findIndex((img: any) => img.url === imgUrl);
+        if (existingImageIdx !== -1) {
+          console.warn(`⚠️ Зображення вже існує в images[${existingImageIdx}], пропускаємо`);
+          overlay.remove();
+          return;
+        }
+
+        const existingOverlayIdx = layerObj.featureGroup.overlays.findIndex((img: any) => img.url === imgUrl);
+        if (existingOverlayIdx !== -1) {
+          console.warn(`⚠️ Зображення вже існує в overlays[${existingOverlayIdx}], пропускаємо`);
+          overlay.remove();
+          return;
+        }
+
+        // Створюємо imageData об'єкт
+        const imageData = { url: imgUrl, bounds, opacity: 1 };
+
+        // Додаємо в усі масиви
+        layerObj.featureGroup.images.push(imageData);
+        layerObj.featureGroup.overlays.push({ ...imageData }); // Копія для сумісності
         layerObj.featureGroup.overlayInstances.push(overlay);
-        // Зберігаємо в localStorage
-        import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
-        // Оновлюємо bounds при будь-якій зміні (drag/resize/move/rotate)
-        const updateOverlayState = () => {
-          const idx = layerObj.featureGroup.overlays.findIndex((img: any) => img.url === imgUrl);
-          if (idx !== -1) {
-            layerObj.featureGroup.overlays[idx].bounds = overlay.getBounds();
-            // Якщо потрібні кути для експорту:
-            if (overlay.getCorners) {
-              const corners = overlay.getCorners();
-              layerObj.featureGroup.overlays[idx].corners = corners.map((c: any) => ({ lat: c.lat, lng: c.lng }));
-            }
+
+        console.log(`✅ Додано зображення в структури даних`, {
+          imagesCount: layerObj.featureGroup.images.length,
+          overlaysCount: layerObj.featureGroup.overlays.length,
+          instancesCount: layerObj.featureGroup.overlayInstances.length
+        });
+
+        // Глобальний debounced save
+        let globalSaveTimeout: number | null = null;
+        const globalDebouncedSave = () => {
+          if (globalSaveTimeout) clearTimeout(globalSaveTimeout);
+          globalSaveTimeout = window.setTimeout(() => {
+            console.log(`💾 Збереження після додавання нового зображення ${overlay._overlayId}`);
             import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
-          }
+            globalSaveTimeout = null;
+          }, 150);
         };
+
+        // Функція оновлення стану overlay
+        const updateOverlayState = () => {
+          console.log(`🎯 Edit event для нового overlay ${overlay._overlayId}`);
+
+          const newBounds = overlay.getBounds();
+          const newCorners = overlay.getCorners?.() ?
+            overlay.getCorners().map((c: any) => ({ lat: c.lat, lng: c.lng })) : null;
+
+          // Знаходимо overlay по URL
+          const overlayIdx = layerObj.featureGroup.overlays.findIndex((img: any) => img.url === imgUrl);
+          const imageIdx = layerObj.featureGroup.images.findIndex((img: any) => img.url === imgUrl);
+
+          if (overlayIdx === -1 || imageIdx === -1) {
+            console.error(`❌ КРИТИЧНА ПОМИЛКА: Overlay не знайдено!`, {
+              overlayId: overlay._overlayId,
+              overlayIdx,
+              imageIdx,
+              url: imgUrl.substring(0, 50) + '...'
+            });
+            return;
+          }
+
+          // Оновлюємо існуючі записи
+          layerObj.featureGroup.overlays[overlayIdx].bounds = newBounds;
+          layerObj.featureGroup.images[imageIdx].bounds = newBounds;
+
+          if (newCorners) {
+            layerObj.featureGroup.overlays[overlayIdx].corners = newCorners;
+            layerObj.featureGroup.images[imageIdx].corners = newCorners;
+          }
+
+          console.log(`📝 Оновлено новий overlay ${overlay._overlayId}`, {
+            overlayIdx,
+            imageIdx,
+            bounds: newBounds
+          });
+
+          globalDebouncedSave();
+        };
+
+        // Підписуємося тільки на 'edit' - це покриває всі зміни
         overlay.on('edit', updateOverlayState);
-        overlay.on('dragend', updateOverlayState);
-        overlay.on('resizeend', updateOverlayState);
-        overlay.on('rotateend', updateOverlayState);
+
+        // Початкове збереження
+        globalDebouncedSave();
         // Оновлення opacity при зміні прозорості шару
         overlay.setOpacity(layerObj.tileLayer.options.opacity);
       };
@@ -486,7 +562,7 @@ export function createLayerControl(layerObj: any) {
     fileInput.click();
   };
   galleryBtn.classList.add('blue');
-  
+
   // Export button (upload icon)
   const exportBtn = document.createElement('button');
   exportBtn.className = 'layer-card-icon-btn export';
@@ -499,7 +575,7 @@ export function createLayerControl(layerObj: any) {
     const images = (l.featureGroup as any).images || [];
     const imagesWithCorners = images.map((img: any) => {
       // @ts-ignore
-      const overlay = (l.featureGroup as any).overlays?.find((o: any) => 
+      const overlay = (l.featureGroup as any).overlays?.find((o: any) =>
         o._customUrl === img.url || o._url === img.url || o._image?.src === img.url
       );
       if (overlay && overlay.getCorners) {
@@ -569,7 +645,7 @@ export function createLayerControl(layerObj: any) {
     input.style.borderRadius = '4px';
     input.style.border = '1px solid #d1d5db';
     input.onblur = save;
-    input.onkeydown = function(e) {
+    input.onkeydown = function (e) {
       if (e.key === 'Enter') {
         input.blur();
       } else if (e.key === 'Escape') {
@@ -633,13 +709,13 @@ export function createLayerControl(layerObj: any) {
     }
     saveLayersToStorage();
   };
-  
+
   // Add bookmark icon to select container
   const bookmarkIcon = document.createElement('i');
   bookmarkIcon.className = 'fa fa-bookmark';
   bookmarkIcon.style.color = '#1976d2';
   bookmarkIcon.style.marginRight = '8px';
-  
+
   selectContainer.appendChild(bookmarkIcon);
   selectContainer.appendChild(select);
 
@@ -655,7 +731,7 @@ export function createLayerControl(layerObj: any) {
   const geonamesNote = document.createElement('span');
   geonamesNote.className = 'note';
   geonamesNote.textContent = '(неможливо вимкнути для OSM)';
-  
+
   geonamesContainer.appendChild(geonamesCheckbox);
   geonamesContainer.appendChild(geonamesLabel);
   geonamesContainer.appendChild(geonamesNote);
@@ -712,12 +788,12 @@ export function createLayerControl(layerObj: any) {
         `<span class="material-icons layer-object-drag-icon">drag_indicator</span>` +
         (
           type === 'marker' ? `<span class="material-icons">${props.icon || 'place'}</span>` :
-          type === 'polygon' ? '<i class="fa fa-draw-polygon"></i>' :
-          type === 'polyline' ? '<i class="fa fa-share-alt"></i>' :
-          type === 'circle' ? '<i class="fa fa-circle"></i>' :
-          type === 'rectangle' ? '<i class="fa fa-square"></i>' :
-          type === 'image' ? '<i class="fa fa-image"></i>' :
-          '<i class="fa fa-question"></i>'
+            type === 'polygon' ? '<i class="fa fa-draw-polygon"></i>' :
+              type === 'polyline' ? '<i class="fa fa-share-alt"></i>' :
+                type === 'circle' ? '<i class="fa fa-circle"></i>' :
+                  type === 'rectangle' ? '<i class="fa fa-square"></i>' :
+                    type === 'image' ? '<i class="fa fa-image"></i>' :
+                      '<i class="fa fa-question"></i>'
         ) +
         ` <span class="layer-object-name">${props.name || '[без назви]'}</span>`;
       item.dataset.objectId = layer._leaflet_id;
@@ -852,7 +928,7 @@ export function createLayerControl(layerObj: any) {
       const rect = objectsListWrap.getBoundingClientRect();
       const x = e.clientX;
       const y = e.clientY;
-      
+
       if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
         objectsListWrap.classList.remove('drag-over');
       }
@@ -901,16 +977,16 @@ export function createLayerControl(layerObj: any) {
       objectsListWrap.appendChild(item);
     });
   }
-  
+
   // Register the renderObjectsList for this layer
   layerIdToRenderObjectsList.set(layerObj.id, renderObjectsList);
-  
+
   renderObjectsList();
 
   // --- expand/collapse logic ---
   let expanded = !layerObj.collapsed;
   const expandableElements = [selectContainer, geonamesContainer, opacityContainer, objectsHeader, objectsListWrap];
-  
+
   function updateExpandCollapse() {
     if (expanded) {
       expandableElements.forEach(el => el.style.display = '');
@@ -925,13 +1001,13 @@ export function createLayerControl(layerObj: any) {
     }
     saveLayersToStorage();
   }
-  
+
   expandBtn.onclick = (e) => {
     e.stopPropagation();
     expanded = !expanded;
     updateExpandCollapse();
   };
-  
+
   updateExpandCollapse();
 
   // --- порядок додавання у layerCard ---
@@ -949,16 +1025,16 @@ export function createLayerControl(layerObj: any) {
     e.dataTransfer!.effectAllowed = 'move';
     layerCard.classList.add('dragging');
   };
-  
+
   layerCard.ondragend = () => {
     layerCard.classList.remove('dragging');
   };
-  
+
   layerCard.ondragover = (e) => {
     e.preventDefault();
     e.dataTransfer!.dropEffect = 'move';
   };
-  
+
   layerCard.ondrop = (e) => {
     e.preventDefault();
     const draggedLayerId = e.dataTransfer?.getData('text/plain');
@@ -966,17 +1042,17 @@ export function createLayerControl(layerObj: any) {
       // Reorder layers
       const draggedLayerIndex = customLayers.findIndex(l => l.id.toString() === draggedLayerId);
       const currentLayerIndex = customLayers.findIndex(l => l.id === layerObj.id);
-      
+
       if (draggedLayerIndex !== -1 && currentLayerIndex !== -1) {
         const [draggedLayer] = customLayers.splice(draggedLayerIndex, 1);
         customLayers.splice(currentLayerIndex, 0, draggedLayer);
-        
+
         // Re-render all layers to update order
         layerControlsDiv.innerHTML = '';
         customLayers.forEach(layer => {
           createLayerControl(layer);
         });
-        
+
         saveLayersToStorage();
       }
     }
@@ -1008,7 +1084,7 @@ export function selectLayer(layerId: string) {
   document.querySelectorAll('.layer-card').forEach(card => {
     card.classList.remove('active');
   });
-  
+
   const targetCard = document.querySelector(`[data-layer-id="${layerId}"]`);
   if (targetCard) {
     targetCard.classList.add('active');

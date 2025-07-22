@@ -69,10 +69,12 @@ export function saveLayersToStorage() {
         });
     });
     const layersData = customLayers.map(l => {
-        // Зберігаємо overlays (зображення)
+        // Зберігаємо overlays (зображення)  
         let overlays = [];
-        if (l.featureGroup.overlays && Array.isArray(l.featureGroup.overlays)) {
-            overlays = l.featureGroup.overlays.map((img) => {
+        // Перевіряємо і в overlays, і в images для сумісності
+        const imageData = l.featureGroup.images || l.featureGroup.overlays;
+        if (imageData && Array.isArray(imageData)) {
+            overlays = imageData.map((img) => {
                 var _a;
                 return ({
                     url: img.url,
@@ -81,6 +83,7 @@ export function saveLayersToStorage() {
                     corners: img.corners // Додаємо corners для збереження трансформацій
                 });
             });
+            console.log(`Шар ${l.title}: зберігаємо ${overlays.length} зображень (знайдено в ${l.featureGroup.images ? 'images' : 'overlays'})`);
         }
         return {
             id: l.id,
@@ -94,12 +97,22 @@ export function saveLayersToStorage() {
             overlays
         };
     });
-    localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
+    // Перевіряємо, що дані не порожні перед збереженням
+    if (layersData.length > 0) {
+        localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
+        console.log(`Збережено ${layersData.length} шарів у localStorage`);
+    }
+    else {
+        console.warn('Не зберігаємо порожній масив шарів у localStorage');
+    }
 }
 export function loadLayersFromStorage() {
     const data = localStorage.getItem('lefleat_layers');
-    if (!data)
+    if (!data) {
+        console.log('localStorage порожній, створюємо новий шар');
         return false;
+    }
+    console.log('Завантажуємо дані з localStorage:', data.length, 'символів');
     try {
         let arr = JSON.parse(data);
         if (!Array.isArray(arr))
@@ -159,7 +172,7 @@ export function loadLayersFromStorage() {
             }
             // Відновлюємо overlays (зображення)
             if (obj.overlays && Array.isArray(obj.overlays)) {
-                featureGroup.images = obj.overlays.map((img) => {
+                const imageData = obj.overlays.map((img) => {
                     var _a;
                     return ({
                         url: img.url,
@@ -168,6 +181,10 @@ export function loadLayersFromStorage() {
                         corners: img.corners
                     });
                 });
+                // Зберігаємо в обох форматах для сумісності
+                featureGroup.images = imageData;
+                featureGroup.overlays = [];
+                console.log(`Відновлюємо ${imageData.length} зображень для шару ${obj.title}`);
                 restoreOverlaysForFeatureGroup(featureGroup);
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
@@ -198,10 +215,12 @@ export function loadLayersFromStorage() {
                 }
             });
         }
+        console.log(`Успішно завантажено ${customLayers.length} шарів з localStorage`);
         return true;
     }
     catch (e) {
-        saveLayersToStorage();
+        console.error('Помилка завантаження з localStorage:', e);
+        // НЕ викликаємо saveLayersToStorage(), щоб не перезаписати дані!
         return false;
     }
 }
@@ -308,50 +327,221 @@ export function addOverlayToFeatureGroup(featureGroup, url) {
     ];
     const overlay = window.L.distortableImageOverlay(url, { bounds, selected: true }).addTo(map);
     overlay._customUrl = url;
+    overlay._overlayId = `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Ініціалізуємо масиви якщо потрібно
     if (!featureGroup.images)
         featureGroup.images = [];
     if (!featureGroup.overlays)
         featureGroup.overlays = [];
-    featureGroup.images.push({ url, bounds, corners: overlay.getCorners() });
-    featureGroup.overlays.push(overlay);
+    if (!featureGroup.overlayInstances)
+        featureGroup.overlayInstances = [];
+    // Додаємо метадані (не Leaflet об'єкти)
+    const imageData = { url, bounds, corners: overlay.getCorners() };
+    featureGroup.images.push(imageData);
+    featureGroup.overlays.push(imageData); // Метадані, не Leaflet об'єкт!
+    featureGroup.overlayInstances.push(overlay); // Leaflet об'єкт окремо
+    // Debounced збереження
+    let saveTimeout = null;
+    const debouncedSave = () => {
+        if (saveTimeout)
+            clearTimeout(saveTimeout);
+        saveTimeout = window.setTimeout(() => {
+            saveLayersToStorage();
+            saveTimeout = null;
+        }, 100);
+    };
     overlay.on('edit', () => {
         const idx = featureGroup.images.findIndex((img) => img.url === url);
+        const overlayIdx = featureGroup.overlays.findIndex((img) => img.url === url);
         if (idx !== -1) {
             featureGroup.images[idx].bounds = overlay.getBounds();
             featureGroup.images[idx].corners = overlay.getCorners();
-            saveLayersToStorage();
         }
+        if (overlayIdx !== -1) {
+            featureGroup.overlays[overlayIdx].bounds = overlay.getBounds();
+            featureGroup.overlays[overlayIdx].corners = overlay.getCorners();
+        }
+        console.log(`Додатковий overlay ${overlay._overlayId} оновлено`);
+        debouncedSave();
     });
-    saveLayersToStorage();
+    debouncedSave();
 }
 export function removeAllOverlaysFromFeatureGroup(featureGroup) {
-    if (featureGroup.overlays) {
-        featureGroup.overlays.forEach((ov) => map.removeLayer(ov));
-        featureGroup.overlays = [];
-    }
-}
-export function restoreOverlaysForFeatureGroup(featureGroup) {
-    removeAllOverlaysFromFeatureGroup(featureGroup);
-    if (!featureGroup.images)
+    var _a, _b, _c;
+    // Захист від очищення під час відновлення 
+    if (featureGroup._restoringOverlays && featureGroup._cleaningInProgress) {
+        console.log(`🔒 Очищення пропущено - вже відбувається відновлення`);
         return;
-    featureGroup.overlays = [];
-    featureGroup.images.forEach((img) => {
-        let overlay;
-        if (img.corners && img.corners.length === 4) {
-            overlay = window.L.distortableImageOverlay(img.url, { corners: img.corners, selected: false }).addTo(map);
-        }
-        else {
-            overlay = window.L.distortableImageOverlay(img.url, { bounds: img.bounds, selected: false }).addTo(map);
-        }
-        overlay._customUrl = img.url;
-        featureGroup.overlays.push(overlay);
-        overlay.on('edit', () => {
-            const idx = featureGroup.images.findIndex((i) => i.url === img.url);
-            if (idx !== -1) {
-                featureGroup.images[idx].bounds = overlay.getBounds();
-                featureGroup.images[idx].corners = overlay.getCorners();
-                saveLayersToStorage();
+    }
+    featureGroup._cleaningInProgress = true;
+    console.log(`🗑️ Очищення overlay з featureGroup`, {
+        instances: ((_a = featureGroup.overlayInstances) === null || _a === void 0 ? void 0 : _a.length) || 0,
+        overlays: ((_b = featureGroup.overlays) === null || _b === void 0 ? void 0 : _b.length) || 0,
+        images: ((_c = featureGroup.images) === null || _c === void 0 ? void 0 : _c.length) || 0
+    });
+    // Видаляємо Leaflet overlay об'єкти з карти через overlayInstances
+    if (featureGroup.overlayInstances && Array.isArray(featureGroup.overlayInstances)) {
+        console.log(`🗑️ Видаляємо ${featureGroup.overlayInstances.length} overlay instances`);
+        featureGroup.overlayInstances.forEach((ov, idx) => {
+            try {
+                if (ov && ov._overlayId) {
+                    console.log(`🗑️ Видаляємо overlay ${ov._overlayId} (${idx})`);
+                }
+                if (ov && typeof ov.remove === 'function') {
+                    ov.remove();
+                }
+                else if (ov) {
+                    map.removeLayer(ov);
+                }
+            }
+            catch (error) {
+                console.warn(`⚠️ Помилка при видаленні overlay ${idx}:`, error);
             }
         });
+    }
+    // Видаляємо усі DOM елементи leaflet-image-layer, що відповідають нашим зображенням
+    if (featureGroup.images && Array.isArray(featureGroup.images)) {
+        featureGroup.images.forEach((img) => {
+            const imgElements = document.querySelectorAll(`img.leaflet-image-layer[src="${img.url}"]`);
+            imgElements.forEach(el => {
+                console.log(`🗑️ Видаляємо DOM елемент img для ${img.url.substring(0, 50)}...`);
+                el.remove();
+            });
+        });
+    }
+    // Видаляємо overlay об'єкти з Leaflet featureGroup._layers
+    if (featureGroup._layers) {
+        const layerIds = Object.keys(featureGroup._layers);
+        layerIds.forEach(layerId => {
+            const layer = featureGroup._layers[layerId];
+            // Перевіряємо, чи це distortable image overlay
+            if (layer && (layer._url || layer._image || layer.constructor.name.includes('Distortable'))) {
+                console.log(`🗑️ Видаляємо layer ${layerId} з featureGroup._layers`);
+                try {
+                    if (typeof layer.remove === 'function') {
+                        layer.remove();
+                    }
+                    else {
+                        featureGroup.removeLayer(layer);
+                    }
+                }
+                catch (error) {
+                    console.warn(`⚠️ Помилка при видаленні layer ${layerId}:`, error);
+                }
+            }
+        });
+    }
+    // Повністю очищуємо масиви
+    featureGroup.overlayInstances = [];
+    featureGroup.overlays = [];
+    // НЕ очищуємо featureGroup.images - це наші метадані для відновлення
+    console.log(`✅ Очищення завершено`);
+    featureGroup._cleaningInProgress = false;
+}
+export function restoreOverlaysForFeatureGroup(featureGroup) {
+    var _a;
+    // Захист від повторних викликів
+    if (featureGroup._restoringOverlays) {
+        console.warn(`⚠️ restoreOverlaysForFeatureGroup вже виконується для цього featureGroup, пропускаємо`);
+        return;
+    }
+    featureGroup._restoringOverlays = true;
+    console.log(`🔄 Відновлення overlay для featureGroup`, { imagesCount: (_a = featureGroup.images) === null || _a === void 0 ? void 0 : _a.length });
+    // Повністю очищуємо всі overlay структури
+    removeAllOverlaysFromFeatureGroup(featureGroup);
+    if (!featureGroup.images || !Array.isArray(featureGroup.images) || featureGroup.images.length === 0) {
+        console.log('📭 Немає зображень для відновлення');
+        featureGroup._restoringOverlays = false;
+        return;
+    }
+    // Ініціалізуємо порожні масиви
+    featureGroup.overlays = [];
+    featureGroup.overlayInstances = [];
+    console.log(`📦 Відновлюємо ${featureGroup.images.length} зображень`);
+    featureGroup.images.forEach((img, imgIndex) => {
+        var _a, _b;
+        console.log(`🖼️ Створюємо overlay ${imgIndex + 1}/${featureGroup.images.length}`, {
+            url: ((_a = img.url) === null || _a === void 0 ? void 0 : _a.substring(0, 50)) + '...',
+            hasCorners: !!(img.corners && img.corners.length === 4)
+        });
+        // Перевіряємо, чи overlay вже існує в DOM
+        const existingImg = document.querySelector(`img.leaflet-image-layer[src="${img.url}"]`);
+        if (existingImg) {
+            console.warn(`⚠️ Overlay вже існує в DOM, пропускаємо створення для ${img.url.substring(0, 50)}...`);
+            return;
+        }
+        // Створюємо overlay
+        let overlay;
+        try {
+            if (img.corners && img.corners.length === 4) {
+                overlay = window.L.distortableImageOverlay(img.url, {
+                    corners: img.corners,
+                    selected: false
+                }).addTo(map);
+            }
+            else {
+                overlay = window.L.distortableImageOverlay(img.url, {
+                    bounds: img.bounds,
+                    selected: false
+                }).addTo(map);
+            }
+        }
+        catch (error) {
+            console.error(`❌ Помилка створення overlay ${imgIndex}:`, error);
+            return; // В forEach потрібно використовувати return замість continue
+        }
+        // Додаємо метадані
+        overlay._customUrl = img.url;
+        overlay._overlayId = `restored_${Date.now()}_${imgIndex}_${Math.random().toString(36).substr(2, 6)}`;
+        console.log(`✅ Створено overlay ${overlay._overlayId}`);
+        // Зберігаємо в масивах (НЕ перевіряємо дублікати, бо ми щойно очистили)
+        featureGroup.overlayInstances.push(overlay);
+        featureGroup.overlays.push({
+            url: img.url,
+            bounds: img.bounds,
+            opacity: (_b = img.opacity) !== null && _b !== void 0 ? _b : 1,
+            corners: img.corners
+        });
+        // Глобальний debounced save (один для всіх overlay)
+        let globalSaveTimeout = null;
+        const globalDebouncedSave = () => {
+            if (globalSaveTimeout)
+                clearTimeout(globalSaveTimeout);
+            globalSaveTimeout = window.setTimeout(() => {
+                console.log(`💾 Глобальне збереження після редагування overlay`);
+                saveLayersToStorage();
+                globalSaveTimeout = null;
+            }, 200); // Більший delay для групування змін
+        };
+        // Обробник подій edit (тільки один!)
+        overlay.on('edit', () => {
+            console.log(`🎯 Edit event для overlay ${overlay._overlayId}`);
+            const newBounds = overlay.getBounds();
+            const newCorners = overlay.getCorners();
+            // Оновлюємо ТІЛЬКИ в images (основний масив)
+            if (featureGroup.images[imgIndex]) {
+                featureGroup.images[imgIndex].bounds = newBounds;
+                featureGroup.images[imgIndex].corners = newCorners;
+                console.log(`📝 Оновлено images[${imgIndex}] для overlay ${overlay._overlayId}`);
+            }
+            // Оновлюємо в overlays по URL (запасний масив)
+            const overlayIdx = featureGroup.overlays.findIndex((o) => o.url === img.url);
+            if (overlayIdx !== -1) {
+                featureGroup.overlays[overlayIdx].bounds = newBounds;
+                featureGroup.overlays[overlayIdx].corners = newCorners;
+                console.log(`📝 Оновлено overlays[${overlayIdx}] для overlay ${overlay._overlayId}`);
+            }
+            else {
+                console.warn(`⚠️ Не знайдено overlay в overlays масиві для ${overlay._overlayId}`);
+            }
+            globalDebouncedSave();
+        });
     });
+    console.log(`🎉 Відновлення завершено:`, {
+        images: featureGroup.images.length,
+        overlays: featureGroup.overlays.length,
+        instances: featureGroup.overlayInstances.length
+    });
+    // Знімаємо прапорець відновлення
+    featureGroup._restoringOverlays = false;
 }

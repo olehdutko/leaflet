@@ -75,7 +75,7 @@ function setupMarkerIconAutocomplete() {
 
   let currentFocus = -1;
 
-  input.addEventListener('input', function() {
+  input.addEventListener('input', function () {
     const val = input.value.trim().toLowerCase();
     list.innerHTML = '';
     preview.textContent = input.value;
@@ -85,7 +85,7 @@ function setupMarkerIconAutocomplete() {
       const item = document.createElement('div');
       item.className = 'autocomplete-item';
       item.innerHTML = `<span class="material-icons">${name}</span> ${name}`;
-      item.onclick = function() {
+      item.onclick = function () {
         input.value = name;
         preview.textContent = name;
         list.innerHTML = '';
@@ -99,7 +99,7 @@ function setupMarkerIconAutocomplete() {
     });
   });
 
-  input.onkeydown = function(e) {
+  input.onkeydown = function (e) {
     const items = list.querySelectorAll('.autocomplete-item');
     if (e.key === 'ArrowDown') {
       currentFocus++;
@@ -119,7 +119,7 @@ function setupMarkerIconAutocomplete() {
     }
   };
   input.onfocus = input.oninput;
-  input.onkeydown = function(e) {
+  input.onkeydown = function (e) {
     const items = list.querySelectorAll('.autocomplete-item');
     if (e.key === 'ArrowDown') {
       currentFocus++;
@@ -138,7 +138,7 @@ function setupMarkerIconAutocomplete() {
       }
     }
   };
-  document.addEventListener('click', function(e) {
+  document.addEventListener('click', function (e) {
     if (e.target !== input) list.innerHTML = '';
   });
 }
@@ -215,13 +215,13 @@ function showEditModal(layer: L.Layer) {
   currentEditingObject.value = layer;
   const type = getObjectType(layer);
   const properties = getObjectProperties(layer);
-  
+
   // Оновлюємо заголовок
   const modalTitle = document.getElementById('modal-title');
   if (modalTitle) {
     modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'об\'єкта'}`;
   }
-  
+
   // Заповнюємо поля
   const objectName = document.getElementById('object-name') as HTMLInputElement | null;
   if (objectName) objectName.value = properties.name;
@@ -235,12 +235,12 @@ function showEditModal(layer: L.Layer) {
   const opacityGroup = document.getElementById('opacity-group') as HTMLElement | null;
   const imageGroup = document.getElementById('image-group') as HTMLElement | null;
   const markerIconGroup = document.getElementById('marker-icon-group') as HTMLElement | null;
-  
+
   // Приховуємо всі групи
   [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, imageGroup, markerIconGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
   });
-  
+
   // Показуємо відповідні групи залежно від типу
   if (type === 'marker') {
     if (colorPickerGroup) colorPickerGroup.style.display = 'block';
@@ -321,7 +321,7 @@ function showEditModal(layer: L.Layer) {
     if (colorPalette && objectColorInput) {
       // Клік по swatch
       (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(swatch => {
-        (swatch as HTMLElement).onclick = function() {
+        (swatch as HTMLElement).onclick = function () {
           (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(s => (s as HTMLElement).classList.remove('selected'));
           (swatch as HTMLElement).classList.add('selected');
           (objectColorInput as HTMLInputElement).value = (swatch as HTMLElement).dataset.color || '';
@@ -336,7 +336,7 @@ function showEditModal(layer: L.Layer) {
         };
       });
       // Зміна через color picker
-      (objectColorInput as HTMLInputElement).oninput = function(e) {
+      (objectColorInput as HTMLInputElement).oninput = function (e) {
         (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(s => (s as HTMLElement).classList.remove('selected'));
         if (currentEditingObject.value) {
           (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
@@ -354,7 +354,7 @@ function showEditModal(layer: L.Layer) {
   if (type === 'polyline') {
     const lineStyle = document.getElementById('line-style');
     if (lineStyle && currentEditingObject.value) {
-      (lineStyle as HTMLInputElement).onchange = function(e) {
+      (lineStyle as HTMLInputElement).onchange = function (e) {
         if (!e.target) return;
         const target = e.target as HTMLInputElement | null;
         let dashArray: string | undefined = undefined;
@@ -375,7 +375,7 @@ function showEditModal(layer: L.Layer) {
       (currentEditingObject.value as L.Polyline).options.dashArray = dashArray;
     }
   }
-  
+
   // Показуємо модальне вікно
   const editModal = document.getElementById('edit-object-modal');
   if (editModal) (editModal as HTMLElement).classList.remove('hidden');
@@ -398,11 +398,11 @@ function showEditModal(layer: L.Layer) {
   // вибір нового зображення
   if (imageInput) {
     (imageInput as HTMLInputElement).value = '';
-    (imageInput as HTMLInputElement).onchange = function(e) {
+    (imageInput as HTMLInputElement).onchange = function (e) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(evt) {
+      reader.onload = function (evt) {
         if (evt.target) {
           (imagePreview as HTMLImageElement).src = (evt.target as any).result;
         }
@@ -418,7 +418,7 @@ function showEditModal(layer: L.Layer) {
   }
   // видалення зображення
   if (imageRemoveBtn) {
-    (imageRemoveBtn as HTMLElement).onclick = function() {
+    (imageRemoveBtn as HTMLElement).onclick = function () {
       (imagePreview as HTMLImageElement).src = '';
       (imagePreviewContainer as HTMLElement).classList.add('hidden');
       if (imageInput) (imageInput as HTMLInputElement).classList.remove('hidden');
@@ -440,13 +440,13 @@ export function closeEditModal() {
 // Функція для збереження змін
 function saveObjectChanges() {
   if (!currentEditingObject.value) return;
-  
+
   const type = getObjectType(currentEditingObject.value as L.Layer);
   const properties: any = {
     name: (document.getElementById('object-name') as HTMLInputElement).value,
     description: (document.getElementById('object-description') as HTMLTextAreaElement).value
   };
-  
+
   if (type === 'marker') {
     const markerColor = document.getElementById('object-color');
     if (markerColor) properties.color = (markerColor as HTMLInputElement).value;
@@ -485,13 +485,13 @@ function saveObjectChanges() {
     const objectOpacity = document.getElementById('object-opacity');
     if (objectOpacity) properties.opacity = parseFloat((objectOpacity as HTMLInputElement).value);
   }
-  
+
   // зображення
   const imagePreview = document.getElementById('object-image-preview');
   if (imagePreview && (imagePreview as HTMLImageElement).src && !(imagePreview as HTMLElement).classList.contains('hidden')) {
     properties.image = (imagePreview as HTMLImageElement).src;
   }
-  
+
   applyObjectProperties(currentEditingObject.value as L.Layer, properties);
   // --- Додаємо копіювання у feature.properties ---
   if ((currentEditingObject.value as any).feature && (currentEditingObject.value as any).properties) {
@@ -507,9 +507,9 @@ function initEditModal() {
   (document.getElementById('modal-close') as HTMLElement).addEventListener('click', closeEditModal);
   (document.getElementById('cancel-edit') as HTMLElement).addEventListener('click', closeEditModal);
   (document.getElementById('save-object') as HTMLElement).addEventListener('click', saveObjectChanges);
-  
+
   // --- Додаю підтвердження для видалення об'єкта ---
-  (document.getElementById('delete-object') as HTMLElement).onclick = function() {
+  (document.getElementById('delete-object') as HTMLElement).onclick = function () {
     if (!currentEditingObject.value) return;
     const type = getObjectType(currentEditingObject.value as L.Layer);
     let typeName = 'обʼєкт';
@@ -524,7 +524,7 @@ function initEditModal() {
     showConfirmDialog({
       title: `Видалення об'єкта: ${objectName}`,
       message: `Ви дійсно хочете видалити об'єкт ${objectName}?`,
-      onConfirm: function(action?: string) {
+      onConfirm: function (action?: string) {
         if (!currentEditingObject.value) return;
         const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value as L.Layer));
         if (layerObj && layerObj.featureGroup) {
@@ -539,25 +539,25 @@ function initEditModal() {
       ]
     });
   };
-  
+
   // Обробники для range слайдерів
-  (document.getElementById('line-width') as HTMLInputElement).addEventListener('input', function() {
+  (document.getElementById('line-width') as HTMLInputElement).addEventListener('input', function () {
     (document.getElementById('line-width-value') as HTMLElement).textContent = (this as HTMLInputElement).value;
   });
-  
-  (document.getElementById('object-opacity') as HTMLInputElement).addEventListener('input', function() {
+
+  (document.getElementById('object-opacity') as HTMLInputElement).addEventListener('input', function () {
     (document.getElementById('opacity-value') as HTMLElement).textContent = Math.round(Number((this as HTMLInputElement).value) * 100) + '%';
   });
-  
+
   // Закриття по кліку поза модальним вікном
-  (document.getElementById('edit-object-modal') as HTMLElement).addEventListener('click', function(e) {
+  (document.getElementById('edit-object-modal') as HTMLElement).addEventListener('click', function (e) {
     if (e.target === this) {
       closeEditModal();
     }
   });
-  
+
   // Закриття по Escape
-  document.addEventListener('keydown', function(e) {
+  document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && (document.getElementById('edit-object-modal') as HTMLElement).classList.contains('hidden') === false) {
       closeEditModal();
     }
@@ -573,7 +573,7 @@ function addDoubleClickToLayer(layer: L.Layer) {
     if (properties.name) html += `<div class='tooltip-title'>${properties.name}</div>`;
     if (properties.description) {
       // Автоматично замінюємо посилання на <a>
-      const descWithLinks = properties.description.replace(/(https?:\/\/[^\s]+)/g, function(url: any) {
+      const descWithLinks = properties.description.replace(/(https?:\/\/[^\s]+)/g, function (url: any) {
         return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
       });
       html += `<div class='tooltip-desc'>${descWithLinks}</div>`;
@@ -584,23 +584,23 @@ function addDoubleClickToLayer(layer: L.Layer) {
   }
   let customTooltip: HTMLElement | null = null;
   let tooltipTimer: number | null = null;
-  
+
   function showTooltip(e: any) { // @ts-ignore
     // Зупиняємо попередній таймер
     if (tooltipTimer) {
       clearTimeout(tooltipTimer);
       tooltipTimer = null;
     }
-    
+
     // Видаляємо попередній тултіп, якщо він є
     if (customTooltip) {
       customTooltip.remove();
       customTooltip = null;
     }
-    
+
     const props = (layer as any).properties || {}; // @ts-ignore
     const html = getTooltipHtml(props);
-    
+
     // Створюємо власний тултіп
     customTooltip = document.createElement('div');
     customTooltip.className = 'custom-tooltip';
@@ -609,11 +609,11 @@ function addDoubleClickToLayer(layer: L.Layer) {
     customTooltip.style.zIndex = '1000';
     customTooltip.style.pointerEvents = 'auto';
     customTooltip.style.cursor = 'default';
-    
+
     // Додаємо тултіп до карти
     const mapContainer = (map as any).getContainer(); // @ts-ignore
     mapContainer.appendChild(customTooltip);
-    
+
     // Позиціонуємо тултіп
     if (e.originalEvent && typeof e.originalEvent.clientX === 'number' && typeof e.originalEvent.clientY === 'number') {
       const mapContainer = (map as any).getContainer(); // @ts-ignore
@@ -628,25 +628,25 @@ function addDoubleClickToLayer(layer: L.Layer) {
       customTooltip.style.top = point.y + 'px';
       customTooltip.style.transform = 'translate(-60%, -120%)';
     }
-    
+
     // Обробники подій для тултіпа
-    customTooltip.addEventListener('mouseenter', function() {
+    customTooltip.addEventListener('mouseenter', function () {
       if (tooltipTimer) {
         clearTimeout(tooltipTimer);
         tooltipTimer = null;
       }
     });
-    
-    customTooltip.addEventListener('mouseleave', function() {
+
+    customTooltip.addEventListener('mouseleave', function () {
       hideTooltip();
     });
   }
-  
+
   function hideTooltip() {
     if (tooltipTimer) {
       clearTimeout(tooltipTimer);
     }
-    
+
     tooltipTimer = setTimeout(() => {
       if (customTooltip) {
         customTooltip.remove();
@@ -655,15 +655,15 @@ function addDoubleClickToLayer(layer: L.Layer) {
       tooltipTimer = null;
     }, 100);
   }
-  
+
   layer.on('mouseover', showTooltip);
   layer.on('mouseout', hideTooltip);
   // --- подвійний клік ---
   if (type === 'marker') {
-    layer.on('add', function() {
+    layer.on('add', function () {
       const el = (layer as any).getElement && (layer as any).getElement(); // @ts-ignore
       if (el) {
-        el.addEventListener('dblclick', function(e: any) { // @ts-ignore
+        el.addEventListener('dblclick', function (e: any) { // @ts-ignore
           e.stopPropagation();
           e.preventDefault();
           showEditModal(layer);
@@ -672,14 +672,14 @@ function addDoubleClickToLayer(layer: L.Layer) {
     });
     const el = (layer as any).getElement && (layer as any).getElement(); // @ts-ignore
     if (el) {
-      el.addEventListener('dblclick', function(e: any) { // @ts-ignore
+      el.addEventListener('dblclick', function (e: any) { // @ts-ignore
         e.stopPropagation();
         e.preventDefault();
         showEditModal(layer);
       });
     }
   } else {
-    layer.on('dblclick', function(e: any) { // @ts-ignore
+    layer.on('dblclick', function (e: any) { // @ts-ignore
       if (e.originalEvent) {
         e.originalEvent.stopPropagation();
         e.originalEvent.preventDefault();
@@ -699,7 +699,7 @@ let searchMarker: any = null;
   let results: any[] = [];
   let activeIdx = -1;
 
-  input.addEventListener('input', function() {
+  input.addEventListener('input', function () {
     const val = (input as HTMLInputElement).value.trim();
     list.innerHTML = '';
     list.classList.remove('active');
@@ -717,7 +717,7 @@ let searchMarker: any = null;
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
             div.textContent = item.display_name;
-            div.addEventListener('mousedown', function(e: MouseEvent) {
+            div.addEventListener('mousedown', function (e: MouseEvent) {
               e.preventDefault();
               selectResult(idx);
             });
@@ -728,7 +728,7 @@ let searchMarker: any = null;
     }, 250);
   });
 
-  input.addEventListener('keydown', function(e: KeyboardEvent) {
+  input.addEventListener('keydown', function (e: KeyboardEvent) {
     if (!results.length) return;
     if (e.key === 'ArrowDown') {
       activeIdx = Math.min(activeIdx + 1, results.length - 1);
@@ -746,7 +746,7 @@ let searchMarker: any = null;
     }
   });
 
-  document.addEventListener('click', function(e: MouseEvent) {
+  document.addEventListener('click', function (e: MouseEvent) {
     if (!input.contains(e.target as Node) && !list.contains(e.target as Node)) {
       list.classList.remove('active');
     }
@@ -811,7 +811,12 @@ function centerGeoSearchBar() {
 window.addEventListener('resize', centerGeoSearchBar);
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadLayersFromStorage();
+  const loadSuccess = loadLayersFromStorage();
+  // Якщо завантаження не вдалося, створюємо початковий шар
+  if (!loadSuccess) {
+    console.log('Створюємо початковий шар через помилку завантаження');
+    addLayer();
+  }
   waitForMaterialIconsAndInitAutocomplete();
   initEditModal();
   centerGeoSearchBar();
@@ -822,36 +827,36 @@ async function handleKmzFile(file: File) {
   try {
     // @ts-ignore
     const zip = await JSZip.loadAsync(file);
-    
+
     // знайти перший .kml файл
     const kmlFileName = Object.keys(zip.files).find(name => name.endsWith('.kml'));
     if (!kmlFileName) {
       alert('KMZ файл не містить KML даних');
       return;
     }
-    
+
     const kmlText = await zip.files[kmlFileName].async('string');
-    
+
     // створити новий шар для KMZ
     const tileType = 'План';
     const tileLayer = createTileLayer(tileType, 1);
     const featureGroup = new L.FeatureGroup();
     tileLayer.addTo(map);
     featureGroup.addTo(map);
-    
+
     // парсити KML через omnivore
     // @ts-ignore
     const kmlLayer = (omnivore as any).kml.parse(kmlText);
-    
+
     // додати всі об'єкти з KML до featureGroup
     kmlLayer.eachLayer((layer: any) => {
       featureGroup.addLayer(layer);
       addDoubleClickToLayer(layer);
-      
+
       // зберегти властивості з KML
       if (layer.feature && layer.feature.properties) {
         layer.properties = { ...layer.feature.properties };
-        
+
         // застосувати стилі для різних типів об'єктів
         const type = getObjectType(layer);
         if (type === 'marker') {
@@ -881,7 +886,7 @@ async function handleKmzFile(file: File) {
         }
       }
     });
-    
+
     // створити ім'я шару за іменем файлу
     const layerTitle = file.name.replace(/\.(kmz|kml)$/i, '');
     // перевірити, чи вже є шар з таким ім'ям
@@ -941,7 +946,7 @@ async function handleKmzFile(file: File) {
         (map as any).fitBounds(featureGroup.getBounds());
       }
     }
-    
+
   } catch (error: any) {
     alert('Помилка при імпорті KMZ файлу: ' + error.message); // @ts-ignore
   }
@@ -952,7 +957,7 @@ const globalSearchInput = document.getElementById('global-object-search') as HTM
 const globalSearchResults = document.getElementById('global-object-search-results') as HTMLElement | null;
 
 if (globalSearchInput && globalSearchResults) {
-  globalSearchInput.addEventListener('input', function(this: HTMLInputElement) {
+  globalSearchInput.addEventListener('input', function (this: HTMLInputElement) {
     const query = (this as HTMLInputElement).value.trim().toLowerCase();
     globalSearchResults.innerHTML = '';
     if (!query) return;
@@ -1050,8 +1055,8 @@ if (globalSearchInput && globalSearchResults) {
           const highlightIcon = L.divIcon({
             className: 'highlight-marker-icon',
             html: '<div style="background:#cd1d1d;width:32px;height:32px;border-radius:50%;border:3px solid #ffe066;box-shadow:0 0 12px #cd1d1d;"></div>',
-            iconSize: [32,32],
-            iconAnchor: [16,32]
+            iconSize: [32, 32],
+            iconAnchor: [16, 32]
           });
           res.layer.setIcon(highlightIcon);
           setTimeout(() => {
@@ -1088,27 +1093,49 @@ if (globalSearchInput && globalSearchResults) {
 
 // --- Слідкуємо за зміною opacity у leaflet-image-layer і зберігаємо у localStorage ---
 const observeOverlayOpacity = () => {
+  // Debounced збереження для opacity observer
+  let opacityTimeout: number | null = null;
+  const debouncedOpacitySave = () => {
+    if (opacityTimeout) clearTimeout(opacityTimeout);
+    opacityTimeout = window.setTimeout(() => {
+      saveLayersToStorage();
+      opacityTimeout = null;
+    }, 200); // Трохи більший delay для opacity змін
+  };
+
   const observer = new MutationObserver(mutations => {
+    let hasChanges = false;
     mutations.forEach(mutation => {
       if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-        const img = mutation.target as any; // @ts-ignore
+        const img = mutation.target as any;
         if ((img as HTMLElement).classList.contains('leaflet-image-layer')) {
-          const opacity = parseFloat((img as HTMLImageElement).style.opacity); // @ts-ignore
-          const src = (img as HTMLImageElement).src; // @ts-ignore
-          // знайти відповідний overlay та шар
+          const opacity = parseFloat((img as HTMLImageElement).style.opacity);
+          const src = (img as HTMLImageElement).src;
+
+          // Знаходимо відповідний overlay та шар (не створюємо дублікати!)
           for (const layerObj of customLayers) {
             if (!layerObj.featureGroup || !(layerObj.featureGroup as any).images) continue;
             const idx = (layerObj.featureGroup as any).images.findIndex((imgObj: any) => imgObj.url === src);
             if (idx !== -1) {
               (layerObj.featureGroup as any).images[idx].properties = (layerObj.featureGroup as any).images[idx].properties || {};
-              (layerObj.featureGroup as any).images[idx].properties.opacity = opacity;
-              saveLayersToStorage();
+
+              // Перевіряємо, чи справді змінилася прозорість
+              if ((layerObj.featureGroup as any).images[idx].properties.opacity !== opacity) {
+                (layerObj.featureGroup as any).images[idx].properties.opacity = opacity;
+                hasChanges = true;
+                console.log(`Opacity змінено на ${opacity} для overlay ${src.substring(0, 50)}...`);
+              }
               break;
             }
           }
         }
       }
     });
+
+    // Зберігаємо тільки якщо справді були зміни
+    if (hasChanges) {
+      debouncedOpacitySave();
+    }
   });
   // спостерігати за всіма leaflet-image-layer
   const addObservers = () => {
@@ -1123,11 +1150,11 @@ const observeOverlayOpacity = () => {
 };
 observeOverlayOpacity();
 
-// Ініціалізація
-loadLayersFromStorage();
-waitForMaterialIconsAndInitAutocomplete();
-initEditModal();
-centerGeoSearchBar();
+// Ініціалізація видалена - все відбувається в DOMContentLoaded
+// loadLayersFromStorage(); // ВИДАЛЕНО - подвійний виклик спричиняв дублікати!
+// waitForMaterialIconsAndInitAutocomplete();
+// initEditModal();
+// centerGeoSearchBar();
 
 // Імпортуємо draw control функції
 import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
@@ -1174,7 +1201,7 @@ if (importAllBtn && importAllInput) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = function(evt) {
+    reader.onload = function (evt) {
       if (!evt.target) return;
       try {
         let imported = JSON.parse(evt.target.result as string);

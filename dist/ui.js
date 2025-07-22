@@ -488,32 +488,93 @@ export function createLayerControl(layerObj) {
                     bounds: bounds,
                     selected: true
                 }).addTo(map);
-                // Масив overlays для шару
+                // Додаємо унікальний ідентифікатор для overlay
+                overlay._overlayId = `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                overlay._customUrl = imgUrl;
+                console.log(`🆕 Додаємо нове зображення через галерею`, {
+                    overlayId: overlay._overlayId,
+                    url: imgUrl.substring(0, 50) + '...',
+                    bounds
+                });
+                // Ініціалізуємо масиви якщо потрібно
                 if (!layerObj.featureGroup.overlays)
                     layerObj.featureGroup.overlays = [];
+                if (!layerObj.featureGroup.images)
+                    layerObj.featureGroup.images = [];
                 if (!layerObj.featureGroup.overlayInstances)
                     layerObj.featureGroup.overlayInstances = [];
-                layerObj.featureGroup.overlays.push({ url: imgUrl, bounds, opacity: 1 });
+                // Перевіряємо, чи не існує вже таке зображення (запобігаємо дублікатам)
+                const existingImageIdx = layerObj.featureGroup.images.findIndex((img) => img.url === imgUrl);
+                if (existingImageIdx !== -1) {
+                    console.warn(`⚠️ Зображення вже існує в images[${existingImageIdx}], пропускаємо`);
+                    overlay.remove();
+                    return;
+                }
+                const existingOverlayIdx = layerObj.featureGroup.overlays.findIndex((img) => img.url === imgUrl);
+                if (existingOverlayIdx !== -1) {
+                    console.warn(`⚠️ Зображення вже існує в overlays[${existingOverlayIdx}], пропускаємо`);
+                    overlay.remove();
+                    return;
+                }
+                // Створюємо imageData об'єкт
+                const imageData = { url: imgUrl, bounds, opacity: 1 };
+                // Додаємо в усі масиви
+                layerObj.featureGroup.images.push(imageData);
+                layerObj.featureGroup.overlays.push(Object.assign({}, imageData)); // Копія для сумісності
                 layerObj.featureGroup.overlayInstances.push(overlay);
-                // Зберігаємо в localStorage
-                import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
-                // Оновлюємо bounds при будь-якій зміні (drag/resize/move/rotate)
-                const updateOverlayState = () => {
-                    const idx = layerObj.featureGroup.overlays.findIndex((img) => img.url === imgUrl);
-                    if (idx !== -1) {
-                        layerObj.featureGroup.overlays[idx].bounds = overlay.getBounds();
-                        // Якщо потрібні кути для експорту:
-                        if (overlay.getCorners) {
-                            const corners = overlay.getCorners();
-                            layerObj.featureGroup.overlays[idx].corners = corners.map((c) => ({ lat: c.lat, lng: c.lng }));
-                        }
+                console.log(`✅ Додано зображення в структури даних`, {
+                    imagesCount: layerObj.featureGroup.images.length,
+                    overlaysCount: layerObj.featureGroup.overlays.length,
+                    instancesCount: layerObj.featureGroup.overlayInstances.length
+                });
+                // Глобальний debounced save
+                let globalSaveTimeout = null;
+                const globalDebouncedSave = () => {
+                    if (globalSaveTimeout)
+                        clearTimeout(globalSaveTimeout);
+                    globalSaveTimeout = window.setTimeout(() => {
+                        console.log(`💾 Збереження після додавання нового зображення ${overlay._overlayId}`);
                         import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
-                    }
+                        globalSaveTimeout = null;
+                    }, 150);
                 };
+                // Функція оновлення стану overlay
+                const updateOverlayState = () => {
+                    var _a;
+                    console.log(`🎯 Edit event для нового overlay ${overlay._overlayId}`);
+                    const newBounds = overlay.getBounds();
+                    const newCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+                        overlay.getCorners().map((c) => ({ lat: c.lat, lng: c.lng })) : null;
+                    // Знаходимо overlay по URL
+                    const overlayIdx = layerObj.featureGroup.overlays.findIndex((img) => img.url === imgUrl);
+                    const imageIdx = layerObj.featureGroup.images.findIndex((img) => img.url === imgUrl);
+                    if (overlayIdx === -1 || imageIdx === -1) {
+                        console.error(`❌ КРИТИЧНА ПОМИЛКА: Overlay не знайдено!`, {
+                            overlayId: overlay._overlayId,
+                            overlayIdx,
+                            imageIdx,
+                            url: imgUrl.substring(0, 50) + '...'
+                        });
+                        return;
+                    }
+                    // Оновлюємо існуючі записи
+                    layerObj.featureGroup.overlays[overlayIdx].bounds = newBounds;
+                    layerObj.featureGroup.images[imageIdx].bounds = newBounds;
+                    if (newCorners) {
+                        layerObj.featureGroup.overlays[overlayIdx].corners = newCorners;
+                        layerObj.featureGroup.images[imageIdx].corners = newCorners;
+                    }
+                    console.log(`📝 Оновлено новий overlay ${overlay._overlayId}`, {
+                        overlayIdx,
+                        imageIdx,
+                        bounds: newBounds
+                    });
+                    globalDebouncedSave();
+                };
+                // Підписуємося тільки на 'edit' - це покриває всі зміни
                 overlay.on('edit', updateOverlayState);
-                overlay.on('dragend', updateOverlayState);
-                overlay.on('resizeend', updateOverlayState);
-                overlay.on('rotateend', updateOverlayState);
+                // Початкове збереження
+                globalDebouncedSave();
                 // Оновлення opacity при зміні прозорості шару
                 overlay.setOpacity(layerObj.tileLayer.options.opacity);
             };

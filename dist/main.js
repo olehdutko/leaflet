@@ -846,7 +846,12 @@ function centerGeoSearchBar() {
 }
 window.addEventListener('resize', centerGeoSearchBar);
 document.addEventListener('DOMContentLoaded', () => {
-    loadLayersFromStorage();
+    const loadSuccess = loadLayersFromStorage();
+    // Якщо завантаження не вдалося, створюємо початковий шар
+    if (!loadSuccess) {
+        console.log('Створюємо початковий шар через помилку завантаження');
+        addLayer();
+    }
     waitForMaterialIconsAndInitAutocomplete();
     initEditModal();
     centerGeoSearchBar();
@@ -1116,28 +1121,47 @@ if (globalSearchInput && globalSearchResults) {
 // ... після ініціалізації карти і customLayers ...
 // --- Слідкуємо за зміною opacity у leaflet-image-layer і зберігаємо у localStorage ---
 const observeOverlayOpacity = () => {
+    // Debounced збереження для opacity observer
+    let opacityTimeout = null;
+    const debouncedOpacitySave = () => {
+        if (opacityTimeout)
+            clearTimeout(opacityTimeout);
+        opacityTimeout = window.setTimeout(() => {
+            saveLayersToStorage();
+            opacityTimeout = null;
+        }, 200); // Трохи більший delay для opacity змін
+    };
     const observer = new MutationObserver(mutations => {
+        let hasChanges = false;
         mutations.forEach(mutation => {
             if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                const img = mutation.target; // @ts-ignore
+                const img = mutation.target;
                 if (img.classList.contains('leaflet-image-layer')) {
-                    const opacity = parseFloat(img.style.opacity); // @ts-ignore
-                    const src = img.src; // @ts-ignore
-                    // знайти відповідний overlay та шар
+                    const opacity = parseFloat(img.style.opacity);
+                    const src = img.src;
+                    // Знаходимо відповідний overlay та шар (не створюємо дублікати!)
                     for (const layerObj of customLayers) {
                         if (!layerObj.featureGroup || !layerObj.featureGroup.images)
                             continue;
                         const idx = layerObj.featureGroup.images.findIndex((imgObj) => imgObj.url === src);
                         if (idx !== -1) {
                             layerObj.featureGroup.images[idx].properties = layerObj.featureGroup.images[idx].properties || {};
-                            layerObj.featureGroup.images[idx].properties.opacity = opacity;
-                            saveLayersToStorage();
+                            // Перевіряємо, чи справді змінилася прозорість
+                            if (layerObj.featureGroup.images[idx].properties.opacity !== opacity) {
+                                layerObj.featureGroup.images[idx].properties.opacity = opacity;
+                                hasChanges = true;
+                                console.log(`Opacity змінено на ${opacity} для overlay ${src.substring(0, 50)}...`);
+                            }
                             break;
                         }
                     }
                 }
             }
         });
+        // Зберігаємо тільки якщо справді були зміни
+        if (hasChanges) {
+            debouncedOpacitySave();
+        }
     });
     // спостерігати за всіма leaflet-image-layer
     const addObservers = () => {
@@ -1151,11 +1175,11 @@ const observeOverlayOpacity = () => {
     imgAddObserver.observe(document.body, { childList: true, subtree: true });
 };
 observeOverlayOpacity();
-// Ініціалізація
-loadLayersFromStorage();
-waitForMaterialIconsAndInitAutocomplete();
-initEditModal();
-centerGeoSearchBar();
+// Ініціалізація видалена - все відбувається в DOMContentLoaded
+// loadLayersFromStorage(); // ВИДАЛЕНО - подвійний виклик спричиняв дублікати!
+// waitForMaterialIconsAndInitAutocomplete();
+// initEditModal();
+// centerGeoSearchBar();
 // Імпортуємо draw control функції
 import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
 // Ініціалізуємо draw control
