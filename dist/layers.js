@@ -159,53 +159,16 @@ export function loadLayersFromStorage() {
             }
             // Відновлюємо overlays (зображення)
             if (obj.overlays && Array.isArray(obj.overlays)) {
-                featureGroup.overlays = [];
-                featureGroup.overlayInstances = [];
-                obj.overlays.forEach((img, idx) => {
-                    var _a, _b;
-                    if (!img.bounds)
-                        return;
-                    const exists = featureGroup.overlayInstances[idx];
-                    if (exists)
-                        return;
-                    // Формуємо опції для overlay
-                    const overlayOptions = {
-                        bounds: img.bounds,
-                        selected: false
-                    };
-                    if (img.corners && Array.isArray(img.corners) && img.corners.length === 4) {
-                        overlayOptions.corners = img.corners.map((c) => L.latLng(c.lat, c.lng));
-                    }
-                    // @ts-ignore
-                    const overlay = L.distortableImageOverlay(img.url, overlayOptions);
-                    overlay.setOpacity((_a = img.opacity) !== null && _a !== void 0 ? _a : 1);
-                    // Додаю обробники подій для збереження змін
-                    const updateOverlayState = () => {
-                        const idx2 = featureGroup.overlays.findIndex((i) => i.url === img.url);
-                        if (idx2 !== -1) {
-                            featureGroup.overlays[idx2].bounds = overlay.getBounds();
-                            if (overlay.getCorners) {
-                                featureGroup.overlays[idx2].corners = overlay.getCorners();
-                            }
-                            saveLayersToStorage();
-                        }
-                    };
-                    overlay.on('edit', updateOverlayState);
-                    overlay.on('dragend', updateOverlayState);
-                    overlay.on('resizeend', updateOverlayState);
-                    overlay.on('rotateend', updateOverlayState);
-                    featureGroup.overlayInstances[idx] = overlay;
-                    featureGroup.overlays.push({
+                featureGroup.images = obj.overlays.map((img) => {
+                    var _a;
+                    return ({
                         url: img.url,
                         bounds: img.bounds,
-                        opacity: (_b = img.opacity) !== null && _b !== void 0 ? _b : 1,
+                        opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1,
                         corners: img.corners
                     });
-                    // Додаю overlay на карту, якщо шар активний
-                    if (obj.visible !== false) {
-                        overlay.addTo(map);
-                    }
                 });
+                restoreOverlaysForFeatureGroup(featureGroup);
             }
             const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
             customLayers.push(layerObj);
@@ -335,4 +298,60 @@ export function removeFeatureGroupAndOverlays(featureGroup) {
         });
         featureGroup.overlays = [];
     }
+}
+// --- Overlay logic ---
+export function addOverlayToFeatureGroup(featureGroup, url) {
+    const center = map.getCenter();
+    const bounds = [
+        [center.lat - 0.005, center.lng - 0.01],
+        [center.lat + 0.005, center.lng + 0.01]
+    ];
+    const overlay = window.L.distortableImageOverlay(url, { bounds, selected: true }).addTo(map);
+    overlay._customUrl = url;
+    if (!featureGroup.images)
+        featureGroup.images = [];
+    if (!featureGroup.overlays)
+        featureGroup.overlays = [];
+    featureGroup.images.push({ url, bounds, corners: overlay.getCorners() });
+    featureGroup.overlays.push(overlay);
+    overlay.on('edit', () => {
+        const idx = featureGroup.images.findIndex((img) => img.url === url);
+        if (idx !== -1) {
+            featureGroup.images[idx].bounds = overlay.getBounds();
+            featureGroup.images[idx].corners = overlay.getCorners();
+            saveLayersToStorage();
+        }
+    });
+    saveLayersToStorage();
+}
+export function removeAllOverlaysFromFeatureGroup(featureGroup) {
+    if (featureGroup.overlays) {
+        featureGroup.overlays.forEach((ov) => map.removeLayer(ov));
+        featureGroup.overlays = [];
+    }
+}
+export function restoreOverlaysForFeatureGroup(featureGroup) {
+    removeAllOverlaysFromFeatureGroup(featureGroup);
+    if (!featureGroup.images)
+        return;
+    featureGroup.overlays = [];
+    featureGroup.images.forEach((img) => {
+        let overlay;
+        if (img.corners && img.corners.length === 4) {
+            overlay = window.L.distortableImageOverlay(img.url, { corners: img.corners, selected: false }).addTo(map);
+        }
+        else {
+            overlay = window.L.distortableImageOverlay(img.url, { bounds: img.bounds, selected: false }).addTo(map);
+        }
+        overlay._customUrl = img.url;
+        featureGroup.overlays.push(overlay);
+        overlay.on('edit', () => {
+            const idx = featureGroup.images.findIndex((i) => i.url === img.url);
+            if (idx !== -1) {
+                featureGroup.images[idx].bounds = overlay.getBounds();
+                featureGroup.images[idx].corners = overlay.getCorners();
+                saveLayersToStorage();
+            }
+        });
+    });
 }

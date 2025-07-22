@@ -178,50 +178,13 @@ export function loadLayersFromStorage(): boolean {
       }
       // Відновлюємо overlays (зображення)
       if (obj.overlays && Array.isArray(obj.overlays)) {
-        featureGroup.overlays = [];
-        featureGroup.overlayInstances = [];
-        obj.overlays.forEach((img: any, idx: number) => {
-          if (!img.bounds) return;
-          const exists = featureGroup.overlayInstances[idx];
-          if (exists) return;
-          // Формуємо опції для overlay
-          const overlayOptions: any = {
-            bounds: img.bounds,
-            selected: false
-          };
-          if (img.corners && Array.isArray(img.corners) && img.corners.length === 4) {
-            overlayOptions.corners = img.corners.map((c: any) => L.latLng(c.lat, c.lng));
-          }
-          // @ts-ignore
-          const overlay = L.distortableImageOverlay(img.url, overlayOptions);
-          overlay.setOpacity(img.opacity ?? 1);
-          // Додаю обробники подій для збереження змін
-          const updateOverlayState = () => {
-            const idx2 = featureGroup.overlays.findIndex((i: any) => i.url === img.url);
-            if (idx2 !== -1) {
-              featureGroup.overlays[idx2].bounds = overlay.getBounds();
-              if (overlay.getCorners) {
-                featureGroup.overlays[idx2].corners = overlay.getCorners();
-              }
-              saveLayersToStorage();
-            }
-          };
-          overlay.on('edit', updateOverlayState);
-          overlay.on('dragend', updateOverlayState);
-          overlay.on('resizeend', updateOverlayState);
-          overlay.on('rotateend', updateOverlayState);
-          featureGroup.overlayInstances[idx] = overlay;
-          featureGroup.overlays.push({
-            url: img.url,
-            bounds: img.bounds,
-            opacity: img.opacity ?? 1,
-            corners: img.corners
-          });
-          // Додаю overlay на карту, якщо шар активний
-          if (obj.visible !== false) {
-            overlay.addTo(map);
-          }
-        });
+        featureGroup.images = obj.overlays.map((img: any) => ({
+          url: img.url,
+          bounds: img.bounds,
+          opacity: img.opacity ?? 1,
+          corners: img.corners
+        }));
+        restoreOverlaysForFeatureGroup(featureGroup);
       }
       const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
       customLayers.push(layerObj);
@@ -342,7 +305,6 @@ declare global {
     distortableImageOverlay: (url: string, options: any) => any;
   }
 }
-
 // Перед видаленням featureGroup або шару — видаляю всі overlay з featureGroup і з карти
 export function removeFeatureGroupAndOverlays(featureGroup: any) {
   if (featureGroup && featureGroup.overlays) {
@@ -354,4 +316,59 @@ export function removeFeatureGroupAndOverlays(featureGroup: any) {
     });
     featureGroup.overlays = [];
   }
+}
+
+// --- Overlay logic ---
+export function addOverlayToFeatureGroup(featureGroup: any, url: string) {
+  const center = map.getCenter();
+  const bounds = [
+    [center.lat - 0.005, center.lng - 0.01],
+    [center.lat + 0.005, center.lng + 0.01]
+  ];
+  const overlay = (window as any).L.distortableImageOverlay(url, { bounds, selected: true }).addTo(map);
+  overlay._customUrl = url;
+  if (!featureGroup.images) featureGroup.images = [];
+  if (!featureGroup.overlays) featureGroup.overlays = [];
+  featureGroup.images.push({ url, bounds, corners: overlay.getCorners() });
+  featureGroup.overlays.push(overlay);
+  overlay.on('edit', () => {
+    const idx = featureGroup.images.findIndex((img: any) => img.url === url);
+    if (idx !== -1) {
+      featureGroup.images[idx].bounds = overlay.getBounds();
+      featureGroup.images[idx].corners = overlay.getCorners();
+      saveLayersToStorage();
+    }
+  });
+  saveLayersToStorage();
+}
+
+export function removeAllOverlaysFromFeatureGroup(featureGroup: any) {
+  if (featureGroup.overlays) {
+    featureGroup.overlays.forEach((ov: any) => map.removeLayer(ov));
+    featureGroup.overlays = [];
+  }
+}
+
+export function restoreOverlaysForFeatureGroup(featureGroup: any) {
+  removeAllOverlaysFromFeatureGroup(featureGroup);
+  if (!featureGroup.images) return;
+  featureGroup.overlays = [];
+  featureGroup.images.forEach((img: any) => {
+    let overlay;
+    if (img.corners && img.corners.length === 4) {
+      overlay = (window as any).L.distortableImageOverlay(img.url, { corners: img.corners, selected: false }).addTo(map);
+    } else {
+      overlay = (window as any).L.distortableImageOverlay(img.url, { bounds: img.bounds, selected: false }).addTo(map);
+    }
+    overlay._customUrl = img.url;
+    featureGroup.overlays.push(overlay);
+    overlay.on('edit', () => {
+      const idx = featureGroup.images.findIndex((i: any) => i.url === img.url);
+      if (idx !== -1) {
+        featureGroup.images[idx].bounds = overlay.getBounds();
+        featureGroup.images[idx].corners = overlay.getCorners();
+        saveLayersToStorage();
+      }
+    });
+  });
 }
