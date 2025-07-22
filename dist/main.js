@@ -849,7 +849,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadSuccess = loadLayersFromStorage();
     // Якщо завантаження не вдалося, створюємо початковий шар
     if (!loadSuccess) {
-        console.log('Створюємо початковий шар через помилку завантаження');
         addLayer();
     }
     waitForMaterialIconsAndInitAutocomplete();
@@ -1150,7 +1149,6 @@ const observeOverlayOpacity = () => {
                             if (layerObj.featureGroup.images[idx].properties.opacity !== opacity) {
                                 layerObj.featureGroup.images[idx].properties.opacity = opacity;
                                 hasChanges = true;
-                                console.log(`Opacity змінено на ${opacity} для overlay ${src.substring(0, 50)}...`);
                             }
                             break;
                         }

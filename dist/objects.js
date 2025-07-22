@@ -1,4 +1,5 @@
 export function applyObjectProperties(layer, properties) {
+    var _a, _b;
     const type = layer && layer instanceof L.Marker && !(layer instanceof L.CircleMarker)
         ? 'marker'
         : layer instanceof L.CircleMarker
@@ -18,43 +19,50 @@ export function applyObjectProperties(layer, properties) {
     layer.properties.description = properties.description;
     if (type === 'marker') {
         const iconName = properties.icon || 'place';
+        const color = properties.color || '#1976d2'; // Дефолтний синій колір
         layer.setIcon(L.divIcon({
             className: 'custom-marker-icon',
-            html: `<div style="background:${properties.color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="material-icons" style="color:#fff;font-size:20px;transform:rotate(45deg);">${iconName}</i></div>`,
+            html: `<div style="background:${color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="material-icons" style="color:#fff;font-size:20px;transform:rotate(45deg);">${iconName}</i></div>`,
             iconSize: [28, 28],
             iconAnchor: [14, 28]
         }));
-        layer.properties.color = properties.color;
+        layer.properties.color = color; // Зберігаємо встановлений колір
         layer.properties.icon = iconName;
-        layer.options.color = properties.color;
+        layer.options.color = color;
     }
     else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
+        const color = properties.color || '#1976d2';
+        const fillColor = properties.fillColor || '#1976d2';
+        const fillOpacity = (_a = properties.fillOpacity) !== null && _a !== void 0 ? _a : 0.2;
         layer.setStyle({
-            fillColor: properties.fillColor,
-            color: properties.color,
-            fillOpacity: properties.fillOpacity,
+            fillColor: fillColor,
+            color: color,
+            fillOpacity: fillOpacity,
         });
-        layer.properties.color = properties.color;
-        layer.properties.fillColor = properties.fillColor;
-        layer.properties.fillOpacity = properties.fillOpacity;
-        layer.options.color = properties.color;
-        layer.options.fillColor = properties.fillColor;
-        layer.options.fillOpacity = properties.fillOpacity;
+        layer.properties.color = color;
+        layer.properties.fillColor = fillColor;
+        layer.properties.fillOpacity = fillOpacity;
+        layer.options.color = color;
+        layer.options.fillColor = fillColor;
+        layer.options.fillOpacity = fillOpacity;
     }
     else if (type === 'polyline') {
+        const color = properties.color || '#1976d2';
+        const weight = properties.weight || 3;
+        const opacity = (_b = properties.opacity) !== null && _b !== void 0 ? _b : 1;
         layer.setStyle({
-            color: properties.color,
-            weight: properties.weight,
-            opacity: properties.opacity,
+            color: color,
+            weight: weight,
+            opacity: opacity,
             dashArray: properties.style === 'dashed' ? '10, 10' : properties.style === 'dotted' ? '2, 8' : null
         });
-        layer.properties.color = properties.color;
-        layer.properties.weight = properties.weight;
-        layer.properties.opacity = properties.opacity;
+        layer.properties.color = color;
+        layer.properties.weight = weight;
+        layer.properties.opacity = opacity;
         layer.properties.style = properties.style;
-        layer.options.color = properties.color;
-        layer.options.weight = properties.weight;
-        layer.options.opacity = properties.opacity;
+        layer.options.color = color;
+        layer.options.weight = weight;
+        layer.options.opacity = opacity;
         layer.options.dashArray = properties.style === 'dashed' ? '10, 10' : properties.style === 'dotted' ? '2, 8' : null;
     }
 }

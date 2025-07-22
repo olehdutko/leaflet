@@ -155,6 +155,8 @@ if (typeof window !== 'undefined') {
     debugLog('- debugOverlay.localStorage() - аналіз localStorage');
     debugLog('- debugOverlay.full() - повний аналіз');
     debugLog('- debugOverlay.callCounts() - лічильник викликів функцій');
+    debugLog('- debugOverlay.geojson() - аналіз GeoJSON об\'єктів');
+    debugLog('- debugOverlay.colors() - перевірка кольорів об\'єктів');
 
     // Додаємо функцію показу лічильників
     window.debugOverlay.callCounts = function () {
@@ -167,5 +169,90 @@ if (typeof window !== 'undefined') {
                 debugLog(`✅ ${funcName}: ${count} виклик`);
             }
         });
+    };
+
+    // Додаємо функцію аналізу GeoJSON об'єктів
+    window.debugOverlay.geojson = function () {
+        debugLog('=== АНАЛІЗ GEOJSON ОБ\'ЄКТІВ ===');
+
+        if (!window.customLayers || window.customLayers.length === 0) {
+            debugLog('❌ customLayers не знайдено або порожній');
+            return;
+        }
+
+        let totalObjects = 0;
+        let visibleObjects = 0;
+
+        window.customLayers.forEach((layer, idx) => {
+            const objectCount = layer.featureGroup.getLayers().length;
+            const visibleCount = layer.featureGroup.getLayers().filter(l => window.map.hasLayer(l)).length;
+
+            totalObjects += objectCount;
+            visibleObjects += visibleCount;
+
+            debugLog(`Шар ${idx} "${layer.title}": ${objectCount} об'єктів, ${visibleCount} видимих, шар видимий: ${layer.visible}`);
+
+            if (objectCount > visibleCount && layer.visible) {
+                debugLog(`🚨 ПРОБЛЕМА: У видимому шарі ${idx} не всі об'єкти відображаються!`);
+            }
+
+            if (objectCount === 0 && layer.visible) {
+                debugLog(`⚠️ Видимий шар ${idx} порожній`);
+            }
+        });
+
+        debugLog(`📊 Загалом: ${totalObjects} об'єктів, ${visibleObjects} видимих на карті`);
+
+        if (totalObjects > 0 && visibleObjects === 0) {
+            debugLog('🚨 КРИТИЧНА ПРОБЛЕМА: Є об\'єкти, але жоден не видимий на карті!');
+            debugLog('💡 Можливі причини:');
+            debugLog('   - featureGroup не додано на карту');
+            debugLog('   - Асинхронна проблема з завантаженням');
+            debugLog('   - Конфлікт з іншими шарами');
+        }
+    };
+
+    // Додаємо функцію аналізу кольорів об'єктів
+    window.debugOverlay.colors = function () {
+        debugLog('=== АНАЛІЗ КОЛЬОРІВ ОБ\'ЄКТІВ ===');
+
+        if (!window.customLayers || window.customLayers.length === 0) {
+            debugLog('❌ customLayers не знайдено або порожній');
+            return;
+        }
+
+        window.customLayers.forEach((layer, layerIdx) => {
+            debugLog(`\n--- Шар ${layerIdx} "${layer.title}" ---`);
+
+            layer.featureGroup.getLayers().forEach((obj, objIdx) => {
+                const objType = obj instanceof L.Marker && !(obj instanceof L.CircleMarker) ? 'marker' :
+                    obj instanceof L.CircleMarker ? 'circle' :
+                        obj instanceof L.Polygon && !(obj instanceof L.Rectangle) ? 'polygon' :
+                            obj instanceof L.Rectangle ? 'rectangle' :
+                                obj instanceof L.Polyline ? 'polyline' : 'unknown';
+
+                const name = obj.properties?.name || '[без назви]';
+                const color = obj.properties?.color || obj.options?.color || 'undefined';
+                const fillColor = obj.properties?.fillColor || obj.options?.fillColor;
+
+                if (objType === 'marker') {
+                    const iconHtml = obj.getIcon && obj.getIcon().options && obj.getIcon().options.html;
+                    const bgColor = iconHtml ? iconHtml.match(/background:([^;]+)/)?.[1] : 'не знайдено';
+                    debugLog(`  📍 ${name} (${objType}): колір=${color}, HTML background=${bgColor}`);
+
+                    if (bgColor === 'undefined') {
+                        debugLog(`    🚨 ПРОБЛЕМА: HTML містить background:undefined!`);
+                    }
+                } else {
+                    debugLog(`  🎨 ${name} (${objType}): контур=${color}, заливка=${fillColor || 'немає'}`);
+
+                    if (color === 'undefined') {
+                        debugLog(`    🚨 ПРОБЛЕМА: Колір контуру undefined!`);
+                    }
+                }
+            });
+        });
+
+        debugLog('\n💡 Якщо бачите "undefined" - це проблема з кольорами!');
     };
 } 

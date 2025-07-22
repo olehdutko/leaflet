@@ -353,36 +353,65 @@ export function createLayerControl(layerObj: any) {
     if (layerObj.visible) {
       layerObj.tileLayer.addTo(map);
       layerObj.featureGroup.addTo(map);
-      // Показати overlays (додаємо на карту overlayInstances, якщо вони ще не додані)
-      if (layerObj.featureGroup.overlayInstances) {
-        layerObj.featureGroup.overlayInstances.forEach((overlay: any) => {
+
+      // Показати overlays
+
+      if (layerObj.featureGroup.overlayInstances && layerObj.featureGroup.overlayInstances.length > 0) {
+        layerObj.featureGroup.overlayInstances.forEach((overlay: any, index: number) => {
           if (overlay && !map.hasLayer(overlay)) {
-            overlay.addTo(map);
+            try {
+              overlay.addTo(map);
+            } catch (error) {
+              // Ігноруємо помилки додавання
+            }
           }
         });
+
+      } else if (layerObj.featureGroup.images && layerObj.featureGroup.images.length > 0) {
+        // overlayInstances відсутні або пусті - відновлюємо з images
+        import('./layers.js').then(({ restoreOverlaysForFeatureGroup }) => {
+          restoreOverlaysForFeatureGroup(layerObj.featureGroup);
+        });
       }
+
       visibilityBtn.innerHTML = '<i class="fa fa-eye"></i>';
       visibilityBtn.title = 'Сховати шар';
       visibilityBtn.classList.add('blue');
       layerCard.classList.remove('layer-card-inactive');
     } else {
       map.removeLayer(layerObj.tileLayer);
-      // Знімаю overlays з карти, але не видаляю з пам'яті
+
+      // Знімаю overlays з карти та очищую overlayInstances
       if (layerObj.featureGroup.overlayInstances) {
         layerObj.featureGroup.overlayInstances.forEach((overlay: any) => {
           if (overlay && map.hasLayer(overlay)) {
             map.removeLayer(overlay);
           }
         });
+
+        // Очищуємо overlayInstances, щоб при показуванні відновити з images
+        layerObj.featureGroup.overlayInstances = [];
       }
-      import('./layers.js').then(({ removeFeatureGroupAndOverlays }) => {
-        map.removeLayer(layerObj.featureGroup);
-      });
+
+      // Видаляємо тільки featureGroup з карти, НЕ очищуючи дані
+      map.removeLayer(layerObj.featureGroup);
+
+      // НЕ викликаємо removeFeatureGroupAndOverlays - вона очищає дані!
+      // import('./layers.js').then(({ removeFeatureGroupAndOverlays }) => {
+      //   removeFeatureGroupAndOverlays(layerObj.featureGroup);
+      // });
+
       visibilityBtn.innerHTML = '<i class="fa fa-eye-slash"></i>';
       visibilityBtn.title = 'Показати шар';
       visibilityBtn.classList.remove('blue');
       layerCard.classList.add('layer-card-inactive');
     }
+
+    // Зберігаємо стан видимості в localStorage
+    import('./layers.js').then(({ saveLayersToStorage }) => {
+      saveLayersToStorage();
+    });
+
     // Оновлюємо видимість draw control
     updateDrawControlVisibility();
   };
@@ -458,12 +487,6 @@ export function createLayerControl(layerObj: any) {
         overlay._overlayId = `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         overlay._customUrl = imgUrl;
 
-        console.log(`🆕 Додаємо нове зображення через галерею`, {
-          overlayId: overlay._overlayId,
-          url: imgUrl.substring(0, 50) + '...',
-          bounds
-        });
-
         // Ініціалізуємо масиви якщо потрібно
         if (!layerObj.featureGroup.overlays) layerObj.featureGroup.overlays = [];
         if (!layerObj.featureGroup.images) layerObj.featureGroup.images = [];
@@ -472,14 +495,12 @@ export function createLayerControl(layerObj: any) {
         // Перевіряємо, чи не існує вже таке зображення (запобігаємо дублікатам)
         const existingImageIdx = layerObj.featureGroup.images.findIndex((img: any) => img.url === imgUrl);
         if (existingImageIdx !== -1) {
-          console.warn(`⚠️ Зображення вже існує в images[${existingImageIdx}], пропускаємо`);
           overlay.remove();
           return;
         }
 
         const existingOverlayIdx = layerObj.featureGroup.overlays.findIndex((img: any) => img.url === imgUrl);
         if (existingOverlayIdx !== -1) {
-          console.warn(`⚠️ Зображення вже існує в overlays[${existingOverlayIdx}], пропускаємо`);
           overlay.remove();
           return;
         }
@@ -492,18 +513,11 @@ export function createLayerControl(layerObj: any) {
         layerObj.featureGroup.overlays.push({ ...imageData }); // Копія для сумісності
         layerObj.featureGroup.overlayInstances.push(overlay);
 
-        console.log(`✅ Додано зображення в структури даних`, {
-          imagesCount: layerObj.featureGroup.images.length,
-          overlaysCount: layerObj.featureGroup.overlays.length,
-          instancesCount: layerObj.featureGroup.overlayInstances.length
-        });
-
         // Глобальний debounced save
         let globalSaveTimeout: number | null = null;
         const globalDebouncedSave = () => {
           if (globalSaveTimeout) clearTimeout(globalSaveTimeout);
           globalSaveTimeout = window.setTimeout(() => {
-            console.log(`💾 Збереження після додавання нового зображення ${overlay._overlayId}`);
             import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
             globalSaveTimeout = null;
           }, 150);
@@ -511,8 +525,6 @@ export function createLayerControl(layerObj: any) {
 
         // Функція оновлення стану overlay
         const updateOverlayState = () => {
-          console.log(`🎯 Edit event для нового overlay ${overlay._overlayId}`);
-
           const newBounds = overlay.getBounds();
           const newCorners = overlay.getCorners?.() ?
             overlay.getCorners().map((c: any) => ({ lat: c.lat, lng: c.lng })) : null;
@@ -522,12 +534,6 @@ export function createLayerControl(layerObj: any) {
           const imageIdx = layerObj.featureGroup.images.findIndex((img: any) => img.url === imgUrl);
 
           if (overlayIdx === -1 || imageIdx === -1) {
-            console.error(`❌ КРИТИЧНА ПОМИЛКА: Overlay не знайдено!`, {
-              overlayId: overlay._overlayId,
-              overlayIdx,
-              imageIdx,
-              url: imgUrl.substring(0, 50) + '...'
-            });
             return;
           }
 
@@ -539,12 +545,6 @@ export function createLayerControl(layerObj: any) {
             layerObj.featureGroup.overlays[overlayIdx].corners = newCorners;
             layerObj.featureGroup.images[imageIdx].corners = newCorners;
           }
-
-          console.log(`📝 Оновлено новий overlay ${overlay._overlayId}`, {
-            overlayIdx,
-            imageIdx,
-            bounds: newBounds
-          });
 
           globalDebouncedSave();
         };
