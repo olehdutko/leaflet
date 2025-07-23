@@ -1,3 +1,16 @@
+// Версія виправлень overlay
+export const OVERLAY_FIX_VERSION = 'v2.7';
+
+// Функція для оновлення title сторінки з версією
+export function updatePageTitle(baseTitle: string = 'Мапа Львова на Leaflet') {
+  document.title = `${baseTitle} ${OVERLAY_FIX_VERSION}`;
+  console.log(`🚀 ${baseTitle} ${OVERLAY_FIX_VERSION} завантажено`);
+  console.log(`📊 Версія виправлень overlay: ${OVERLAY_FIX_VERSION}`);
+}
+
+// Експортуємо версію в глобальну область для debug функцій
+(window as any).OVERLAY_FIX_VERSION = OVERLAY_FIX_VERSION;
+
 // Використовуємо глобальну змінну L з CDN
 declare const L: any;
 import { map } from './map-init.js';
@@ -688,6 +701,9 @@ function centerGeoSearchBar() {
 window.addEventListener('resize', centerGeoSearchBar);
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Оновлюємо title сторінки з версією
+  updatePageTitle();
+
   const loadSuccess = loadLayersFromStorage();
   // Якщо завантаження не вдалося, створюємо початковий шар
   if (!loadSuccess) {
