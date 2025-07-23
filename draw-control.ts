@@ -10,11 +10,11 @@ export function initDrawControl() {
   if (drawControl) {
     map.removeControl(drawControl);
   }
-  
+
   // Створюємо feature group для draw control (тимчасовий)
   const drawnItems = new L.FeatureGroup();
   map.addLayer(drawnItems);
-  
+
   // Створюємо draw control
   drawControl = new L.Control.Draw({
     position: 'topright',
@@ -60,18 +60,27 @@ export function initDrawControl() {
       remove: true
     }
   });
-  
+
   // Додаємо draw control до карти
   map.addControl(drawControl);
-  
+
   // Обробники подій для draw control
-  map.on('draw:created', function(e: any) {
+  map.on('draw:created', function (e: any) {
     const layer = e.layer;
     const type = e.layerType;
-    
+
     // Додаємо властивості за замовчуванням
+    // Генеруємо назву з поточним часом як у шарів
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const objectType = type === 'marker' ? 'Маркер' :
+      type === 'polygon' ? 'Полігон' :
+        type === 'polyline' ? 'Лінія' :
+          type === 'circle' ? 'Коло' : 'Прямокутник';
+
     layer.properties = {
-      name: `Новий ${type === 'marker' ? 'маркер' : type === 'polygon' ? 'полігон' : type === 'polyline' ? 'лінія' : type === 'circle' ? 'коло' : 'прямокутник'}`,
+      name: `${objectType} ${timeStr}`,
       description: '',
       color: '#1976d2',
       fillColor: '#1976d2',
@@ -79,7 +88,7 @@ export function initDrawControl() {
       opacity: 1,
       weight: 3
     };
-    
+
     // Додаємо до активного шару
     if (activeLayer instanceof L.FeatureGroup) {
       activeLayer.addLayer(layer);
@@ -87,20 +96,20 @@ export function initDrawControl() {
         (window as any).addDoubleClickToLayer(layer);
       }
       saveLayersToStorage();
-      
+
       // Оновлюємо UI
       updateActiveLayerUI();
     }
   });
-  
-  map.on('draw:edited', function(e: any) {
+
+  map.on('draw:edited', function (e: any) {
     // Зберігаємо зміни в активному шарі
     if (activeLayer) {
       saveLayersToStorage();
     }
   });
-  
-  map.on('draw:deleted', function(e: any) {
+
+  map.on('draw:deleted', function (e: any) {
     // Зберігаємо зміни в активному шарі
     if (activeLayer) {
       saveLayersToStorage();

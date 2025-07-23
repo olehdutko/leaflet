@@ -153,6 +153,448 @@
   <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
   <script src="./debug-overlay.js"></script>
   <script type="module" src="./dist/main.js"></script>
+
+  <!-- Функція requestOverlayDelete після завантаження всіх модулів -->
+  <script>
+    // Проста функція для підтвердження видалення overlay зображень
+    window.requestOverlayDelete = function (overlay) {
+      console.log('📞 requestOverlayDelete викликана для:', overlay._customUrl);
+
+      const imageName = overlay._customUrl ?
+        'зображення' + (overlay._customUrl.includes('blob:') ? ' (завантажене з файлу)' : '') :
+        'зображення';
+
+      // ПОШУК СПРАВЖНЬОГО OVERLAY (переносимо сюди щоб було доступно в callback)
+      console.log('🔍 Пошук справжнього overlay об\'єкта...');
+      let realOverlay = null;
+
+      // Метод 1: Перевіряємо чи це action об'єкт з посиланням на overlay
+      if (overlay._overlay) {
+        console.log('   Знайдено _overlay властивість');
+        realOverlay = overlay._overlay;
+      } else if (overlay.overlay) {
+        console.log('   Знайдено overlay властивість');
+        realOverlay = overlay.overlay;
+      } else if (overlay._layer) {
+        console.log('   Знайдено _layer властивість');
+        realOverlay = overlay._layer;
+      } else if (overlay.target) {
+        console.log('   Знайдено target властивість');
+        realOverlay = overlay.target;
+      }
+
+      // Метод 2: Пошук через DOM події
+      if (!realOverlay) {
+        console.log('   Пошук через останню активну overlay...');
+        const selectedOverlay = document.querySelector('.leaflet-image-layer.leaflet-interactive');
+        if (selectedOverlay) {
+          console.log('   Знайдено активну overlay в DOM');
+          if (window.customLayers) {
+            for (const layerObj of window.customLayers) {
+              if (layerObj.featureGroup && layerObj.featureGroup.overlayInstances) {
+                for (const inst of layerObj.featureGroup.overlayInstances) {
+                  if (inst._image === selectedOverlay) {
+                    realOverlay = inst;
+                    console.log('   ✅ Знайдено відповідний overlay об\'єкт!');
+                    break;
+                  }
+                }
+                if (realOverlay) break;
+              }
+            }
+          }
+        }
+      }
+
+      // Використовуємо знайдений справжній overlay
+      const finalOverlay = realOverlay || overlay;
+      if (realOverlay) {
+        console.log('✅ Знайдено справжній overlay об\'єкт!');
+        console.log('   _customUrl:', realOverlay._customUrl);
+        console.log('   _url:', realOverlay._url);
+        console.log('   _image:', realOverlay._image);
+      } else {
+        console.log('⚠️ Справжній overlay не знайдено, використовуємо оригінальний об\'єкт');
+      }
+
+      // Функція очистки даних
+      const cleanupData = function () {
+        console.log('✅ Виконуємо очистку даних');
+        console.log('🔍 window.customLayers доступне:', window.customLayers ? 'ТАК' : 'НІ');
+        console.log('🔍 overlay._customUrl:', overlay._customUrl);
+
+        // ГЛИБОКА діагностика overlay об'єкта
+        console.log('🔍 ГЛИБОКА діагностика overlay об\'єкта:');
+        console.log('   typeof overlay:', typeof overlay);
+        console.log('   constructor:', overlay.constructor?.name);
+        console.log('   _url:', overlay._url);
+        console.log('   src:', overlay.src);
+        console.log('   options:', overlay.options);
+        console.log('   _image:', overlay._image);
+        if (overlay._image) {
+          console.log('   _image.src:', overlay._image.src);
+          console.log('   _image.currentSrc:', overlay._image.currentSrc);
+        }
+        console.log('   _overlayId:', overlay._overlayId);
+        console.log('   _debugId:', overlay._debugId);
+
+        // Додаткові властивості, які можуть бути в leaflet.distortableimage
+        console.log('   _overlay:', overlay._overlay);
+        console.log('   overlay:', overlay.overlay);
+        console.log('   _layer:', overlay._layer);
+        console.log('   target:', overlay.target);
+        console.log('   _parent:', overlay._parent);
+        console.log('   _feature:', overlay._feature);
+
+        // Перевіряємо всі властивості об'єкта
+        console.log('🔍 Всі властивості overlay об\'єкта:');
+        const allKeys = [];
+        let currentObj = overlay;
+        while (currentObj && currentObj !== Object.prototype) {
+          allKeys.push(...Object.getOwnPropertyNames(currentObj));
+          currentObj = Object.getPrototypeOf(currentObj);
+        }
+        const uniqueKeys = [...new Set(allKeys)].filter(key => !key.startsWith('_leaflet'));
+        console.log('   Властивості:', uniqueKeys.slice(0, 20)); // Показуємо перші 20
+
+        // Спробуємо знайти overlay в DOM за допомогою різних методів
+        let domImage = null;
+        const allImages = document.querySelectorAll('img.leaflet-image-layer');
+        console.log(`🔍 Знайдено ${allImages.length} leaflet-image-layer в DOM`);
+
+        allImages.forEach((img, idx) => {
+          console.log(`   DOM image ${idx}: src=${img.src?.substring(0, 100)}...`);
+          // Порівнюємо finalOverlay._image з DOM елементом
+          if (finalOverlay._image === img) {
+            domImage = img;
+            console.log(`   ✅ Знайдено відповідний DOM елемент: індекс ${idx}`);
+          }
+        });
+
+        // Отримуємо URL для пошуку з різних властивостей finalOverlay
+        const overlayUrl = finalOverlay._customUrl ||
+          finalOverlay._url ||
+          finalOverlay.src ||
+          (finalOverlay.options && finalOverlay.options.url) ||
+          (finalOverlay._image && finalOverlay._image.src) ||
+          (finalOverlay._image && finalOverlay._image.currentSrc) ||
+          (domImage && domImage.src);
+
+        console.log('🔍 Знайдений URL для видалення:', overlayUrl);
+
+        if (!overlayUrl) {
+          console.error('❌ Не вдається знайти URL overlay для видалення');
+          console.log('🔍 Спробуємо альтернативний метод через пошук в overlayInstances...');
+
+          // Альтернативний метод: знаходимо overlay по точному об'єкту в overlayInstances
+          if (window.customLayers && Array.isArray(window.customLayers)) {
+            let foundByReference = false;
+            window.customLayers.forEach((layerObj, layerIndex) => {
+              if (layerObj.featureGroup && layerObj.featureGroup.overlayInstances) {
+                // Шукаємо і оригінальний об'єкт, і знайдений realOverlay
+                let idx = layerObj.featureGroup.overlayInstances.findIndex(inst => inst === overlay);
+                if (idx === -1 && realOverlay) {
+                  idx = layerObj.featureGroup.overlayInstances.findIndex(inst => inst === realOverlay);
+                }
+                if (idx !== -1) {
+                  console.log(`🔍 Знайдено overlay по посиланню в шарі ${layerIndex}, позиція ${idx}`);
+                  // Видаляємо тільки з overlayInstances
+                  layerObj.featureGroup.overlayInstances.splice(idx, 1);
+                  console.log(`🧹 Видалено з overlayInstances (знайдено по посиланню)`);
+                  foundByReference = true;
+
+                  // Зберігаємо зміни
+                  if (window.saveLayersToStorage) {
+                    window.saveLayersToStorage();
+                  }
+                }
+              }
+            });
+
+            if (foundByReference) {
+              console.log('✅ Overlay видалено по прямому посиланню');
+              return;
+            }
+          }
+
+          console.error('❌ Не вдається знайти overlay для видалення жодним методом');
+          console.log('💡 Спробуємо видалити всі overlay без URL...');
+
+          // Крайній випадок: видаляємо всі overlay які не мають чіткого URL
+          if (window.customLayers && Array.isArray(window.customLayers)) {
+            let foundAny = false;
+            window.customLayers.forEach((layerObj, layerIndex) => {
+              if (layerObj.featureGroup && layerObj.featureGroup.overlayInstances) {
+                const toRemove = [];
+                layerObj.featureGroup.overlayInstances.forEach((inst, idx) => {
+                  if (!inst._customUrl && !inst._url && !inst.src && inst._image) {
+                    toRemove.push(idx);
+                  }
+                });
+
+                if (toRemove.length > 0) {
+                  console.log(`🗑️ Видаляємо ${toRemove.length} overlay без URL з шару ${layerIndex}`);
+                  // Видаляємо в зворотньому порядку щоб не збити індекси
+                  toRemove.reverse().forEach(idx => {
+                    layerObj.featureGroup.overlayInstances.splice(idx, 1);
+                  });
+                  foundAny = true;
+                }
+              }
+            });
+
+            if (foundAny) {
+              console.log('✅ Видалено overlay без URL');
+              if (window.saveLayersToStorage) {
+                window.saveLayersToStorage();
+              }
+              return;
+            }
+          }
+
+          return;
+        }
+
+        // Перевіряємо поточний стан localStorage
+        const currentStorage = localStorage.getItem('lefleat_layers');
+        console.log('🔍 Поточний localStorage (до очистки):', currentStorage ? 'ІСНУЄ' : 'ПОРОЖНІЙ');
+
+        let totalFound = 0;
+        let cleanupSuccess = false;
+
+        try {
+          // Спочатку спробуємо стандартний метод через window.customLayers
+          if (window.customLayers && Array.isArray(window.customLayers)) {
+            console.log('🔍 Кількість шарів:', window.customLayers.length);
+
+            window.customLayers.forEach((layerObj, layerIndex) => {
+              console.log(`🔍 Перевіряємо шар ${layerIndex} "${layerObj.title}"`);
+
+              if (layerObj.featureGroup) {
+                let layerChanges = false;
+
+                // Видаляємо з images
+                if (layerObj.featureGroup.images && Array.isArray(layerObj.featureGroup.images)) {
+                  console.log(`📂 images масив: ${layerObj.featureGroup.images.length} елементів`);
+
+                  const idx = layerObj.featureGroup.images.findIndex(img => img.url === overlayUrl);
+                  if (idx !== -1) {
+                    layerObj.featureGroup.images.splice(idx, 1);
+                    console.log(`🧹 Видалено з images масиву (індекс ${idx}). Залишилось: ${layerObj.featureGroup.images.length}`);
+                    layerChanges = true;
+                    totalFound++;
+                  }
+                }
+
+                // Видаляємо з overlays
+                if (layerObj.featureGroup.overlays && Array.isArray(layerObj.featureGroup.overlays)) {
+                  console.log(`📂 overlays масив: ${layerObj.featureGroup.overlays.length} елементів`);
+
+                  const idx = layerObj.featureGroup.overlays.findIndex(img => img.url === overlayUrl);
+                  if (idx !== -1) {
+                    layerObj.featureGroup.overlays.splice(idx, 1);
+                    console.log(`🧹 Видалено з overlays масиву (індекс ${idx}). Залишилось: ${layerObj.featureGroup.overlays.length}`);
+                    layerChanges = true;
+                    totalFound++;
+                  }
+                }
+
+                // Видаляємо з overlayInstances
+                if (layerObj.featureGroup.overlayInstances && Array.isArray(layerObj.featureGroup.overlayInstances)) {
+                  console.log(`📂 overlayInstances масив: ${layerObj.featureGroup.overlayInstances.length} елементів`);
+
+                  // Спочатку пошук по точному об'єкту (оригінальному або знайденому)
+                  let idx = layerObj.featureGroup.overlayInstances.findIndex(inst => inst === overlay);
+                  if (idx === -1 && realOverlay) {
+                    idx = layerObj.featureGroup.overlayInstances.findIndex(inst => inst === realOverlay);
+                  }
+                  if (idx === -1) {
+                    // Потім пошук по URL
+                    idx = layerObj.featureGroup.overlayInstances.findIndex(inst =>
+                      inst._customUrl === overlayUrl ||
+                      inst._url === overlayUrl ||
+                      inst.src === overlayUrl ||
+                      (inst._image && inst._image.src === overlayUrl) ||
+                      (inst._image && inst._image.currentSrc === overlayUrl)
+                    );
+                  }
+
+                  if (idx !== -1) {
+                    layerObj.featureGroup.overlayInstances.splice(idx, 1);
+                    console.log(`🧹 Видалено з overlayInstances масиву (індекс ${idx}). Залишилось: ${layerObj.featureGroup.overlayInstances.length}`);
+                    layerChanges = true;
+                    totalFound++;
+                  }
+                }
+
+                if (layerChanges) {
+                  console.log(`✅ Зміни внесено в шар "${layerObj.title}"`);
+                  cleanupSuccess = true;
+                }
+              }
+            });
+          }
+
+          // Якщо стандартний метод не спрацював або не знайшов нічого, спробуємо прямо через localStorage
+          if (totalFound === 0) {
+            console.log('🔄 Стандартний метод не знайшов даних, спробуємо резервний варіант...');
+
+            const stored = localStorage.getItem('lefleat_layers');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              console.log('🔄 Резервний метод: шукаємо в localStorage...');
+
+              let storageModified = false;
+              parsed.forEach((layer, layerIdx) => {
+                if (layer.featureGroup) {
+                  // Очищаємо images
+                  if (layer.featureGroup.images && Array.isArray(layer.featureGroup.images)) {
+                    const originalLength = layer.featureGroup.images.length;
+                    layer.featureGroup.images = layer.featureGroup.images.filter(img => img.url !== overlayUrl);
+                    if (layer.featureGroup.images.length < originalLength) {
+                      console.log(`🧹 Резервний: видалено з localStorage шар ${layerIdx} images`);
+                      storageModified = true;
+                      totalFound++;
+                    }
+                  }
+
+                  // Очищаємо overlays  
+                  if (layer.featureGroup.overlays && Array.isArray(layer.featureGroup.overlays)) {
+                    const originalLength = layer.featureGroup.overlays.length;
+                    layer.featureGroup.overlays = layer.featureGroup.overlays.filter(img => img.url !== overlayUrl);
+                    if (layer.featureGroup.overlays.length < originalLength) {
+                      console.log(`🧹 Резервний: видалено з localStorage шар ${layerIdx} overlays`);
+                      storageModified = true;
+                      totalFound++;
+                    }
+                  }
+                }
+              });
+
+              if (storageModified) {
+                localStorage.setItem('lefleat_layers', JSON.stringify(parsed));
+                console.log('💾 Резервний: оновлено localStorage');
+                cleanupSuccess = true;
+              }
+            }
+          }
+
+          console.log(`📊 Загалом знайдено та видалено: ${totalFound} записів`);
+
+          // Збереження змін
+          if (cleanupSuccess && window.saveLayersToStorage && typeof window.saveLayersToStorage === 'function') {
+            console.log('💾 Зберігаємо зміни...');
+            window.saveLayersToStorage();
+
+            // Оновлюємо UI
+            setTimeout(() => {
+              if (window.updateObjectsListForAllLayers && typeof window.updateObjectsListForAllLayers === 'function') {
+                console.log('🔄 Оновлюємо UI...');
+                window.updateObjectsListForAllLayers();
+              }
+            }, 100);
+          } else if (totalFound > 0) {
+            console.log('⚠️ Знайдено записи, але не вдалося зберегти зміни');
+          }
+
+          if (totalFound === 0) {
+            console.log('⚠️ Не знайдено жодних записів для видалення');
+            console.log('🔍 Можливі причини:');
+            console.log('   - Overlay вже було видалено');
+            console.log('   - URL не співпадає з збереженими даними');
+            console.log('   - Проблема з структурою даних');
+            console.log('   - requestOverlayDelete викликано з неправильним об\'єктом');
+
+            // Спробуємо показати наявні URL для діагностики
+            if (window.customLayers && Array.isArray(window.customLayers)) {
+              console.log('🔍 Наявні overlay URL в системі:');
+              window.customLayers.forEach((layer, idx) => {
+                if (layer.featureGroup && layer.featureGroup.overlays) {
+                  layer.featureGroup.overlays.forEach((overlay, overlayIdx) => {
+                    console.log(`   Шар ${idx}, overlay ${overlayIdx}: ${overlay.url?.substring(0, 100)}...`);
+                  });
+                }
+              });
+            }
+          }
+
+        } catch (error) {
+          console.error('❌ Помилка cleanup:', error);
+          console.error('❌ Stack trace:', error.stack);
+        }
+      };
+
+      // Спробуємо використати кастомний діалог
+      if (window.showConfirmDialog && typeof window.showConfirmDialog === 'function') {
+        console.log('✅ Використовуємо кастомний діалог');
+
+        window.showConfirmDialog({
+          title: `Видалення ${imageName}`,
+          message: `Ви дійсно хочете видалити ${imageName}?`,
+          onConfirm: function () {
+            console.log('🗑️ Підтверджено через кастомний діалог');
+            console.log('🔍 Overlay об\'єкт:', overlay);
+            console.log('🔍 Overlay властивості URL:', {
+              _customUrl: overlay._customUrl,
+              _url: overlay._url,
+              src: overlay.src,
+              optionsUrl: overlay.options?.url,
+              imageSrc: overlay._image?.src
+            });
+
+            // MANUALLY видаляємо overlay з карти після підтвердження
+            try {
+              if (finalOverlay && typeof finalOverlay.remove === 'function') {
+                finalOverlay.remove();
+                console.log('🗑️ FinalOverlay видалено з карти вручну');
+              } else if (overlay && typeof overlay.remove === 'function') {
+                overlay.remove();
+                console.log('🗑️ Overlay видалено з карти вручну');
+              }
+            } catch (error) {
+              console.log('⚠️ Помилка при ручному видаленні overlay:', error);
+            }
+
+            // Очищаємо дані з невеликою затримкою після видалення
+            setTimeout(() => {
+              console.log('🕐 Виконуємо cleanup через 100мс після видалення...');
+              cleanupData();
+            }, 100);
+          },
+          onCancel: function () {
+            console.log('❌ Скасовано через кастомний діалог - overlay залишається на карті');
+          },
+          buttons: [
+            { text: 'Видалити', action: 'delete', className: 'btn-danger' },
+            { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+          ]
+        });
+
+        // Повертаємо FALSE щоб зупинити автоматичне видалення leaflet.distortableimage.js
+        console.log('🔄 Повертаємо false (зупиняємо автовидалення, будемо видаляти вручну)');
+        return false;
+      } else {
+        console.log('⚠️ Використовуємо стандартний confirm');
+        const confirmed = confirm(`Ви дійсно хочете видалити ${imageName}?\n\nЦю дію неможливо скасувати.`);
+
+        if (confirmed) {
+          console.log('🗑️ Підтверджено через стандартний діалог');
+
+          // При стандартному confirm очищаємо дані і дозволяємо leaflet.distortableimage.js видалити overlay
+          setTimeout(() => {
+            cleanupData();
+          }, 100);
+
+          return true; // Дозволяємо автоматичне видалення
+        } else {
+          console.log('❌ Скасовано через стандартний діалог');
+          return false; // Зупиняємо видалення
+        }
+      }
+    };
+
+    console.log('✅ requestOverlayDelete функція завантажена (покращена версія v2.0)');
+  </script>
 </body>
 
 </html>

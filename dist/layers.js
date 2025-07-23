@@ -148,11 +148,23 @@ export function loadLayersFromStorage() {
                         };
                     },
                     onEachFeature: function (feature, layer) {
+                        var _a;
                         featureGroup.addLayer(layer);
                         addDoubleClickToLayer(layer);
                         if (feature.properties) {
                             layer.properties = Object.assign({}, feature.properties);
-                            applyObjectProperties(layer, feature.properties);
+                            // Виправляємо undefined значення для назви та опису
+                            if (!layer.properties.name || layer.properties.name === 'undefined') {
+                                const type = (_a = feature.geometry) === null || _a === void 0 ? void 0 : _a.type;
+                                const objectType = type === 'Point' ? 'Маркер' :
+                                    type === 'Polygon' ? 'Полігон' :
+                                        type === 'LineString' ? 'Лінія' : 'Об\'єкт';
+                                layer.properties.name = `${objectType} [без назви]`;
+                            }
+                            if (!layer.properties.description || layer.properties.description === 'undefined') {
+                                layer.properties.description = '';
+                            }
+                            applyObjectProperties(layer, layer.properties);
                             if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
                                 let dashArray = null;
                                 if (feature.properties.style === 'dashed')
@@ -237,6 +249,47 @@ export function loadLayersFromStorage() {
                 });
             }
         }, 100);
+        // Оновлюємо layerId до максимального існуючого ID + 1
+        const maxId = customLayers.length > 0 ? Math.max(...customLayers.map(l => l.id)) : 0;
+        layerId = maxId + 1;
+        // Перевіряємо та виправляємо дублюючі ID
+        const usedIds = new Set();
+        let hasChanges = false;
+        customLayers.forEach((layer, index) => {
+            if (usedIds.has(layer.id)) {
+                // Знайшли дублікат - присвоюємо новий унікальний ID
+                while (usedIds.has(layerId)) {
+                    layerId++;
+                }
+                layer.id = layerId;
+                usedIds.add(layerId);
+                layerId++;
+                hasChanges = true;
+                // Оновлюємо data-layer-id в DOM
+                const layerCard = document.querySelector(`[data-layer-id="${layer.id}"]`);
+                if (!layerCard) {
+                    // Шукаємо картку по інших ознаках та оновлюємо
+                    const allCards = document.querySelectorAll('.layer-card');
+                    if (allCards[index]) {
+                        allCards[index].dataset.layerId = layer.id.toString();
+                    }
+                }
+            }
+            else {
+                usedIds.add(layer.id);
+            }
+        });
+        // Якщо були зміни, зберігаємо оновлені дані
+        if (hasChanges) {
+            saveLayersToStorage();
+            // Перегенеровуємо UI щоб оновити всі data-layer-id
+            if (layerControlsDiv) {
+                layerControlsDiv.innerHTML = '';
+                customLayers.forEach(layer => {
+                    createLayerControl(layer);
+                });
+            }
+        }
         return true;
     }
     catch (e) {
@@ -530,3 +583,6 @@ export function restoreOverlaysForFeatureGroup(featureGroup) {
     // Знімаємо прапорець відновлення
     featureGroup._restoringOverlays = false;
 }
+// Експортуємо customLayers та saveLayersToStorage в глобальну область для requestOverlayDelete
+window.customLayers = customLayers;
+window.saveLayersToStorage = saveLayersToStorage;

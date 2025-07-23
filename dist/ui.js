@@ -1,5 +1,6 @@
 import { currentEditingObject } from './state.js';
 import { closeEditModal } from './main.js';
+import { map } from './map-init.js';
 import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './utils.js';
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
@@ -22,10 +23,10 @@ export function showEditModal(layer) {
     // Заповнюємо поля
     const objectName = document.getElementById('object-name');
     if (objectName)
-        objectName.value = properties.name;
+        objectName.value = properties.name || '';
     const objectDescription = document.getElementById('object-description');
     if (objectDescription)
-        objectDescription.value = properties.description;
+        objectDescription.value = properties.description || '';
     // Групи контролів
     const colorPickerGroup = document.getElementById('color-picker-group');
     const lineWidthGroup = document.getElementById('line-width-group');
@@ -246,7 +247,90 @@ export function showEditModal(layer) {
 export function addDoubleClickToLayer(layer) {
     if (!layer)
         return;
-    // dblclick — модалка
+    const type = getObjectType(layer);
+    // --- Тултіп функціональність ---
+    function getTooltipHtml(properties) {
+        let html = '';
+        if (properties.name)
+            html += `<div class='tooltip-title'>${properties.name}</div>`;
+        if (properties.description) {
+            // Автоматично замінюємо посилання на <a>
+            const descWithLinks = properties.description.replace(/(https?:\/\/[^\s]+)/g, function (url) {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+            });
+            html += `<div class='tooltip-desc'>${descWithLinks}</div>`;
+        }
+        if (properties.image)
+            html += `<div class='tooltip-img-wrap'><img src='${properties.image}' class='tooltip-img' /></div>`;
+        return html || '<span class="tooltip-empty">(немає даних)</span>';
+    }
+    let customTooltip = null;
+    let tooltipTimer = null;
+    function showTooltip(e) {
+        // Зупиняємо попередній таймер
+        if (tooltipTimer) {
+            clearTimeout(tooltipTimer);
+            tooltipTimer = null;
+        }
+        // Видаляємо попередній тултіп, якщо він є
+        if (customTooltip) {
+            customTooltip.remove();
+            customTooltip = null;
+        }
+        const props = layer.properties || {};
+        const html = getTooltipHtml(props);
+        // Створюємо власний тултіп
+        customTooltip = document.createElement('div');
+        customTooltip.className = 'custom-tooltip';
+        customTooltip.innerHTML = html;
+        customTooltip.style.position = 'absolute';
+        customTooltip.style.zIndex = '1000';
+        customTooltip.style.pointerEvents = 'auto';
+        customTooltip.style.cursor = 'default';
+        // Додаємо тултіп до карти
+        const mapContainer = map.getContainer();
+        mapContainer.appendChild(customTooltip);
+        // Позиціонуємо тултіп
+        if (e.originalEvent && typeof e.originalEvent.clientX === 'number' && typeof e.originalEvent.clientY === 'number') {
+            const rect = mapContainer.getBoundingClientRect();
+            customTooltip.style.left = (e.originalEvent.clientX - rect.left) + 'px';
+            customTooltip.style.top = (e.originalEvent.clientY - rect.top) + 'px';
+            customTooltip.style.transform = 'translate(-50%, -120%)';
+        }
+        else {
+            // fallback: над об'єктом
+            const point = map.latLngToLayerPoint(e.latlng);
+            customTooltip.style.left = point.x + 'px';
+            customTooltip.style.top = point.y + 'px';
+            customTooltip.style.transform = 'translate(-60%, -120%)';
+        }
+        // Обробники подій для тултіпа
+        customTooltip.addEventListener('mouseenter', function () {
+            if (tooltipTimer) {
+                clearTimeout(tooltipTimer);
+                tooltipTimer = null;
+            }
+        });
+        customTooltip.addEventListener('mouseleave', function () {
+            hideTooltip();
+        });
+    }
+    function hideTooltip() {
+        if (tooltipTimer) {
+            clearTimeout(tooltipTimer);
+        }
+        tooltipTimer = setTimeout(() => {
+            if (customTooltip) {
+                customTooltip.remove();
+                customTooltip = null;
+            }
+            tooltipTimer = null;
+        }, 100);
+    }
+    // Підключаємо тултіпи
+    layer.on('mouseover', showTooltip);
+    layer.on('mouseout', hideTooltip);
+    // --- Подвійний клік функціональність ---
     layer.on('dblclick', function (e) {
         var _a, _b, _c, _d;
         layer._wasDblClicked = true;
@@ -349,8 +433,7 @@ export function createLayerControl(layerObj) {
     const layerCard = document.createElement('div');
     layerCard.className = 'layer-card';
     layerCard.dataset.layerId = layerObj.id.toString();
-    // Make layer card draggable
-    layerCard.draggable = true;
+    // Layer card is not draggable by default - only via drag handle
     // Layer selection functionality
     layerCard.onclick = (e) => {
         // Don't select if clicking on buttons, drag handle, or objects
@@ -372,6 +455,7 @@ export function createLayerControl(layerObj) {
     dragHandle.className = 'layer-card-icon-btn layer-card-drag-handle';
     dragHandle.innerHTML = '<i class="fa fa-grip-vertical"></i>';
     dragHandle.title = 'Перетягнути для зміни порядку';
+    // Drag functionality handled by Sortable.js via handle: '.layer-card-drag-handle'
     // Expand/collapse button
     const expandBtn = document.createElement('button');
     expandBtn.className = 'layer-card-icon-btn layer-card-expand-btn';
@@ -486,6 +570,10 @@ export function createLayerControl(layerObj) {
     galleryBtn.innerHTML = '<i class="fa fa-image"></i>';
     galleryBtn.title = 'Галерея';
     galleryBtn.onclick = () => {
+        // Встановлюємо цей шар як активний
+        import('./layers.js').then(({ setActiveLayer }) => {
+            setActiveLayer(layerObj.featureGroup);
+        });
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
@@ -1023,40 +1111,7 @@ export function createLayerControl(layerObj) {
     layerCard.appendChild(opacityContainer);
     layerCard.appendChild(objectsHeader);
     layerCard.appendChild(objectsListWrap);
-    // Drag & drop event handlers for layer reordering
-    layerCard.ondragstart = (e) => {
-        var _a;
-        (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', layerObj.id.toString());
-        e.dataTransfer.effectAllowed = 'move';
-        layerCard.classList.add('dragging');
-    };
-    layerCard.ondragend = () => {
-        layerCard.classList.remove('dragging');
-    };
-    layerCard.ondragover = (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    };
-    layerCard.ondrop = (e) => {
-        var _a;
-        e.preventDefault();
-        const draggedLayerId = (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData('text/plain');
-        if (draggedLayerId && draggedLayerId !== layerObj.id.toString()) {
-            // Reorder layers
-            const draggedLayerIndex = customLayers.findIndex(l => l.id.toString() === draggedLayerId);
-            const currentLayerIndex = customLayers.findIndex(l => l.id === layerObj.id);
-            if (draggedLayerIndex !== -1 && currentLayerIndex !== -1) {
-                const [draggedLayer] = customLayers.splice(draggedLayerIndex, 1);
-                customLayers.splice(currentLayerIndex, 0, draggedLayer);
-                // Re-render all layers to update order
-                layerControlsDiv.innerHTML = '';
-                customLayers.forEach(layer => {
-                    createLayerControl(layer);
-                });
-                saveLayersToStorage();
-            }
-        }
-    };
+    // Layer reordering is handled by Sortable.js in layers.ts
     layerControlsDiv.appendChild(layerCard);
     return layerCard;
 }
@@ -1087,7 +1142,6 @@ export function selectLayer(layerId) {
 }
 // Додаємо необхідні імпорти
 import { customLayers, createTileLayer } from './layers.js';
-import { map } from './map-init.js';
 import { updateDrawControlVisibility } from './draw-control.js';
 // Робимо renderObjectsList глобально доступною
 // (window as any).renderObjectsList = renderObjectsList; // більше не потрібно
@@ -1125,6 +1179,26 @@ if (layersPanelDrawer && layersPanelToggle) {
     });
 }
 window.addDoubleClickToLayer = addDoubleClickToLayer;
+// Експортуємо для використання в window.requestOverlayDelete після завантаження layers.js
+import('./layers.js').then(({ saveLayersToStorage, customLayers }) => {
+    window.saveLayersToStorage = saveLayersToStorage;
+    window.customLayers = customLayers;
+});
+// Експортуємо showConfirmDialog для використання в requestOverlayDelete
+window.showConfirmDialog = showConfirmDialog;
+// Функція для оновлення UI всіх шарів після видалення overlay
+function updateObjectsListForAllLayers() {
+    import('./layers.js').then(({ customLayers }) => {
+        customLayers.forEach(layerObj => {
+            const updateFn = layerIdToRenderObjectsList.get(layerObj.id);
+            if (updateFn) {
+                updateFn();
+            }
+        });
+    });
+}
+// Експортуємо updateObjectsListForAllLayers для використання в requestOverlayDelete
+window.updateObjectsListForAllLayers = updateObjectsListForAllLayers;
 // --- Глобальний MutationObserver для маркерів ---
 if (typeof window !== 'undefined' && typeof L !== 'undefined') {
     const markerObserver = new MutationObserver(() => {

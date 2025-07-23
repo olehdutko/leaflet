@@ -157,6 +157,7 @@ if (typeof window !== 'undefined') {
     debugLog('- debugOverlay.callCounts() - лічильник викликів функцій');
     debugLog('- debugOverlay.geojson() - аналіз GeoJSON об\'єктів');
     debugLog('- debugOverlay.colors() - перевірка кольорів об\'єктів');
+    debugLog('- debugOverlay.checkCleanup(url) - перевірка очищення overlay');
 
     // Додаємо функцію показу лічильників
     window.debugOverlay.callCounts = function () {
@@ -254,5 +255,103 @@ if (typeof window !== 'undefined') {
         });
 
         debugLog('\n💡 Якщо бачите "undefined" - це проблема з кольорами!');
+    };
+
+    // Додаємо функцію для перевірки очищення overlay після видалення
+    window.debugOverlay.checkCleanup = function (overlayUrl) {
+        debugLog('=== ПЕРЕВІРКА ОЧИЩЕННЯ OVERLAY ===');
+
+        if (!overlayUrl) {
+            debugLog('❌ Не вказано URL для перевірки');
+            return;
+        }
+
+        const shortUrl = overlayUrl.substring(0, 100) + '...';
+        debugLog(`🔍 Перевіряємо очищення для: ${shortUrl}`);
+
+        let foundInMemory = 0;
+        let foundInStorage = 0;
+
+        // Перевіряємо в пам'яті (customLayers)
+        if (window.customLayers && Array.isArray(window.customLayers)) {
+            window.customLayers.forEach((layer, layerIdx) => {
+                if (layer.featureGroup) {
+                    // Перевіряємо images
+                    if (layer.featureGroup.images) {
+                        const found = layer.featureGroup.images.find(img => img.url === overlayUrl);
+                        if (found) {
+                            debugLog(`🚨 ЗНАЙДЕНО в пам'яті шар ${layerIdx} images`);
+                            foundInMemory++;
+                        }
+                    }
+
+                    // Перевіряємо overlays
+                    if (layer.featureGroup.overlays) {
+                        const found = layer.featureGroup.overlays.find(img => img.url === overlayUrl);
+                        if (found) {
+                            debugLog(`🚨 ЗНАЙДЕНО в пам'яті шар ${layerIdx} overlays`);
+                            foundInMemory++;
+                        }
+                    }
+
+                    // Перевіряємо overlayInstances
+                    if (layer.featureGroup.overlayInstances) {
+                        const found = layer.featureGroup.overlayInstances.find(inst =>
+                            inst._customUrl === overlayUrl ||
+                            inst._url === overlayUrl ||
+                            inst.src === overlayUrl
+                        );
+                        if (found) {
+                            debugLog(`🚨 ЗНАЙДЕНО в пам'яті шар ${layerIdx} overlayInstances`);
+                            foundInMemory++;
+                        }
+                    }
+                }
+            });
+        }
+
+        // Перевіряємо в localStorage
+        const stored = localStorage.getItem('lefleat_layers');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.forEach((layer, layerIdx) => {
+                if (layer.featureGroup) {
+                    // Перевіряємо images
+                    if (layer.featureGroup.images) {
+                        const found = layer.featureGroup.images.find(img => img.url === overlayUrl);
+                        if (found) {
+                            debugLog(`🚨 ЗНАЙДЕНО в localStorage шар ${layerIdx} images`);
+                            foundInStorage++;
+                        }
+                    }
+
+                    // Перевіряємо overlays
+                    if (layer.featureGroup.overlays) {
+                        const found = layer.featureGroup.overlays.find(img => img.url === overlayUrl);
+                        if (found) {
+                            debugLog(`🚨 ЗНАЙДЕНО в localStorage шар ${layerIdx} overlays`);
+                            foundInStorage++;
+                        }
+                    }
+                }
+            });
+        }
+
+        // Перевіряємо DOM
+        const domElements = document.querySelectorAll(`img.leaflet-image-layer[src="${overlayUrl}"]`);
+
+        debugLog(`📊 Результати перевірки:`);
+        debugLog(`   Знайдено в пам'яті: ${foundInMemory}`);
+        debugLog(`   Знайдено в localStorage: ${foundInStorage}`);
+        debugLog(`   Знайдено в DOM: ${domElements.length}`);
+
+        if (foundInMemory === 0 && foundInStorage === 0 && domElements.length === 0) {
+            debugLog('✅ УСПІХ: Overlay повністю очищено!');
+        } else {
+            debugLog('❌ ПРОБЛЕМА: Overlay не повністю очищено!');
+            if (foundInMemory > 0) debugLog('   🔧 Потрібно очистити пам\'ять');
+            if (foundInStorage > 0) debugLog('   🔧 Потрібно очистити localStorage');
+            if (domElements.length > 0) debugLog('   🔧 Потрібно очистити DOM');
+        }
     };
 } 

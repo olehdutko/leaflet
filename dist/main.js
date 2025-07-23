@@ -227,10 +227,10 @@ function showEditModal(layer) {
     // Заповнюємо поля
     const objectName = document.getElementById('object-name');
     if (objectName)
-        objectName.value = properties.name;
+        objectName.value = properties.name || '';
     const objectDescription = document.getElementById('object-description');
     if (objectDescription)
-        objectDescription.value = properties.description;
+        objectDescription.value = properties.description || '';
     // Групи контролів
     const colorPickerGroup = document.getElementById('color-picker-group');
     const lineWidthGroup = document.getElementById('line-width-group');
@@ -603,123 +603,7 @@ function initEditModal() {
         }
     });
 }
-// Функція для додавання подвійного кліку до об'єктів
-function addDoubleClickToLayer(layer) {
-    const type = getObjectType(layer);
-    // --- тултіп ---
-    function getTooltipHtml(properties) {
-        let html = '';
-        if (properties.name)
-            html += `<div class='tooltip-title'>${properties.name}</div>`;
-        if (properties.description) {
-            // Автоматично замінюємо посилання на <a>
-            const descWithLinks = properties.description.replace(/(https?:\/\/[^\s]+)/g, function (url) {
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
-            });
-            html += `<div class='tooltip-desc'>${descWithLinks}</div>`;
-        }
-        if (properties.image)
-            html += `<div class='tooltip-img-wrap'><img src='${properties.image}' class='tooltip-img' /></div>`;
-        // можна додати ще інші властивості
-        return html || '<span class="tooltip-empty">(немає даних)</span>';
-    }
-    let customTooltip = null;
-    let tooltipTimer = null;
-    function showTooltip(e) {
-        // Зупиняємо попередній таймер
-        if (tooltipTimer) {
-            clearTimeout(tooltipTimer);
-            tooltipTimer = null;
-        }
-        // Видаляємо попередній тултіп, якщо він є
-        if (customTooltip) {
-            customTooltip.remove();
-            customTooltip = null;
-        }
-        const props = layer.properties || {}; // @ts-ignore
-        const html = getTooltipHtml(props);
-        // Створюємо власний тултіп
-        customTooltip = document.createElement('div');
-        customTooltip.className = 'custom-tooltip';
-        customTooltip.innerHTML = html;
-        customTooltip.style.position = 'absolute';
-        customTooltip.style.zIndex = '1000';
-        customTooltip.style.pointerEvents = 'auto';
-        customTooltip.style.cursor = 'default';
-        // Додаємо тултіп до карти
-        const mapContainer = map.getContainer(); // @ts-ignore
-        mapContainer.appendChild(customTooltip);
-        // Позиціонуємо тултіп
-        if (e.originalEvent && typeof e.originalEvent.clientX === 'number' && typeof e.originalEvent.clientY === 'number') {
-            const mapContainer = map.getContainer(); // @ts-ignore
-            const rect = mapContainer.getBoundingClientRect();
-            customTooltip.style.left = (e.originalEvent.clientX - rect.left) + 'px';
-            customTooltip.style.top = (e.originalEvent.clientY - rect.top) + 'px';
-            customTooltip.style.transform = 'translate(-50%, -120%)';
-        }
-        else {
-            // fallback: над об'єктом
-            const point = map.latLngToLayerPoint(e.latlng); // @ts-ignore
-            customTooltip.style.left = point.x + 'px';
-            customTooltip.style.top = point.y + 'px';
-            customTooltip.style.transform = 'translate(-60%, -120%)';
-        }
-        // Обробники подій для тултіпа
-        customTooltip.addEventListener('mouseenter', function () {
-            if (tooltipTimer) {
-                clearTimeout(tooltipTimer);
-                tooltipTimer = null;
-            }
-        });
-        customTooltip.addEventListener('mouseleave', function () {
-            hideTooltip();
-        });
-    }
-    function hideTooltip() {
-        if (tooltipTimer) {
-            clearTimeout(tooltipTimer);
-        }
-        tooltipTimer = setTimeout(() => {
-            if (customTooltip) {
-                customTooltip.remove();
-                customTooltip = null;
-            }
-            tooltipTimer = null;
-        }, 100);
-    }
-    layer.on('mouseover', showTooltip);
-    layer.on('mouseout', hideTooltip);
-    // --- подвійний клік ---
-    if (type === 'marker') {
-        layer.on('add', function () {
-            const el = layer.getElement && layer.getElement(); // @ts-ignore
-            if (el) {
-                el.addEventListener('dblclick', function (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    showEditModal(layer);
-                });
-            }
-        });
-        const el = layer.getElement && layer.getElement(); // @ts-ignore
-        if (el) {
-            el.addEventListener('dblclick', function (e) {
-                e.stopPropagation();
-                e.preventDefault();
-                showEditModal(layer);
-            });
-        }
-    }
-    else {
-        layer.on('dblclick', function (e) {
-            if (e.originalEvent) {
-                e.originalEvent.stopPropagation();
-                e.originalEvent.preventDefault();
-            }
-            showEditModal(layer);
-        });
-    }
-}
+// Функція addDoubleClickToLayer перенесена в ui.ts
 // --- Геопошук з автокомплітом ---
 let searchMarker = null;
 (function setupGeoSearch() {
@@ -824,7 +708,7 @@ let searchMarker = null;
                     shadowSize: [41, 41]
                 })
             }).addTo(map);
-            // додати обробник подвійного кліку
+            // додати обробник подвійного кліку та тултіпів
             import('./ui.js').then(({ addDoubleClickToLayer }) => {
                 addDoubleClickToLayer(window.searchMarker);
             });
@@ -880,10 +764,23 @@ function handleKmzFile(file) {
             // додати всі об'єкти з KML до featureGroup
             kmlLayer.eachLayer((layer) => {
                 featureGroup.addLayer(layer);
-                addDoubleClickToLayer(layer);
+                import('./ui.js').then(({ addDoubleClickToLayer }) => {
+                    addDoubleClickToLayer(layer);
+                });
                 // зберегти властивості з KML
                 if (layer.feature && layer.feature.properties) {
                     layer.properties = Object.assign({}, layer.feature.properties);
+                    // Виправляємо undefined значення для назви та опису
+                    if (!layer.properties.name || layer.properties.name === 'undefined') {
+                        const type = getObjectType(layer);
+                        const objectType = type === 'marker' ? 'Маркер' :
+                            type === 'polygon' ? 'Полігон' :
+                                type === 'polyline' ? 'Лінія' : 'Об\'єкт';
+                        layer.properties.name = `${objectType} [з KML]`;
+                    }
+                    if (!layer.properties.description || layer.properties.description === 'undefined') {
+                        layer.properties.description = '';
+                    }
                     // застосувати стилі для різних типів об'єктів
                     const type = getObjectType(layer);
                     if (type === 'marker') {
