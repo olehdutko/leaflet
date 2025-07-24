@@ -1200,3 +1200,30 @@ if (importAllBtn && importAllInput) {
         reader.readAsText(file);
     });
 }
+// === Додаю інструмент вимірювання відстані ===
+if (typeof window.L !== 'undefined' &&
+    map &&
+    window.L.Control &&
+    typeof window.L.Control.PolylineMeasure === 'function') {
+    // @ts-ignore
+    map.addControl(new window.L.Control.PolylineMeasure({
+        position: 'topright',
+        unit: 'metres',
+        showBearings: true,
+        clearMeasurementsOnStop: false,
+        showClearControl: true,
+        showUnitControl: true,
+        measureControlTitleOn: 'Увімкнути вимірювання',
+        measureControlTitleOff: 'Вимкнути вимірювання',
+        measureControlLabel: '⟷',
+        measureControlLabelOn: '⟷',
+        measureControlLabelOff: '⟷',
+        tooltipTextFinish: 'Подвійний клік — завершити вимірювання',
+        tooltipTextDelete: 'Клік для видалення точки',
+        tooltipTextMove: 'Перетягніть для зміни положення',
+        tooltipTextResume: 'Клік для продовження вимірювання',
+        tooltipTextAdd: 'Клік для додавання точки',
+        startLabel: 'Старт',
+        language: 'uk',
+    }));
+}
