@@ -1107,15 +1107,49 @@ export function createLayerControl(layerObj: any) {
         e.stopPropagation();
       };
       item.ondragover = (e) => {
+        e.preventDefault();
         e.stopPropagation();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        item.classList.add('drag-over');
+      };
+      item.ondragleave = (e) => {
+        e.stopPropagation();
+        item.classList.remove('drag-over');
       };
       item.ondrop = (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        if (e.dataTransfer) {
-          const data = e.dataTransfer.getData('application/layer-object');
-        } else {
-          // [ondrop] no dataTransfer', e);
+        item.classList.remove('drag-over');
+        if (!e.dataTransfer) {
+          return;
         }
+        const data = e.dataTransfer.getData('application/layer-object');
+        if (!data) return;
+        const { layerId, objectId } = JSON.parse(data);
+        if (layerId == layerObj.id) return; // не переносимо у той самий шар
+        
+        // знайти старий шар та об'єкт
+        const fromLayerObj = customLayers.find(l => l.id == layerId);
+        if (!fromLayerObj) {
+          return;
+        }
+        let movedLayer = null;
+        fromLayerObj.featureGroup.eachLayer((l: any) => {
+          if (l._leaflet_id == objectId) movedLayer = l;
+        });
+        if (!movedLayer) {
+          return;
+        }
+        
+        fromLayerObj.featureGroup.removeLayer(movedLayer);
+        layerObj.featureGroup.addLayer(movedLayer);
+        saveLayersToStorage();
+        
+        // Оновити UI для обох шарів через setTimeout щоб уникнути конфлікту з Sortable.js
+        setTimeout(() => {
+          updateObjectsListForLayer(fromLayerObj);
+          updateObjectsListForLayer(layerObj);
+        }, 100);
       };
       // клік — тільки підсвічування
       let wasDragged = false;
@@ -1154,31 +1188,14 @@ export function createLayerControl(layerObj: any) {
       });
       objectsListWrap.appendChild(item);
     });
-    // --- SortableJS для drag&drop об'єктів ---
+    // --- Відключаємо SortableJS для drag&drop між шарами ---
     if (typeof window !== 'undefined' && (window as any).Sortable && objectsListWrap) {
       if (!(window as any).objectsSortables) (window as any).objectsSortables = new Map();
       const sortablesMap = (window as any).objectsSortables as Map<string, any>;
       if (sortablesMap.has(layerObj.id)) {
         sortablesMap.get(layerObj.id).destroy();
+        sortablesMap.delete(layerObj.id);
       }
-      const sortable = new (window as any).Sortable(objectsListWrap, {
-        animation: 150,
-        handle: '.layer-object-drag-icon',
-        preventOnFilter: false,
-        onEnd: function (evt: any) {
-          const newOrder = Array.from(objectsListWrap.children).map((el: any) => el.dataset.objectId);
-          const layers: any[] = [];
-          layerObj.featureGroup.eachLayer((l: any) => layers.push(l));
-          layers.forEach(l => layerObj.featureGroup.removeLayer(l));
-          newOrder.forEach((id: string) => {
-            const l = layers.find(x => x._leaflet_id == id);
-            if (l) layerObj.featureGroup.addLayer(l);
-          });
-          saveLayersToStorage();
-          renderObjectsList();
-        }
-      });
-      sortablesMap.set(layerObj.id, sortable);
     }
     // підсвічування source-списку
     objectsListWrap.addEventListener('dragstart', () => {
@@ -1188,7 +1205,7 @@ export function createLayerControl(layerObj: any) {
       document.querySelectorAll('.layer-objects-list.drag-over, .layer-objects-list-wrap.drag-over').forEach(el => el.classList.remove('drag-over'));
     });
 
-    // підсвічування target-списку
+    // drag&drop на контейнер списку (для порожніх місць)
     objectsListWrap.ondragover = (e) => {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
@@ -1208,17 +1225,16 @@ export function createLayerControl(layerObj: any) {
       e.preventDefault();
       objectsListWrap.classList.remove('drag-over');
       if (!e.dataTransfer) {
-        // [objectsListWrap.ondrop] no dataTransfer', e);
         return;
       }
       const data = e.dataTransfer.getData('application/layer-object');
       if (!data) return;
       const { layerId, objectId } = JSON.parse(data);
       if (layerId == layerObj.id) return; // не переносимо у той самий шар
+      
       // знайти старий шар та об'єкт
       const fromLayerObj = customLayers.find(l => l.id == layerId);
       if (!fromLayerObj) {
-        // [objectsListWrap.ondrop] fromLayerObj not found', layerId);
         return;
       }
       let movedLayer = null;
@@ -1226,14 +1242,18 @@ export function createLayerControl(layerObj: any) {
         if (l._leaflet_id == objectId) movedLayer = l;
       });
       if (!movedLayer) {
-        // [objectsListWrap.ondrop] movedLayer not found', objectId);
         return;
       }
+      
       fromLayerObj.featureGroup.removeLayer(movedLayer);
       layerObj.featureGroup.addLayer(movedLayer);
       saveLayersToStorage();
-      // оновити UI тільки для поточного шару
-      renderObjectsList();
+      
+      // Оновити UI для обох шарів
+      setTimeout(() => {
+        updateObjectsListForLayer(fromLayerObj);
+        updateObjectsListForLayer(layerObj);
+      }, 100);
     };
   }
   if (layerObj.featureGroup.images && Array.isArray(layerObj.featureGroup.images)) {
