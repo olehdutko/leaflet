@@ -137,8 +137,112 @@
   </div>
   <div id="confirm-modal-backdrop" class="modal-backdrop hidden"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    window.L = window.L || {};
+    window.L.drawLocal = {
+      draw: {
+        toolbar: {
+          actions: {
+            title: 'Скасувати малювання',
+            text: 'Скасувати'
+          },
+          finish: {
+            title: 'Завершити малювання',
+            text: 'Завершити'
+          },
+          undo: {
+            title: 'Видалити останню точку',
+            text: 'Видалити останню точку'
+          },
+          buttons: {
+            polyline: 'Намалювати лінію',
+            polygon: 'Намалювати полігон',
+            rectangle: 'Намалювати прямокутник',
+            circle: 'Намалювати коло',
+            marker: 'Додати маркер',
+            circlemarker: 'Додати круглий маркер'
+          }
+        },
+        handlers: {
+          polygon: {
+            tooltip: {
+              start: 'Клікніть для початку малювання полігону.',
+              cont: 'Клікніть для продовження малювання полігону.',
+              end: 'Клікніть на першу точку для завершення полігону.'
+            },
+            error: '<strong>Помилка:</strong> полігон не може сам себе перетинати!'
+          },
+          polyline: {
+            tooltip: {
+              start: 'Клікніть для початку малювання лінії.',
+              cont: 'Клікніть для продовження малювання лінії.',
+              end: 'Клікніть на останню точку для завершення лінії.'
+            },
+            error: '<strong>Помилка:</strong> лінії не можуть перетинатися!'
+          },
+          rectangle: {
+            tooltip: {
+              start: 'Клікніть і тягніть для малювання прямокутника.'
+            },
+            error: ''
+          },
+          circle: {
+            tooltip: {
+              start: 'Клікніть і тягніть для малювання кола.'
+            },
+            error: ''
+          },
+          marker: {
+            tooltip: {
+              start: 'Клікніть для додавання маркера.'
+            },
+            error: ''
+          },
+          circlemarker: {
+            tooltip: {
+              start: 'Клікніть для додавання круглого маркера.'
+            },
+            error: ''
+          }
+        }
+      },
+      edit: {
+        toolbar: {
+          actions: {
+            save: {
+              title: 'Зберегти зміни',
+              text: 'Зберегти'
+            },
+            cancel: {
+              title: 'Скасувати редагування',
+              text: 'Скасувати'
+            }
+          },
+          buttons: {
+            edit: 'Редагувати шари',
+            editDisabled: 'Немає шарів для редагування',
+            remove: 'Видалити шари',
+            removeDisabled: 'Немає шарів для видалення'
+          }
+        },
+        handlers: {
+          edit: {
+            tooltip: {
+              text: 'Перетягніть маркери для редагування обʼєкта.',
+              subtext: ''
+            }
+          },
+          remove: {
+            tooltip: {
+              text: 'Клікніть на обʼєкт для видалення.',
+              subtext: ''
+            }
+          }
+        }
+      }
+    };
+  </script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-  <script>console.log('L before toolbar', window.L);</script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.js"></script>  
   <script src="./leaflet.distortableimage.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>

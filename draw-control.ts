@@ -213,21 +213,18 @@ export function setDrawButtonsEnabled(enabled: boolean) {
 }
 
 export function updateDrawControlVisibility() {
-  const hasVisibleLayers = customLayers.some(layer => layer.visible);
-  // виправлена перевірка: activeLayer має бути FeatureGroup
+  // Завжди показуємо draw control, якщо є активний шар
   const hasActiveLayer = !!(activeLayer && typeof L.FeatureGroup !== 'undefined' && activeLayer instanceof L.FeatureGroup);
-  if (hasVisibleLayers) {
+  if (hasActiveLayer) {
     if (!drawControl) {
       initDrawControl();
     }
-    // Draw control вже доданий, показуємо його
     const drawSection = document.querySelector('.leaflet-draw');
     if (drawSection) {
       (drawSection as HTMLElement).style.display = 'block';
     }
-    setDrawButtonsEnabled(hasActiveLayer);
+    setDrawButtonsEnabled(true);
   } else {
-    // Приховуємо draw control
     const drawSection = document.querySelector('.leaflet-draw');
     if (drawSection) {
       (drawSection as HTMLElement).style.display = 'none';
