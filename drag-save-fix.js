@@ -1,31 +1,29 @@
-// Альтернативний механізм збереження позицій на основі drag подій
-console.log('🔄 Завантажуємо альтернативний механізм збереження drag v2.9');
+// Альтернативний механізм збереження позицій overlay при drag - v2.9
+// Завантажуємо альтернативний механізм збереження drag v2.9
 
 (function () {
     'use strict';
 
+    // Флаг для попередження повторних викликів
     if (window.dragSaveFixLoaded) {
-        console.log('⚠️ Drag save fix уже завантажено');
         return;
     }
     window.dragSaveFixLoaded = true;
 
-    let saveTimeout = null;
     let isDebugMode = false;
 
+    // Увімкнути debug режим
+    window.enableDragSaveDebug = function () {
+        isDebugMode = true;
+    };
+
     function debugLog(message, data = null) {
-        if (isDebugMode) {
-            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-            console.log(`[${timestamp}] 🔄 ${message}`, data || '');
-        }
+        // Debug логування вимкнено для production
     }
 
-    // Функція збереження позицій
-    function saveDragPosition(overlay, reason = 'drag') {
-        debugLog(`Збереження позиції: ${reason}`);
-
+    // Функція збереження позиції overlay
+    function saveOverlayPosition(overlay, overlayId) {
         if (!window.saveLayersToStorage) {
-            console.warn('⚠️ saveLayersToStorage недоступна');
             return;
         }
 
@@ -33,209 +31,170 @@ console.log('🔄 Завантажуємо альтернативний меха
         const newCorners = overlay.getCorners?.() ?
             overlay.getCorners().map(c => ({ lat: c.lat, lng: c.lng })) : null;
 
-        console.log(`🔄 DRAG ЗБЕРЕЖЕННЯ позиції overlay:`);
-        console.log(`   Bounds: ${JSON.stringify(newBounds)}`);
-        console.log(`   Corners: ${newCorners ? newCorners.length : 0} точок`);
+        debugLog(`DRAG ЗБЕРЕЖЕННЯ позиції overlay:`, {
+            bounds: newBounds,
+            corners: newCorners ? newCorners.length : 0
+        });
 
         // Знаходимо overlay в системі шарів
-        let found = false;
         if (window.customLayers) {
-            window.customLayers.forEach((layer, layerIdx) => {
-                if (layer.featureGroup && layer.featureGroup.overlayInstances) {
-                    layer.featureGroup.overlayInstances.forEach((inst, overlayIdx) => {
-                        if (inst === overlay) {
-                            debugLog(`Знайдено overlay в шарі ${layerIdx}.${overlayIdx}`);
+            for (const layer of window.customLayers) {
+                if (!layer || !layer.featureGroup) continue;
 
-                            // Оновлюємо в images
-                            if (layer.featureGroup.images && layer.featureGroup.images[overlayIdx]) {
-                                layer.featureGroup.images[overlayIdx].bounds = newBounds;
-                                if (newCorners) {
-                                    layer.featureGroup.images[overlayIdx].corners = newCorners;
-                                }
-                                console.log(`✅ Оновлено images[${overlayIdx}]`);
-                            }
-
-                            // Оновлюємо в overlays
-                            if (layer.featureGroup.overlays && layer.featureGroup.overlays[overlayIdx]) {
-                                layer.featureGroup.overlays[overlayIdx].bounds = newBounds;
-                                if (newCorners) {
-                                    layer.featureGroup.overlays[overlayIdx].corners = newCorners;
-                                }
-                                console.log(`✅ Оновлено overlays[${overlayIdx}]`);
-                            }
-
-                            found = true;
-                        }
+                let overlayIdx = layer.featureGroup.overlayInstances?.indexOf(overlay);
+                
+                if (overlayIdx === -1 && overlay._overlay) {
+                    overlayIdx = layer.featureGroup.overlayInstances?.findIndex(inst => {
+                        return inst === overlay._overlay || inst._overlay === overlay._overlay;
                     });
                 }
-            });
-        }
 
-        if (!found) {
-            console.warn('⚠️ Overlay не знайдено в системі шарів');
-            return;
-        }
-
-        // Збереження з debounce
-        if (saveTimeout) {
-            clearTimeout(saveTimeout);
-        }
-
-        saveTimeout = setTimeout(() => {
-            debugLog('Виконуємо збереження в localStorage...');
-
-            try {
-                window.saveLayersToStorage();
-                console.log('✅ DRAG ЗБЕРЕЖЕННЯ: Позиція збережена в localStorage');
-
-                // Перевіряємо результат
-                setTimeout(() => {
-                    const stored = localStorage.getItem('lefleat_layers');
-                    if (stored) {
-                        const data = JSON.parse(stored);
-                        console.log(`✅ localStorage оновлено: ${data.length} шарів`);
+                if (overlayIdx !== -1) {
+                    // Оновлюємо в images масиві
+                    if (layer.featureGroup.images && layer.featureGroup.images[overlayIdx]) {
+                        layer.featureGroup.images[overlayIdx].bounds = newBounds;
+                        if (newCorners) {
+                            layer.featureGroup.images[overlayIdx].corners = newCorners;
+                        }
                     }
-                }, 50);
 
-            } catch (error) {
-                console.error('❌ Помилка drag збереження:', error);
+                    // Оновлюємо в overlays масиві
+                    if (layer.featureGroup.overlays && layer.featureGroup.overlays[overlayIdx]) {
+                        layer.featureGroup.overlays[overlayIdx].bounds = newBounds;
+                        if (newCorners) {
+                            layer.featureGroup.overlays[overlayIdx].corners = newCorners;
+                        }
+                    }
+
+                    // Зберігаємо зміни
+                    try {
+                        window.saveLayersToStorage();
+                        debugLog('DRAG ЗБЕРЕЖЕННЯ: Позиція збережена в localStorage');
+                    } catch (error) {
+                        // Мовчазно обробляємо помилки збереження
+                    }
+
+                    return;
+                }
             }
-
-            saveTimeout = null;
-        }, 100);
+        }
     }
 
-    // Функція для прив'язки drag handlers
-    function bindDragHandlers() {
-        console.log('🔄 Прив\'язуємо drag handlers для збереження позицій...');
+    // Функція для прив'язування drag handlers
+    function bindDragSaveHandlers() {
+        debugLog('Прив\'язуємо drag handlers для збереження позицій...');
 
         if (!window.customLayers) {
-            console.warn('⚠️ customLayers недоступні');
             return;
         }
 
         let bound = 0;
 
         window.customLayers.forEach((layer, layerIdx) => {
-            if (layer.featureGroup && layer.featureGroup.overlayInstances) {
-                layer.featureGroup.overlayInstances.forEach((overlay, overlayIdx) => {
-                    const overlayId = `${layerIdx}.${overlayIdx}`;
-
-                    // Перевіряємо чи вже прив'язано
-                    if (overlay._dragSaveHandlerBound) {
-                        debugLog(`Overlay ${overlayId} вже має drag save handler`);
-                        return;
-                    }
-
-                    const element = overlay.getElement();
-                    if (!element) {
-                        debugLog(`Overlay ${overlayId} не має DOM element`);
-                        return;
-                    }
-
-                    debugLog(`Прив'язуємо drag save handler для overlay ${overlayId}`);
-
-                    let isDragging = false;
-                    let initialBounds = null;
-
-                    // Mouse down - початок drag
-                    const onMouseDown = (e) => {
-                        isDragging = true;
-                        initialBounds = overlay.getBounds();
-                        debugLog(`Drag розпочато для overlay ${overlayId}`);
-                    };
-
-                    // Mouse up - кінець drag
-                    const onMouseUp = (e) => {
-                        if (isDragging) {
-                            isDragging = false;
-
-                            const finalBounds = overlay.getBounds();
-
-                            // Перевіряємо чи змінилася позиція
-                            const boundsChanged = !initialBounds ||
-                                JSON.stringify(initialBounds) !== JSON.stringify(finalBounds);
-
-                            if (boundsChanged) {
-                                console.log(`🔄 DRAG ЗАВЕРШЕНО для overlay ${overlayId} - позиція змінилася`);
-                                console.log(`   Було: ${JSON.stringify(initialBounds)}`);
-                                console.log(`   Стало: ${JSON.stringify(finalBounds)}`);
-
-                                saveDragPosition(overlay, `drag-end-${overlayId}`);
-                            } else {
-                                debugLog(`Drag завершено для overlay ${overlayId} - позиція не змінилася`);
-                            }
-                        }
-                    };
-
-                    element.addEventListener('mousedown', onMouseDown);
-                    document.addEventListener('mouseup', onMouseUp);
-
-                    // Позначаємо що handler прив'язано
-                    overlay._dragSaveHandlerBound = true;
-                    overlay._dragSaveCleanup = () => {
-                        element.removeEventListener('mousedown', onMouseDown);
-                        document.removeEventListener('mouseup', onMouseUp);
-                    };
-
-                    bound++;
-                });
+            if (!layer || !layer.featureGroup || !layer.featureGroup.overlayInstances) {
+                return;
             }
+
+            layer.featureGroup.overlayInstances.forEach((overlay, overlayIdx) => {
+                if (!overlay || !overlay.getCorners || overlay._dragSaveHandlerBound) {
+                    return;
+                }
+
+                const overlayId = `${layerIdx}.${overlayIdx}`;
+                let initialBounds = null;
+                let isDragging = false;
+
+                // Обробник початку drag
+                const dragStartHandler = () => {
+                    initialBounds = overlay.getBounds();
+                    isDragging = true;
+                    debugLog(`DRAG ПОЧАТОК для overlay ${overlayId}`);
+                };
+
+                // Обробник кінця drag
+                const dragEndHandler = () => {
+                    if (isDragging && initialBounds) {
+                        const finalBounds = overlay.getBounds();
+                        
+                        // Перевіряємо чи позиція дійсно змінилася
+                        if (JSON.stringify(initialBounds) !== JSON.stringify(finalBounds)) {
+                            debugLog(`DRAG ЗАВЕРШЕНО для overlay ${overlayId} - позиція змінилася`, {
+                                було: initialBounds,
+                                стало: finalBounds
+                            });
+                            
+                            // Зберігаємо нову позицію
+                            saveOverlayPosition(overlay, overlayId);
+                        }
+                    }
+                    
+                    isDragging = false;
+                    initialBounds = null;
+                };
+
+                // Прив'язуємо обробники
+                overlay.on('dragstart', dragStartHandler);
+                overlay.on('dragend', dragEndHandler);
+                
+                // Позначаємо що handler вже прив'язаний
+                overlay._dragSaveHandlerBound = true;
+                bound++;
+            });
         });
 
-        console.log(`✅ Прив'язано drag save handlers для ${bound} overlay`);
-        return bound;
+        debugLog(`Прив'язано drag save handlers для ${bound} overlay`);
     }
 
-    // Функція для увімкнення debug режиму
-    function enableDebugMode() {
-        isDebugMode = true;
-        console.log('🐛 Debug режим drag save увімкнено');
-    }
-
-    // Функція тестування
-    function testDragSave() {
-        console.log('🧪 ТЕСТ DRAG SAVE МЕХАНІЗМУ...');
+    // Функція для тестування
+    function testDragSaveMechanism() {
+        debugLog('ТЕСТ DRAG SAVE МЕХАНІЗМУ...');
 
         if (!window.customLayers || window.customLayers.length === 0) {
-            console.log('❌ Немає шарів для тестування');
+            debugLog('Немає шарів для тестування');
             return;
         }
 
-        let testCount = 0;
+        let totalOverlays = 0;
+        let overlaysWithHandlers = 0;
+
         window.customLayers.forEach((layer, layerIdx) => {
-            if (layer.featureGroup && layer.featureGroup.overlayInstances) {
+            if (layer && layer.featureGroup && layer.featureGroup.overlayInstances) {
                 layer.featureGroup.overlayInstances.forEach((overlay, overlayIdx) => {
-                    testCount++;
-                    console.log(`📍 Overlay ${layerIdx}.${overlayIdx}:`);
-                    console.log(`   Bounds: ${JSON.stringify(overlay.getBounds())}`);
-                    console.log(`   Drag handler: ${overlay._dragSaveHandlerBound ? '✅' : '❌'}`);
+                    totalOverlays++;
+                    
+                    if (overlay && overlay._dragSaveHandlerBound) {
+                        overlaysWithHandlers++;
+                        debugLog(`Overlay ${layerIdx}.${overlayIdx}:`, {
+                            bounds: overlay.getBounds(),
+                            dragHandler: overlay._dragSaveHandlerBound ? '✅' : '❌'
+                        });
+                    }
                 });
             }
         });
 
-        if (testCount === 0) {
-            console.log('❌ Немає overlay для тестування');
+        if (totalOverlays === 0) {
+            debugLog('Немає overlay для тестування');
         } else {
-            console.log('🎯 Переміщуйте overlay і дивіться на логи збереження!');
+            debugLog('Переміщуйте overlay і дивіться на логи збереження!');
         }
     }
 
-    // Публічне API
+    // Експортуємо функції
     window.dragSaveFix = {
-        bind: bindDragHandlers,
-        test: testDragSave,
-        enableDebug: enableDebugMode,
-        save: saveDragPosition
+        bindHandlers: bindDragSaveHandlers,
+        test: testDragSaveMechanism,
+        enableDebug: () => { isDebugMode = true; }
     };
 
-    // Автоматично прив'язуємо handlers через 2 секунди
+    // Ініціалізація
     setTimeout(() => {
-        const bound = bindDragHandlers();
-        if (bound > 0) {
-            console.log('✅ Drag save механізм v2.9 активований');
-            console.log('💡 Команди: dragSaveFix.test(), dragSaveFix.enableDebug()');
-        }
-    }, 2000);
+        bindDragSaveHandlers();
+    }, 1000);
+
+    // Періодична перевірка
+    setInterval(() => {
+        bindDragSaveHandlers();
+    }, 5000);
 
 })(); 

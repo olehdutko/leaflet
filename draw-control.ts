@@ -116,7 +116,6 @@ export function initDrawControl() {
       }
     } else if (type === 'polygon' && layer.getLatLngs) {
       // Обробка для полігону
-      console.log('🎯 Створюю полігон з розрахунком площі...');
       const latlngs = layer.getLatLngs();
       if (!Array.isArray(latlngs) || latlngs.length === 0) {
         description = '';
@@ -138,10 +137,8 @@ export function initDrawControl() {
             } else {
               description = 'Площа: ' + area.toFixed(1) + ' м²';
             }
-            console.log('📐 Площа полігону:', description);
           } catch (err) {
             description = '';
-            console.warn('Помилка розрахунку площі полігону:', err);
           }
         }
       }
@@ -149,7 +146,6 @@ export function initDrawControl() {
       layer.properties.description = description;
       // Явно створюю feature для polygon
       if (!layer.feature) {
-        console.log('🔍 latlngs для полігону:', latlngs);
         
         // Правильна обробка координат для полігону
         let coords: number[][] = [];
@@ -179,11 +175,8 @@ export function initDrawControl() {
             },
             properties: {}
           };
-          console.log('✅ Полігон створено як Polygon з', validCoords.length, 'точками');
-          console.log('🎨 Геометрія полігону:', layer.feature.geometry);
-          console.log('📍 Координати:', validCoords);
         } else {
-          console.error('❌ Недостатньо валідних координат для полігону:', validCoords);
+          // Недостатньо валідних координат для полігону
         }
       }
       if (!layer.feature.properties) layer.feature.properties = {};
@@ -194,10 +187,8 @@ export function initDrawControl() {
       layer.feature.properties.fillOpacity = 0.3;
     } else if (type === 'circle' && layer.getLatLng && layer.getRadius) {
       // Обробка для кола
-      console.log('🎯 Створюю коло з полігонною геометрією...');
       const center = layer.getLatLng();
       const radius = layer.getRadius();
-      console.log('📍 Центр кола:', center, 'Радіус:', radius);
       try {
         const area = Math.PI * radius * radius;
         if (area > 1000) {
@@ -232,8 +223,7 @@ export function initDrawControl() {
           },
           properties: {}
         };
-        console.log('✅ Коло створено як Polygon з', points.length, 'точками');
-        console.log('🎨 Геометрія:', layer.feature.geometry);
+        
       }
       if (!layer.feature.properties) layer.feature.properties = {};
       layer.feature.properties.name = `${objectType} ${timeStr}`;
@@ -243,7 +233,6 @@ export function initDrawControl() {
       layer.feature.properties.fillOpacity = 0.3;
     } else if (type === 'rectangle' && layer.getLatLngs) {
       // Обробка для прямокутника
-      console.log('🎯 Створюю прямокутник з розрахунком площі...');
       const latlngs = layer.getLatLngs();
       if (!Array.isArray(latlngs) || latlngs.length === 0) {
         description = '';
@@ -265,10 +254,8 @@ export function initDrawControl() {
             } else {
               description = 'Площа: ' + area.toFixed(1) + ' м²';
             }
-            console.log('📐 Площа прямокутника:', description);
           } catch (err) {
             description = '';
-            console.warn('Помилка розрахунку площі прямокутника:', err);
           }
         }
       }
@@ -277,7 +264,6 @@ export function initDrawControl() {
       
       // Явно створюю feature для rectangle як Polygon
       if (!layer.feature) {
-        console.log('🔍 latlngs для прямокутника:', latlngs);
         
         // Правильна обробка координат для прямокутника
         let coords: number[][] = [];
@@ -307,11 +293,8 @@ export function initDrawControl() {
             },
             properties: {}
           };
-          console.log('✅ Прямокутник створено як Polygon з', validCoords.length, 'точками');
-          console.log('🎨 Геометрія прямокутника:', layer.feature.geometry);
-          console.log('📍 Координати:', validCoords);
         } else {
-          console.error('❌ Недостатньо валідних координат для прямокутника:', validCoords);
+          // Недостатньо валідних координат для прямокутника
         }
       }
       if (!layer.feature.properties) layer.feature.properties = {};

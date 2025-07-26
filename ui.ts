@@ -144,7 +144,6 @@ export function showEditModal(layer: any) {
               // Автоматично зберігаємо зміни
               import('./layers.js').then(({ saveLayersToStorage }) => {
                 saveLayersToStorage();
-                console.log('💾 Зображення збережено в localStorage');
               });
             }
           };
@@ -168,7 +167,6 @@ export function showEditModal(layer: any) {
           // Автоматично зберігаємо зміни
           import('./layers.js').then(({ saveLayersToStorage }) => {
             saveLayersToStorage();
-            console.log('💾 Видалення зображення збережено в localStorage');
           });
         }
       };
@@ -691,101 +689,42 @@ export function createLayerControl(layerObj: any) {
           corners: initialCorners
         };
 
-        console.log(`🆕 Додаємо новий overlay через галерею:`);
-        console.log(`   URL: ${imgUrl.substring(0, 50)}...`);
-        console.log(`   Початкові corners:`, initialCorners);
+
 
         // Додаємо в усі масиви
         layerObj.featureGroup.images.push(imageData);
         layerObj.featureGroup.overlays.push({ ...imageData }); // Копія для сумісності
         layerObj.featureGroup.overlayInstances.push(overlay);
 
-        console.log(`✅ Додано в масиви: images[${layerObj.featureGroup.images.length - 1}], overlays[${layerObj.featureGroup.overlays.length - 1}], instances[${layerObj.featureGroup.overlayInstances.length - 1}]`);
-
         // ДІЙСНО СИНХРОННЕ збереження - використовуємо вже завантажену функцію
-        console.log(`💾 СПРАВЖНЄ синхронне початкове збереження...`);
         if ((window as any).saveLayersToStorage && typeof (window as any).saveLayersToStorage === 'function') {
           try {
             (window as any).saveLayersToStorage();
-            console.log(`✅ Синхронне збереження завершено успішно`);
           } catch (error) {
-            console.log(`❌ Помилка синхронного збереження:`, error);
+            // Мовчазно обробляємо помилки збереження
           }
         } else {
-          console.log(`⚠️ saveLayersToStorage недоступна, використовуємо async import`);
           import('./layers.js').then(({ saveLayersToStorage }) => {
             saveLayersToStorage();
-            console.log(`✅ Async збереження завершено`);
           });
         }
 
-        // Перевіряємо що overlay дійсно збережено в localStorage
-        setTimeout(() => {
-          const stored = localStorage.getItem('lefleat_layers');
-          if (stored) {
-            const data = JSON.parse(stored);
-            const hasNewOverlay = data.some((layer: any) =>
-              layer.overlays && layer.overlays.some((ov: any) => ov.url === imgUrl)
-            );
-            if (hasNewOverlay) {
-              console.log(`✅ ПІДТВЕРДЖЕНО: Новий overlay знайдено в localStorage`);
-            } else {
-              console.log(`❌ ПРОБЛЕМА: Новий overlay НЕ знайдено в localStorage!`);
-            }
-          }
-        }, 50);
+
 
         // Лічильник edit подій для цього overlay
         let editEventCount = 0;
 
         // Покращений механізм збереження з особливою увагою до першого edit
         const improvedSave = (isFirstEdit: boolean = false) => {
-          console.log(`💾 Збереження викликано (перший edit: ${isFirstEdit})...`);
-
           // Для першого edit робимо мінімальну затримку
           const delay = isFirstEdit ? 25 : 150;
 
           setTimeout(() => {
-            console.log(`💾 Виконуємо збереження в localStorage (затримка: ${delay}мс)...`);
-
-            // Перевіряємо стан до збереження
-            const beforeState = localStorage.getItem('lefleat_layers');
-            console.log(`📋 Стан localStorage ДО збереження: ${beforeState ? JSON.parse(beforeState).length + ' шарів' : 'порожній'}`);
-
             if ((window as any).saveLayersToStorage && typeof (window as any).saveLayersToStorage === 'function') {
               (window as any).saveLayersToStorage();
-
-              // Перевіряємо стан після збереження з короткою затримкою
-              setTimeout(() => {
-                const afterState = localStorage.getItem('lefleat_layers');
-                console.log(`✅ Стан localStorage ПІСЛЯ збереження: ${afterState ? JSON.parse(afterState).length + ' шарів' : 'порожній'}`);
-
-                if (isFirstEdit && afterState) {
-                  const data = JSON.parse(afterState);
-                  let foundUpdatedCorners = false;
-                  data.forEach((layer: any) => {
-                    if (layer.overlays && layer.overlays.length > 0) {
-                      layer.overlays.forEach((ov: any) => {
-                        if (ov.corners && ov.corners.length > 0) {
-                          foundUpdatedCorners = true;
-                          console.log(`🎯 ПЕРШИЙ EDIT: Знайдено оновлені координати!`, ov.corners.slice(0, 2));
-                        }
-                      });
-                    }
-                  });
-
-                  if (!foundUpdatedCorners) {
-                    console.log(`❌ ПЕРШИЙ EDIT: Координати НЕ знайдено в localStorage!`);
-                  } else {
-                    console.log(`✅ ПЕРШИЙ EDIT: Координати УСПІШНО збережено!`);
-                  }
-                }
-              }, 25);
             } else {
-              console.log(`⚠️ saveLayersToStorage недоступна, використовуємо import`);
               import('./layers.js').then(({ saveLayersToStorage }) => {
                 saveLayersToStorage();
-                console.log(`✅ Збереження виконано через import`);
               });
             }
           }, delay);
@@ -800,32 +739,14 @@ export function createLayerControl(layerObj: any) {
           const newCorners = overlay.getCorners?.() ?
             overlay.getCorners().map((c: any) => ({ lat: c.lat, lng: c.lng })) : null;
 
-          console.log(`🔄 Edit подія #${editEventCount} для gallery overlay: ${imgUrl.substring(0, 50)}... (перший: ${isFirstEdit})`);
-          console.log(`   Нові bounds:`, newBounds);
-          console.log(`   Нові corners:`, newCorners);
-
-          // Перевіряємо стан масивів перед оновленням
-          console.log(`🔍 Поточний стан масивів:`);
-          console.log(`   images.length: ${layerObj.featureGroup.images?.length || 0}`);
-          console.log(`   overlays.length: ${layerObj.featureGroup.overlays?.length || 0}`);
-          console.log(`   overlayInstances.length: ${layerObj.featureGroup.overlayInstances?.length || 0}`);
-
           // Знаходимо overlay по URL в обох масивах
           const overlayIdx = layerObj.featureGroup.overlays.findIndex((img: any) => img.url === imgUrl);
           const imageIdx = layerObj.featureGroup.images.findIndex((img: any) => img.url === imgUrl);
 
-          console.log(`🔍 Пошук по URL: overlayIdx=${overlayIdx}, imageIdx=${imageIdx}`);
-
           if (overlayIdx === -1 && imageIdx === -1) {
-            console.log(`❌ КРИТИЧНА ПОМИЛКА: Не знайдено overlay в жодному масиві!`);
-            console.log(`   Шукаємо URL: ${imgUrl.substring(0, 50)}...`);
-            console.log(`   Доступні URLs в images:`, layerObj.featureGroup.images.map((img: any) => img.url.substring(0, 30)));
-            console.log(`   Доступні URLs в overlays:`, layerObj.featureGroup.overlays.map((img: any) => img.url.substring(0, 30)));
-
             // Спробуємо знайти по _customUrl overlay об'єкта
             const overlayInstIdx = layerObj.featureGroup.overlayInstances.findIndex((inst: any) => inst._customUrl === imgUrl);
             if (overlayInstIdx !== -1) {
-              console.log(`🔍 Знайдено в overlayInstances[${overlayInstIdx}], спробуємо відновити синхронізацію...`);
               // Можливо масиви розсинхронізувалися, спробуємо виправити
               return;
             }
@@ -843,11 +764,8 @@ export function createLayerControl(layerObj: any) {
               layerObj.featureGroup.overlays[overlayIdx].corners = newCorners;
             }
 
-            console.log(`✅ Оновлено overlays[${overlayIdx}]:`);
-            console.log(`   bounds: ${JSON.stringify(oldBounds)} → ${JSON.stringify(newBounds)}`);
-            console.log(`   corners: ${oldCorners?.length || 0} → ${newCorners?.length || 0} точок`);
           } else {
-            console.log(`⚠️ Не знайдено в overlays масиві для URL: ${imgUrl.substring(0, 50)}...`);
+            // Не знайдено в overlays масиві
           }
 
           // Оновлюємо images масив
@@ -860,26 +778,19 @@ export function createLayerControl(layerObj: any) {
               layerObj.featureGroup.images[imageIdx].corners = newCorners;
             }
 
-            console.log(`✅ Оновлено images[${imageIdx}]:`);
-            console.log(`   bounds: ${JSON.stringify(oldBounds)} → ${JSON.stringify(newBounds)}`);
-            console.log(`   corners: ${oldCorners?.length || 0} → ${newCorners?.length || 0} точок`);
           } else {
-            console.log(`⚠️ Не знайдено в images масиві для URL: ${imgUrl.substring(0, 50)}...`);
+            // Не знайдено в images масиві
           }
 
-          console.log(`💾 Викликаємо збереження в localStorage (перший edit: ${isFirstEdit})...`);
           improvedSave(isFirstEdit);
         };
 
         // Підписуємося на 'edit' з покращеним механізмом збереження
-        console.log(`🎧 Підключаємо ПОКРАЩЕНИЙ edit обробник для нового overlay...`);
-
         // Додаємо невелику затримку перед підключенням edit обробника
         // щоб переконатися що початкове збереження завершилося
         setTimeout(() => {
           // Використовуємо покращений edit handler якщо доступний
           if ((window as any).overlayPositionFix && (window as any).overlayPositionFix.createEditHandler) {
-            console.log(`🔧 Використовуємо покращений edit handler v2.8`);
             const enhancedHandler = (window as any).overlayPositionFix.createEditHandler(
               overlay,
               imgUrl,
@@ -887,16 +798,9 @@ export function createLayerControl(layerObj: any) {
             );
             overlay.on('edit', enhancedHandler);
           } else {
-            console.log(`⚠️ Покращений handler недоступний, використовуємо fallback`);
             overlay.on('edit', updateOverlayState);
           }
-          console.log(`✅ Edit обробник підключено з затримкою`);
         }, 100);
-
-        // **Збільшуємо затримку готовності до редагування**
-        setTimeout(() => {
-          console.log(`🔓 Overlay повністю готовий до редагування`);
-        }, 300);
 
         // Оновлення opacity при зміні прозорості шару
         overlay.setOpacity(layerObj.tileLayer.options.opacity);
