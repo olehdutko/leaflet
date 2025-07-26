@@ -562,32 +562,7 @@ body {
   z-index: 1000;
 }
 
-.layer-card {
-  border-width: 1px;
-  border-color: black;
-  background-color: #7c72721f;
-  cursor: grab;
-  transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
-}
-
-.layer-card.active {
-  cursor: grabbing;
-  border-color: #1976d2;
-  border-width: 1px;
-  background-color: #7c72721f;
-  outline: 1.5px solid #1976d2;
-  box-shadow: 0 0 20px #3b82f6;
-}
-
-.theme-dark .layer-card.active {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 1px #60a5fa, 0 4px 12px rgba(96, 165, 250, 0.2);
-  background-color: #1e3a8a;
-}
-
-.layer-card.layer-card-inactive {
-  opacity: 0.3;
-}
+/* Видалено дублікати стилів layer-card - використовуються стилі з рядків 260-588 */
 
 .layers-panel-header {
   display: flex;
@@ -1085,18 +1060,7 @@ body {
   box-sizing: border-box;
 }
 
-.modal-body {
-  max-height: 60vh;
-  overflow-y: auto;
-  padding-bottom: 12px;
-}
-
-.modal-footer {
-  position: sticky;
-  bottom: 0;
-  background: #fff;
-  z-index: 2;
-}
+/* Видалено дублікати стилів modal-body та modal-footer - використовуються стилі з рядків 721-725 */
 
 .custom-tooltip {
   background: #fff;
@@ -1275,17 +1239,7 @@ body {
   gap: 1px;
   margin-left: auto;
 }
-.layer-card-title {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 2px 0 2px 0;
-  font-size: 1.1em;
-  font-weight: 600;
-  line-height: 1.2;
-  word-break: break-word;
-  margin-bottom: 2px;
-}
+/* Видалено дублікат стилів layer-card-title - використовуються стилі з рядків 283-291 */
 .layer-card-collapse-btn {
   background: none;
   border: none;
@@ -1314,15 +1268,7 @@ body {
 .leaflet-draw-section {
   top: 50px;
 } 
-.layer-card-drag-handle {
-  cursor: grab;
-  font-size: 18px;
-  color: #888;
-  margin-right: 8px;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-} 
+/* Видалено дублікат стилів layer-card-drag-handle - використовуються стилі з рядків 539-553 */ 
 /* Розмиття всього вікна, окрім модального діалогу */
 body.blurred > *:not(#confirm-modal) {
   filter: blur(6px) brightness(0.95);
@@ -1384,122 +1330,9 @@ body.blurred > *:not(#confirm-modal) {
   background: #7c727200;
 }
 
-.layer-object-item {
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  user-select: none;
-}
-.layer-object-drag-icon {
-  font-size: 18px;
-  margin-right: 4px;
-  cursor: grab;
-  color: #888;
-  flex-shrink: 0;
-}
-.layer-object-name {
-  font-size: 12px;
-}
-.layer-object-item:last-child {
-  border-bottom: none;
-}
+/* Видалено дублікати стилів - використовуються стилі з рядків 420-520 */
 
-.layer-object-item:hover {
-  background-color: #f3f4f6;
-}
-
-.layer-object-item.object-hidden {
-  opacity: 0.6;
-  background-color: #f1f5f9;
-}
-
-.object-type-icon {
-  width: 16px;
-  text-align: center;
-  color: #6b7280;
-  font-size: 0.8em;
-}
-
-.object-name {
-  flex: 1;
-  font-size: 0.85em;
-  color: #374151;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.object-visibility-btn {
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 3px;
-  font-size: 0.8em;
-  transition: color 0.15s;
-}
-
-.object-visibility-btn:hover {
-  color: #374151;
-  background-color: #e5e7eb;
-}
-
-.layer-objects-empty {
-  padding: 12px;
-  text-align: center;
-  color: #9ca3af;
-  font-size: 0.85em;
-  font-style: italic;
-}
-
-/* Темна тема для об'єктів */
-.theme-dark .layer-objects-section {
-  border-top-color: #374151;
-}
-
-.theme-dark .layer-objects-title {
-  color: #9ca3af;
-}
-
-.theme-dark .layer-objects-list {
-  border-color: #374151;
-  background: #1f2937;
-}
-
-.theme-dark .layer-object-item {
-  border-bottom-color: #374151;
-}
-
-.theme-dark .layer-object-item:hover {
-  background-color: #374151;
-}
-
-.theme-dark .layer-object-item.object-hidden {
-  background-color: #111827;
-}
-
-.theme-dark .object-type-icon {
-  color: #9ca3af;
-}
-
-.theme-dark .object-name {
-  color: #d1d5db;
-}
-
-.theme-dark .object-visibility-btn {
-  color: #9ca3af;
-}
-
-.theme-dark .object-visibility-btn:hover {
-  color: #d1d5db;
-  background-color: #374151;
-}
-
-.theme-dark .layer-objects-empty {
-  color: #6b7280;
-} 
+/* Видалено дублікати стилів темної теми - використовуються стилі з рядків 452, 472, 496, 500, 514, 530, 534, 548, 552 */ 
 
 /* --- Стилі для тултіпа об'єктів --- */
 .object-tooltip {
