@@ -267,6 +267,13 @@ body {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.layer-card.active {
+  background-color: #7c727204;
+  border-color: #f10b22;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+
 .theme-dark .layer-card {
   background: #232323;
   border-color: #374151;
@@ -775,48 +782,45 @@ body {
   vertical-align: middle;
 }
 
-.btn-primary {
-  background: #1976d2;
-  color: white;
-  border: none;
+/* Базові стилі для кнопок */
+.btn-primary,
+.btn-secondary,
+.btn-danger {
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s;
+}
+
+/* Стилі для primary кнопки */
+.btn-primary {
+  background: #1976d2;
+  color: white;
+  border: none;
 }
 
 .btn-primary:hover {
   background: #1565c0;
 }
 
+/* Стилі для secondary кнопки */
 .btn-secondary {
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #d1d5db;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
 }
 
 .btn-secondary:hover {
   background: #e5e7eb;
 }
 
+/* Стилі для danger кнопки */
 .btn-danger {
   background: #e53935;
   color: #fff;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
 }
 
 .btn-danger:hover {

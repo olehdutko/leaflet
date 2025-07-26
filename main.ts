@@ -410,14 +410,6 @@ import { showConfirmDialog } from './ui.js';
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
 
-// --- Перенесено: Функція для збереження шарів у localStorage ---
-// function saveLayersToStorage() { ... }
-// ...
-// function loadLayersFromStorage() { ... }
-// ...
-// function addLayer() { ... }
-// ...
-// function updateActiveLayerUI() { ... }
 // ... existing code ...
 
 import { getLayerIcon, createTooltip, getObjectType, getObjectProperties } from './utils.js';
@@ -483,25 +475,6 @@ function setupMarkerIconAutocomplete() {
     }
   };
   input.onfocus = input.oninput;
-  input.onkeydown = function (e) {
-    const items = list.querySelectorAll('.autocomplete-item');
-    if (e.key === 'ArrowDown') {
-      currentFocus++;
-      if (currentFocus >= items.length) currentFocus = 0;
-      items.forEach((el, i) => (el as HTMLElement).classList.toggle('active', i === currentFocus));
-      e.preventDefault();
-    } else if (e.key === 'ArrowUp') {
-      currentFocus--;
-      if (currentFocus < 0) currentFocus = items.length - 1;
-      items.forEach((el, i) => (el as HTMLElement).classList.toggle('active', i === currentFocus));
-      e.preventDefault();
-    } else if (e.key === 'Enter') {
-      if (currentFocus > -1 && items[currentFocus]) {
-        (items[currentFocus] as HTMLElement).click();
-        e.preventDefault();
-      }
-    }
-  };
   document.addEventListener('click', function (e) {
     if (e.target !== input) list.innerHTML = '';
   });
