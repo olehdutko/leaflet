@@ -33,8 +33,9 @@ export function showEditModal(layer) {
     const styleGroup = document.getElementById('style-group');
     const opacityGroup = document.getElementById('opacity-group');
     const markerIconGroup = document.getElementById('marker-icon-group');
+    const imageGroup = document.getElementById('object-image-group');
     // Приховуємо всі групи
-    [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup].forEach(group => {
+    [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup].forEach(group => {
         if (group)
             group.style.display = 'none';
     });
@@ -44,6 +45,8 @@ export function showEditModal(layer) {
             colorPickerGroup.style.display = 'block';
         if (markerIconGroup)
             markerIconGroup.style.display = 'block';
+        if (imageGroup)
+            imageGroup.style.display = 'block';
         // Встановити значення інпуту та превʼю
         const markerIconInput = document.getElementById('marker-icon');
         const markerIconPreview = document.getElementById('marker-icon-preview');
@@ -71,6 +74,8 @@ export function showEditModal(layer) {
             colorPickerGroup.style.display = 'block';
         if (opacityGroup)
             opacityGroup.style.display = 'block';
+        if (imageGroup)
+            imageGroup.style.display = 'block';
         // Приховати координати для не-маркерів
         const coordsGroup = document.querySelector('.marker-coords-group');
         if (coordsGroup)
@@ -83,6 +88,8 @@ export function showEditModal(layer) {
             lineWidthGroup.style.display = 'block';
         if (styleGroup)
             styleGroup.style.display = 'block';
+        if (imageGroup)
+            imageGroup.style.display = 'block';
         // opacityGroup не показуємо для polyline
         // Приховати координати для не-маркерів
         const coordsGroup = document.querySelector('.marker-coords-group');
@@ -90,7 +97,14 @@ export function showEditModal(layer) {
             coordsGroup.style.display = 'none';
     }
     else if (type === 'image') {
-        // видалено: логіка для imageGroup, opacityGroup, coordsGroup
+        if (imageGroup)
+            imageGroup.style.display = 'block';
+        if (opacityGroup)
+            opacityGroup.style.display = 'block';
+        // Приховати координати для не-маркерів
+        const coordsGroup = document.querySelector('.marker-coords-group');
+        if (coordsGroup)
+            coordsGroup.style.display = 'none';
     }
     // Заповнюємо значення контролів
     // Колір
@@ -117,6 +131,72 @@ export function showEditModal(layer) {
             opacity = properties.fillOpacity;
         objectOpacity.value = opacity !== null && opacity !== void 0 ? opacity : 1;
         opacityValue.textContent = Math.round((opacity !== null && opacity !== void 0 ? opacity : 1) * 100) + '%';
+    }
+    // --- Ініціалізація контролів зображень ---
+    if (imageGroup) {
+        const imageInput = document.getElementById('object-image');
+        const imagePreviewContainer = document.getElementById('object-image-preview-container');
+        const imagePreview = document.getElementById('object-image-preview');
+        const imageRemoveBtn = document.getElementById('object-image-remove');
+        // Показуємо попередній перегляд якщо є зображення
+        if (properties.image) {
+            if (imagePreviewContainer)
+                imagePreviewContainer.classList.remove('hidden');
+            if (imagePreview)
+                imagePreview.src = properties.image;
+        }
+        else {
+            if (imagePreviewContainer)
+                imagePreviewContainer.classList.add('hidden');
+        }
+        // Обробник вибору файлу
+        if (imageInput) {
+            imageInput.onchange = function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const imageUrl = e.target.result;
+                        if (imagePreview)
+                            imagePreview.src = imageUrl;
+                        if (imagePreviewContainer)
+                            imagePreviewContainer.classList.remove('hidden');
+                        // Зберігаємо зображення в властивості об'єкта
+                        if (currentEditingObject.value) {
+                            currentEditingObject.value.properties = currentEditingObject.value.properties || {};
+                            currentEditingObject.value.properties.image = imageUrl;
+                            // Автоматично зберігаємо зміни
+                            import('./layers.js').then(({ saveLayersToStorage }) => {
+                                saveLayersToStorage();
+                                console.log('💾 Зображення збережено в localStorage');
+                            });
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+        }
+        // Обробник видалення зображення
+        if (imageRemoveBtn) {
+            imageRemoveBtn.onclick = function () {
+                if (imagePreview)
+                    imagePreview.src = '';
+                if (imagePreviewContainer)
+                    imagePreviewContainer.classList.add('hidden');
+                if (imageInput)
+                    imageInput.value = '';
+                // Видаляємо зображення з властивостей об'єкта
+                if (currentEditingObject.value) {
+                    currentEditingObject.value.properties = currentEditingObject.value.properties || {};
+                    delete currentEditingObject.value.properties.image;
+                    // Автоматично зберігаємо зміни
+                    import('./layers.js').then(({ saveLayersToStorage }) => {
+                        saveLayersToStorage();
+                        console.log('💾 Видалення зображення збережено в localStorage');
+                    });
+                }
+            };
+        }
     }
     // --- Додаю інтерактивність для вибору кольору ---
     if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle')) {

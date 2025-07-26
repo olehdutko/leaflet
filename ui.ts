@@ -34,14 +34,16 @@ export function showEditModal(layer: any) {
   const styleGroup = document.getElementById('style-group') as HTMLElement | null;
   const opacityGroup = document.getElementById('opacity-group') as HTMLElement | null;
   const markerIconGroup = document.getElementById('marker-icon-group') as HTMLElement | null;
+  const imageGroup = document.getElementById('object-image-group') as HTMLElement | null;
   // Приховуємо всі групи
-  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup].forEach(group => {
+  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
   });
   // Показуємо відповідні групи залежно від типу
   if (type === 'marker') {
     if (colorPickerGroup) colorPickerGroup.style.display = 'block';
     if (markerIconGroup) markerIconGroup.style.display = 'block';
+    if (imageGroup) imageGroup.style.display = 'block';
     // Встановити значення інпуту та превʼю
     const markerIconInput = document.getElementById('marker-icon') as HTMLInputElement | null;
     const markerIconPreview = document.getElementById('marker-icon-preview') as HTMLElement | null;
@@ -65,6 +67,7 @@ export function showEditModal(layer: any) {
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
     if (colorPickerGroup) colorPickerGroup.style.display = 'block';
     if (opacityGroup) opacityGroup.style.display = 'block';
+    if (imageGroup) imageGroup.style.display = 'block';
     // Приховати координати для не-маркерів
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
@@ -72,12 +75,17 @@ export function showEditModal(layer: any) {
     if (colorPickerGroup) colorPickerGroup.style.display = 'block';
     if (lineWidthGroup) lineWidthGroup.style.display = 'block';
     if (styleGroup) styleGroup.style.display = 'block';
+    if (imageGroup) imageGroup.style.display = 'block';
     // opacityGroup не показуємо для polyline
     // Приховати координати для не-маркерів
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
   } else if (type === 'image') {
-    // видалено: логіка для imageGroup, opacityGroup, coordsGroup
+    if (imageGroup) imageGroup.style.display = 'block';
+    if (opacityGroup) opacityGroup.style.display = 'block';
+    // Приховати координати для не-маркерів
+    const coordsGroup = document.querySelector('.marker-coords-group');
+    if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
   }
   // Заповнюємо значення контролів
   // Колір
@@ -102,6 +110,71 @@ export function showEditModal(layer: any) {
     (objectOpacity as HTMLInputElement).value = opacity ?? 1;
     (opacityValue as HTMLElement).textContent = Math.round((opacity ?? 1) * 100) + '%';
   }
+  // --- Ініціалізація контролів зображень ---
+  if (imageGroup) {
+    const imageInput = document.getElementById('object-image') as HTMLInputElement | null;
+    const imagePreviewContainer = document.getElementById('object-image-preview-container') as HTMLElement | null;
+    const imagePreview = document.getElementById('object-image-preview') as HTMLImageElement | null;
+    const imageRemoveBtn = document.getElementById('object-image-remove') as HTMLButtonElement | null;
+
+    // Показуємо попередній перегляд якщо є зображення
+    if (properties.image) {
+      if (imagePreviewContainer) imagePreviewContainer.classList.remove('hidden');
+      if (imagePreview) imagePreview.src = properties.image;
+    } else {
+      if (imagePreviewContainer) imagePreviewContainer.classList.add('hidden');
+    }
+
+    // Обробник вибору файлу
+    if (imageInput) {
+      imageInput.onchange = function(e: any) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e: any) {
+            const imageUrl = e.target.result;
+            if (imagePreview) imagePreview.src = imageUrl;
+            if (imagePreviewContainer) imagePreviewContainer.classList.remove('hidden');
+            
+            // Зберігаємо зображення в властивості об'єкта
+            if (currentEditingObject.value) {
+              (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
+              (currentEditingObject.value as any).properties.image = imageUrl;
+              
+              // Автоматично зберігаємо зміни
+              import('./layers.js').then(({ saveLayersToStorage }) => {
+                saveLayersToStorage();
+                console.log('💾 Зображення збережено в localStorage');
+              });
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+    }
+
+    // Обробник видалення зображення
+    if (imageRemoveBtn) {
+      imageRemoveBtn.onclick = function() {
+        if (imagePreview) imagePreview.src = '';
+        if (imagePreviewContainer) imagePreviewContainer.classList.add('hidden');
+        if (imageInput) imageInput.value = '';
+        
+        // Видаляємо зображення з властивостей об'єкта
+        if (currentEditingObject.value) {
+          (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
+          delete (currentEditingObject.value as any).properties.image;
+          
+          // Автоматично зберігаємо зміни
+          import('./layers.js').then(({ saveLayersToStorage }) => {
+            saveLayersToStorage();
+            console.log('💾 Видалення зображення збережено в localStorage');
+          });
+        }
+      };
+    }
+  }
+
   // --- Додаю інтерактивність для вибору кольору ---
   if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle')) {
     const colorPalette = document.getElementById('color-palette');
