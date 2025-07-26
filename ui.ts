@@ -1,4 +1,5 @@
-import { materialIcons, currentEditingObject } from './state.js';
+import { state } from './state.js';
+import { materialIcons } from './material-icons.js';
 import { closeEditModal } from './main.js';
 import { map } from './map-init.js';
 declare const L: any;
@@ -15,7 +16,7 @@ export function updateObjectsListForLayer(layerObj: any) {
 }
 
 export function showEditModal(layer: any) {
-  currentEditingObject.value = layer;
+  state.currentEditingObject.value = layer;
   const type = getObjectType(layer);
   const properties = getObjectProperties(layer);
   // Оновлюємо заголовок
@@ -59,8 +60,8 @@ export function showEditModal(layer: any) {
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = '';
     const latInput = document.getElementById('marker-lat');
     const lngInput = document.getElementById('marker-lng');
-    if (latInput && lngInput && currentEditingObject.value && currentEditingObject.value.getLatLng) {
-      const latlng = (currentEditingObject.value as L.Marker).getLatLng();
+    if (latInput && lngInput && state.currentEditingObject.value && (state.currentEditingObject.value as any).getLatLng) {
+      const latlng = (state.currentEditingObject.value as any).getLatLng();
       (latInput as HTMLInputElement).value = latlng.lat.toString();
       (lngInput as HTMLInputElement).value = latlng.lng.toString();
     }
@@ -137,9 +138,9 @@ export function showEditModal(layer: any) {
             if (imagePreviewContainer) imagePreviewContainer.classList.remove('hidden');
             
             // Зберігаємо зображення в властивості об'єкта
-            if (currentEditingObject.value) {
-              (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-              (currentEditingObject.value as any).properties.image = imageUrl;
+            if (state.currentEditingObject.value) {
+              (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+              (state.currentEditingObject.value as any).properties.image = imageUrl;
               
               // Автоматично зберігаємо зміни
               import('./layers.js').then(({ saveLayersToStorage }) => {
@@ -160,9 +161,9 @@ export function showEditModal(layer: any) {
         if (imageInput) imageInput.value = '';
         
         // Видаляємо зображення з властивостей об'єкта
-        if (currentEditingObject.value) {
-          (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-          delete (currentEditingObject.value as any).properties.image;
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          delete (state.currentEditingObject.value as any).properties.image;
           
           // Автоматично зберігаємо зміни
           import('./layers.js').then(({ saveLayersToStorage }) => {
@@ -184,26 +185,26 @@ export function showEditModal(layer: any) {
           (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(s => (s as HTMLElement).classList.remove('selected'));
           (swatch as HTMLElement).classList.add('selected');
           (objectColorInput as HTMLInputElement).value = (swatch as HTMLElement).dataset.color || '';
-          if (currentEditingObject.value) {
-            (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-            (currentEditingObject.value as any).properties.color = (swatch as HTMLElement).dataset.color;
+          if (state.currentEditingObject.value) {
+            (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+            (state.currentEditingObject.value as any).properties.color = (swatch as HTMLElement).dataset.color;
             if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-              (currentEditingObject.value as any).properties.fillColor = (swatch as HTMLElement).dataset.color;
+              (state.currentEditingObject.value as any).properties.fillColor = (swatch as HTMLElement).dataset.color;
             }
-            applyObjectProperties(currentEditingObject.value as L.Layer, (currentEditingObject.value as any).properties);
+            applyObjectProperties(state.currentEditingObject.value as L.Layer, (state.currentEditingObject.value as any).properties);
           }
         };
       });
       // Зміна через color picker
       (objectColorInput as HTMLInputElement).oninput = function (e) {
         (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(s => (s as HTMLElement).classList.remove('selected'));
-        if (currentEditingObject.value) {
-          (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-          (currentEditingObject.value as any).properties.color = (e.target as HTMLInputElement).value;
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          (state.currentEditingObject.value as any).properties.color = (e.target as HTMLInputElement).value;
           if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-            (currentEditingObject.value as any).properties.fillColor = (e.target as HTMLInputElement).value;
+            (state.currentEditingObject.value as any).properties.fillColor = (e.target as HTMLInputElement).value;
           }
-          applyObjectProperties(currentEditingObject.value as L.Layer, (currentEditingObject.value as any).properties);
+          applyObjectProperties(state.currentEditingObject.value as L.Layer, (state.currentEditingObject.value as any).properties);
         }
       };
     }
@@ -211,7 +212,7 @@ export function showEditModal(layer: any) {
   // --- Додаю інтерактивність для вибору стилю лінії ---
   if (type === 'polyline') {
     const lineStyle = document.getElementById('line-style');
-    if (lineStyle && currentEditingObject.value) {
+    if (lineStyle && state.currentEditingObject.value) {
       (lineStyle as HTMLInputElement).onchange = function (e) {
         if (!e.target) return;
         const target = e.target as HTMLInputElement | null;
@@ -219,18 +220,18 @@ export function showEditModal(layer: any) {
         if (target && target.value === 'dashed') dashArray = '10, 10';
         else if (target && target.value === 'dotted') dashArray = '2, 8';
         // Оновлюємо властивість
-        (currentEditingObject.value as L.Polyline).options.dashArray = dashArray;
-        if (dashArray) (currentEditingObject.value as L.Polyline).setStyle({ dashArray });
-        (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-        if (target) (currentEditingObject.value as any).properties.style = target.value;
+        (state.currentEditingObject.value as unknown as L.Polyline).options.dashArray = dashArray;
+        if (dashArray) (state.currentEditingObject.value as unknown as L.Polyline).setStyle({ dashArray });
+        (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+        if (target) (state.currentEditingObject.value as any).properties.style = target.value;
         saveLayersToStorage(); // одразу зберігаємо стиль
       };
       // Встановити стиль при відкритті модалки
       let dashArray: string | undefined = undefined;
       if ((lineStyle as HTMLInputElement).value === 'dashed') dashArray = '10, 10';
       else if ((lineStyle as HTMLInputElement).value === 'dotted') dashArray = '2, 8';
-      (currentEditingObject.value as L.Polyline).setStyle({ dashArray });
-      (currentEditingObject.value as L.Polyline).options.dashArray = dashArray;
+              (state.currentEditingObject.value as unknown as L.Polyline).setStyle({ dashArray });
+        (state.currentEditingObject.value as unknown as L.Polyline).options.dashArray = dashArray;
     }
   }
   // Показуємо модальне вікно
@@ -243,8 +244,8 @@ export function showEditModal(layer: any) {
   if (deleteObjectBtn) {
     deleteObjectBtn.onclick = function () {
       let typeName = 'обʼєкта';
-      if (currentEditingObject.value) {
-        const type = getObjectType(currentEditingObject.value as L.Layer);
+      if (state.currentEditingObject.value) {
+        const type = getObjectType(state.currentEditingObject.value as L.Layer);
         if (type === 'marker') typeName = 'маркеру';
         else if (type === 'polygon') typeName = 'полігону';
         else if (type === 'polyline') typeName = 'лінії';
@@ -252,21 +253,21 @@ export function showEditModal(layer: any) {
         else if (type === 'circle') typeName = 'кола';
       }
       let objectName = typeName;
-      if (currentEditingObject.value) {
-        const properties = getObjectProperties(currentEditingObject.value as L.Layer);
+      if (state.currentEditingObject.value) {
+        const properties = getObjectProperties(state.currentEditingObject.value as L.Layer);
         if (properties.name) objectName = `"${properties.name}"`;
       }
       showConfirmDialog({
         title: `Видалення ${typeName}: ${objectName}`,
         message: 'Ви дійсно хочете видалити цей обʼєкт?',
         onConfirm: () => {
-          if (!currentEditingObject.value) return;
+          if (!state.currentEditingObject.value) return;
           // Знаходимо відповідний customLayer
-          const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value as L.Layer));
+          const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(state.currentEditingObject.value as unknown as L.Layer));
           if (layerObj && layerObj.featureGroup) {
-            layerObj.featureGroup.removeLayer(currentEditingObject.value as L.Layer);
+            layerObj.featureGroup.removeLayer(state.currentEditingObject.value as L.Layer);
           }
-          map.removeLayer(currentEditingObject.value as L.Layer);
+          map.removeLayer(state.currentEditingObject.value as L.Layer);
           saveLayersToStorage();
           updateObjectsListForLayer(layerObj); // оновити список об'єктів після видалення
           // clean up renderObjectsList reference if no objects left

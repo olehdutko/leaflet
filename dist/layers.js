@@ -27,7 +27,7 @@ import { addDoubleClickToLayer, createLayerControl, layerControlsDiv } from './u
 import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
-import * as state from './state.js';
+import { state } from './state.js';
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage() {
     customLayers.forEach(l => {

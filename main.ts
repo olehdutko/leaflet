@@ -404,7 +404,8 @@ const tileLayerOptions = {
 import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer, updateActiveLayerUI } from './layers.js';
 
 import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput } from './ui.js';
-import { materialIcons, currentEditingObject } from './state.js';
+import { stateManager, state } from './state.js';
+import { materialIcons, filterMaterialIcons } from './material-icons.js';
 import { showConfirmDialog } from './ui.js';
 
 // --- глобальний прапорець для drag & drop тултіпів ---
@@ -435,9 +436,9 @@ function setupMarkerIconAutocomplete() {
     const val = input.value.trim().toLowerCase();
     list.innerHTML = '';
     preview.textContent = input.value;
-    const matches = materialIcons.filter(name => name.includes(val)).slice(0, 10);
+    const matches = filterMaterialIcons(val);
     currentFocus = -1;
-    matches.forEach(name => {
+    matches.forEach((name: string) => {
       const item = document.createElement('div');
       item.className = 'autocomplete-item';
       item.innerHTML = `<span class="material-icons">${name}</span> ${name}`;
@@ -445,10 +446,10 @@ function setupMarkerIconAutocomplete() {
         input.value = name;
         preview.textContent = name;
         list.innerHTML = '';
-        if (currentEditingObject.value) {
-          (currentEditingObject.value as any).properties = (currentEditingObject.value as any).properties || {};
-          (currentEditingObject.value as any).properties.icon = name;
-          applyObjectProperties(currentEditingObject.value, (currentEditingObject.value as any).properties);
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          (state.currentEditingObject.value as any).properties.icon = name;
+          applyObjectProperties(state.currentEditingObject.value, (state.currentEditingObject.value as any).properties);
         }
       };
       list.appendChild(item);
@@ -508,14 +509,14 @@ function waitForMaterialIconsAndInitAutocomplete() {
 export function closeEditModal() {
   const editModal = document.getElementById('edit-object-modal');
   if (editModal) (editModal as HTMLElement).classList.add('hidden');
-  currentEditingObject.value = null;
+  state.currentEditingObject.value = null;
 }
 
 // Функція для збереження змін
 function saveObjectChanges() {
-  if (!currentEditingObject.value) return;
+  if (!state.currentEditingObject.value) return;
 
-  const type = getObjectType(currentEditingObject.value as L.Layer);
+  const type = getObjectType(state.currentEditingObject.value as L.Layer);
   const properties: any = {
     name: (document.getElementById('object-name') as HTMLInputElement).value,
     description: (document.getElementById('object-description') as HTMLTextAreaElement).value
@@ -529,13 +530,13 @@ function saveObjectChanges() {
     // --- координати ---
     const latInput = document.getElementById('marker-lat');
     const lngInput = document.getElementById('marker-lng');
-    if (latInput && lngInput && currentEditingObject.value && currentEditingObject.value.setLatLng) {
+    if (latInput && lngInput && state.currentEditingObject.value && (state.currentEditingObject.value as any).setLatLng) {
       const lat = parseFloat((latInput as HTMLInputElement).value);
       const lng = parseFloat((lngInput as HTMLInputElement).value);
       if (!isNaN(lat) && !isNaN(lng)) {
-        const old = (currentEditingObject.value as L.Marker).getLatLng();
+        const old = (state.currentEditingObject.value as any).getLatLng();
         if (lat !== old.lat || lng !== old.lng) {
-          (currentEditingObject.value as L.Marker).setLatLng([lat, lng]);
+          (state.currentEditingObject.value as any).setLatLng([lat, lng]);
         }
       }
     }
@@ -566,10 +567,10 @@ function saveObjectChanges() {
     properties.image = (imagePreview as HTMLImageElement).src;
   }
 
-  applyObjectProperties(currentEditingObject.value as L.Layer, properties);
+  applyObjectProperties(state.currentEditingObject.value as L.Layer, properties);
   // --- Додаємо копіювання у feature.properties ---
-  if ((currentEditingObject.value as any).feature && (currentEditingObject.value as any).properties) {
-    (currentEditingObject.value as any).feature.properties = { ...(currentEditingObject.value as any).properties };
+  if ((state.currentEditingObject.value as any).feature && (state.currentEditingObject.value as any).properties) {
+    (state.currentEditingObject.value as any).feature.properties = { ...(state.currentEditingObject.value as any).properties };
   }
   saveLayersToStorage();
   closeEditModal();
@@ -584,27 +585,27 @@ function initEditModal() {
 
   // --- Додаю підтвердження для видалення об'єкта ---
   (document.getElementById('delete-object') as HTMLElement).onclick = function () {
-    if (!currentEditingObject.value) return;
-    const type = getObjectType(currentEditingObject.value as L.Layer);
+      if (!state.currentEditingObject.value) return;
+  const type = getObjectType(state.currentEditingObject.value as L.Layer);
     let typeName = 'обʼєкт';
     if (type === 'marker') typeName = 'маркер';
     else if (type === 'polygon') typeName = 'полігон';
     else if (type === 'polyline') typeName = 'полілінію';
     else if (type === 'rectangle') typeName = 'прямокутник';
     else if (type === 'circle') typeName = 'коло';
-    const properties = getObjectProperties(currentEditingObject.value as L.Layer);
+    const properties = getObjectProperties(state.currentEditingObject.value as L.Layer);
     const objectName = properties.name ? `"${properties.name}"` : typeName;
     closeEditModal();
     showConfirmDialog({
       title: `Видалення об'єкта: ${objectName}`,
       message: `Ви дійсно хочете видалити об'єкт ${objectName}?`,
       onConfirm: function (action?: string) {
-        if (!currentEditingObject.value) return;
-        const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(currentEditingObject.value as L.Layer));
+        if (!state.currentEditingObject.value) return;
+        const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(state.currentEditingObject.value as unknown as L.Layer));
         if (layerObj && layerObj.featureGroup) {
-          layerObj.featureGroup.removeLayer(currentEditingObject.value as L.Layer);
+          layerObj.featureGroup.removeLayer(state.currentEditingObject.value as L.Layer);
         }
-        map.removeLayer(currentEditingObject.value as L.Layer);
+        map.removeLayer(state.currentEditingObject.value as L.Layer);
         saveLayersToStorage();
       },
       buttons: [

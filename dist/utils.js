@@ -60,11 +60,29 @@ export function getObjectProperties(layer) {
     return layer.properties || (layer.feature && layer.feature.properties) || {};
 }
 export function getColoredMarkerIcon(color = "#1976d2", iconName = "place") {
-    // Реалізація з main.ts (можна розширити типізацію пізніше)
     return L.divIcon({
         className: 'custom-marker-icon',
         html: `<div style="background:${color};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="material-icons" style="color:#fff;font-size:20px;">${iconName}</i></div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 28]
     });
+}
+// Додаємо утиліти для роботи з властивостями об'єктів
+export function setObjectProperty(layer, key, value) {
+    if (!layer.properties)
+        layer.properties = {};
+    layer.properties[key] = value;
+}
+export function getObjectProperty(layer, key, defaultValue = null) {
+    var _a, _b;
+    return (_b = (_a = layer.properties) === null || _a === void 0 ? void 0 : _a[key]) !== null && _b !== void 0 ? _b : defaultValue;
+}
+// Утиліта для застосування стилів до об'єктів
+export function applyObjectStyle(layer, style) {
+    if (layer.setStyle) {
+        layer.setStyle(style);
+    }
+    if (layer.options) {
+        Object.assign(layer.options, style);
+    }
 }

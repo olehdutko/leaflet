@@ -1,25 +1,16 @@
 declare const L: any;
+import { getObjectType, setObjectProperty, applyObjectStyle } from './utils.js';
 
 export function applyObjectProperties(layer: any, properties: any) {
-  const type = layer && layer instanceof L.Marker && !(layer instanceof L.CircleMarker)
-    ? 'marker'
-    : layer instanceof L.CircleMarker
-      ? 'circle'
-      : layer instanceof L.Polygon && !(layer instanceof L.Rectangle)
-        ? 'polygon'
-        : layer instanceof L.Rectangle
-          ? 'rectangle'
-          : layer instanceof L.Polyline
-            ? 'polyline'
-            : layer instanceof L.ImageOverlay
-              ? 'image'
-              : 'unknown';
-  if (!layer.properties) layer.properties = {};
-  layer.properties.name = properties.name;
-  layer.properties.description = properties.description;
+  const type = getObjectType(layer);
+  
+  // Встановлюємо базові властивості
+  setObjectProperty(layer, 'name', properties.name);
+  setObjectProperty(layer, 'description', properties.description);
+  
   if (type === 'marker') {
     const iconName = properties.icon || 'place';
-    const color = properties.color || '#1976d2'; // Дефолтний синій колір
+    const color = properties.color || '#1976d2';
 
     layer.setIcon(L.divIcon({
       className: 'custom-marker-icon',
@@ -27,43 +18,43 @@ export function applyObjectProperties(layer: any, properties: any) {
       iconSize: [28, 28],
       iconAnchor: [14, 28]
     }));
-    layer.properties.color = color; // Зберігаємо встановлений колір
-    layer.properties.icon = iconName;
+    
+    setObjectProperty(layer, 'color', color);
+    setObjectProperty(layer, 'icon', iconName);
     layer.options.color = color;
+    
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
     const color = properties.color || '#1976d2';
     const fillColor = properties.fillColor || '#1976d2';
     const fillOpacity = properties.fillOpacity ?? 0.2;
 
-    layer.setStyle({
+    applyObjectStyle(layer, {
       fillColor: fillColor,
       color: color,
       fillOpacity: fillOpacity,
     });
-    layer.properties.color = color;
-    layer.properties.fillColor = fillColor;
-    layer.properties.fillOpacity = fillOpacity;
-    layer.options.color = color;
-    layer.options.fillColor = fillColor;
-    layer.options.fillOpacity = fillOpacity;
+    
+    setObjectProperty(layer, 'color', color);
+    setObjectProperty(layer, 'fillColor', fillColor);
+    setObjectProperty(layer, 'fillOpacity', fillOpacity);
+    
   } else if (type === 'polyline') {
     const color = properties.color || '#1976d2';
     const weight = properties.weight || 3;
     const opacity = properties.opacity ?? 1;
+    const dashArray = properties.style === 'dashed' ? '10, 10' : 
+                     properties.style === 'dotted' ? '2, 8' : null;
 
-    layer.setStyle({
+    applyObjectStyle(layer, {
       color: color,
       weight: weight,
       opacity: opacity,
-      dashArray: properties.style === 'dashed' ? '10, 10' : properties.style === 'dotted' ? '2, 8' : null
+      dashArray: dashArray
     });
-    layer.properties.color = color;
-    layer.properties.weight = weight;
-    layer.properties.opacity = opacity;
-    layer.properties.style = properties.style;
-    layer.options.color = color;
-    layer.options.weight = weight;
-    layer.options.opacity = opacity;
-    layer.options.dashArray = properties.style === 'dashed' ? '10, 10' : properties.style === 'dotted' ? '2, 8' : null;
+    
+    setObjectProperty(layer, 'color', color);
+    setObjectProperty(layer, 'weight', weight);
+    setObjectProperty(layer, 'opacity', opacity);
+    setObjectProperty(layer, 'style', properties.style);
   }
 }

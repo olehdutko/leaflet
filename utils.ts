@@ -1,5 +1,6 @@
 // --- Утиліти ---
 declare var L: any;
+
 export function getLayerIcon(type: string): string {
   if (type === 'План') return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><rect width="24" height="24" rx="4" fill="#1976d2"/><path d="M7 17V7l5-2v10l-5 2zM12 5l5 2v10l-5-2V5z" fill="#fff"/></svg>`;
   if (type === 'Ландшафт') return '<i class="fa fa-mountain" style="font-size:22px;color:#1976d2;"></i>';
@@ -55,11 +56,30 @@ export function getObjectProperties(layer: any): any {
 }
 
 export function getColoredMarkerIcon(color: string = "#1976d2", iconName: string = "place"): any {
-  // Реалізація з main.ts (можна розширити типізацію пізніше)
   return L.divIcon({
     className: 'custom-marker-icon',
     html: `<div style="background:${color};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="material-icons" style="color:#fff;font-size:20px;">${iconName}</i></div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 28]
   });
+}
+
+// Додаємо утиліти для роботи з властивостями об'єктів
+export function setObjectProperty(layer: any, key: string, value: any): void {
+  if (!layer.properties) layer.properties = {};
+  layer.properties[key] = value;
+}
+
+export function getObjectProperty(layer: any, key: string, defaultValue: any = null): any {
+  return layer.properties?.[key] ?? defaultValue;
+}
+
+// Утиліта для застосування стилів до об'єктів
+export function applyObjectStyle(layer: any, style: any): void {
+  if (layer.setStyle) {
+    layer.setStyle(style);
+  }
+  if (layer.options) {
+    Object.assign(layer.options, style);
+  }
 }
