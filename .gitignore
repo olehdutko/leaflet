@@ -1,29 +1,33 @@
-# Node.js dependencies
+# Залежності
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build output
+# Скомпільовані файли
 dist/
+build/
+*.js.map
+
+# TypeScript
 *.tsbuildinfo
 
-# OS files
-.DS_Store
-
-# IDE/editor files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Local environment
-.env
-.env.*
+# OS
+.DS_Store
+Thumbs.db
 
-# Cursor/AI files
-.cursor/
-cursorrules
+# Логи
+*.log
 
-# Misc
-package-lock.json 
+# Тимчасові файли
+*.tmp
+*.temp
+
+# Дебаг файли (якщо потрібно)
+# del/ 
