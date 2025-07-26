@@ -16,7 +16,7 @@ function quickDebug() {
     // 2. Перевіряємо помилки JavaScript
     const errors = [];
     if (typeof window.overlayPositionFix === 'undefined') {
-        errors.push('❌ overlay-position-fix.js не завантажився');
+        errors.push('❌ overlayPositionFix не завантажився');
     }
     if (typeof window.testOverlayPositions === 'undefined') {
         errors.push('❌ test-overlay-position.js не завантажився');

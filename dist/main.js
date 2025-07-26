@@ -1235,3 +1235,485 @@ if (typeof window.L !== 'undefined' &&
         language: 'uk',
     }));
 }
+(function () {
+    'use strict';
+    // Флаг для попередження повторних викликів
+    if (window.overlayPositionFixLoaded) {
+        return;
+    }
+    window.overlayPositionFixLoaded = true;
+    let saveQueue = [];
+    let saveTimeout = null;
+    let isDebugMode = false;
+    // Увімкнути debug режим
+    window.enableOverlayDebug = function () {
+        isDebugMode = true;
+    };
+    function debugLog(message, data = null) {
+        // Debug логування вимкнено для production
+    }
+    // Універсальна функція збереження
+    function universalSave(reason = 'unknown', priority = false) {
+        debugLog(`Збереження запитано: ${reason} (priority: ${priority})`);
+        if (!window.saveLayersToStorage) {
+            return;
+        }
+        // Для пріоритетних збережень (перше переміщення) - зменшена затримка
+        const delay = priority ? 50 : 150;
+        // Очищуємо попередній timeout
+        if (saveTimeout) {
+            clearTimeout(saveTimeout);
+        }
+        saveTimeout = setTimeout(() => {
+            var _a, _b;
+            debugLog(`Виконуємо збереження: ${reason}`);
+            try {
+                // Зберігаємо стан ПЕРЕД збереженням для порівняння
+                const beforeState = localStorage.getItem('lefleat_layers');
+                const beforeCount = beforeState ? JSON.parse(beforeState).length : 0;
+                // Виконуємо збереження
+                (_b = (_a = window).saveLayersToStorage) === null || _b === void 0 ? void 0 : _b.call(_a);
+                // Перевіряємо результат
+                setTimeout(() => {
+                    const afterState = localStorage.getItem('lefleat_layers');
+                    const afterCount = afterState ? JSON.parse(afterState).length : 0;
+                    debugLog(`Збереження завершено: ${beforeCount} → ${afterCount} шарів`);
+                    // Для пріоритетних збережень перевіряємо наявність corners
+                    if (priority && afterState) {
+                        const data = JSON.parse(afterState);
+                        let foundCorners = false;
+                        data.forEach((layer) => {
+                            if (layer.overlays && layer.overlays.length > 0) {
+                                layer.overlays.forEach((ov) => {
+                                    if (ov.corners && ov.corners.length > 0) {
+                                        foundCorners = true;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }, 25);
+            }
+            catch (error) {
+                // Мовчазно обробляємо помилки збереження
+            }
+            saveTimeout = null;
+        }, delay);
+    }
+    // Покращений wrapper для edit подій
+    function createEditHandler(overlay, imageUrl, featureGroup, isFirstMove = false) {
+        let editCount = 0;
+        return function handleEdit() {
+            var _a;
+            editCount++;
+            const isFirstEdit = editCount === 1;
+            const newBounds = overlay.getBounds();
+            const newCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+                overlay.getCorners().map(c => ({ lat: c.lat, lng: c.lng })) : null;
+            debugLog(`Edit подія #${editCount} для overlay: ${imageUrl === null || imageUrl === void 0 ? void 0 : imageUrl.substring(0, 30)}...`);
+            // Оновлюємо дані в масивах
+            if (featureGroup && featureGroup.images) {
+                const imageIdx = featureGroup.images.findIndex(img => img.url === imageUrl);
+                if (imageIdx !== -1) {
+                    featureGroup.images[imageIdx].bounds = newBounds;
+                    if (newCorners) {
+                        featureGroup.images[imageIdx].corners = newCorners;
+                    }
+                }
+            }
+            if (featureGroup && featureGroup.overlays) {
+                const overlayIdx = featureGroup.overlays.findIndex(img => img.url === imageUrl);
+                if (overlayIdx !== -1) {
+                    featureGroup.overlays[overlayIdx].bounds = newBounds;
+                    if (newCorners) {
+                        featureGroup.overlays[overlayIdx].corners = newCorners;
+                    }
+                }
+            }
+            // Зберігаємо зміни
+            universalSave(`edit_${editCount}`, isFirstEdit);
+        };
+    }
+    // Функція для переприв'язування edit handlers
+    function rebindEditHandlers() {
+        if (!window.customLayers) {
+            return;
+        }
+        let rebound = 0;
+        window.customLayers.forEach((layer, layerIdx) => {
+            if (!layer || !layer.featureGroup)
+                return;
+            const { overlayInstances, images } = layer.featureGroup;
+            if (overlayInstances && images) {
+                overlayInstances.forEach((overlay, overlayIdx) => {
+                    var _a;
+                    if (overlay && overlay.getCorners) {
+                        const imageUrl = (_a = images[overlayIdx]) === null || _a === void 0 ? void 0 : _a.url;
+                        if (imageUrl) {
+                            // Видаляємо старі обробники
+                            overlay.off('edit');
+                            // Додаємо новий обробник
+                            const handler = createEditHandler(overlay, imageUrl, layer.featureGroup);
+                            overlay.on('edit', handler);
+                            rebound++;
+                        }
+                    }
+                });
+            }
+        });
+        debugLog(`Переприв'язано ${rebound} edit handlers`);
+    }
+    // Функція для перевірки стану overlay
+    function checkOverlayState() {
+        if (!window.customLayers) {
+            return;
+        }
+        let totalOverlays = 0;
+        let overlaysWithHandlers = 0;
+        let overlaysWithData = 0;
+        window.customLayers.forEach((layer) => {
+            if (layer && layer.featureGroup) {
+                const { overlayInstances, images } = layer.featureGroup;
+                if (overlayInstances) {
+                    totalOverlays += overlayInstances.length;
+                    overlayInstances.forEach((overlay) => {
+                        if (overlay && overlay.getCorners) {
+                            overlaysWithHandlers++;
+                        }
+                    });
+                }
+                if (images) {
+                    overlaysWithData += images.length;
+                }
+            }
+        });
+        // Перевіряємо localStorage
+        const stored = localStorage.getItem('lefleat_layers');
+        let storedOverlays = 0;
+        let overlaysWithCorners = 0;
+        if (stored) {
+            try {
+                const data = JSON.parse(stored);
+                data.forEach((layer) => {
+                    if (layer.overlays) {
+                        storedOverlays += layer.overlays.length;
+                        layer.overlays.forEach((ov) => {
+                            if (ov.corners && ov.corners.length > 0) {
+                                overlaysWithCorners++;
+                            }
+                        });
+                    }
+                });
+            }
+            catch (e) {
+                // Мовчазно обробляємо помилки парсингу
+            }
+        }
+        debugLog(`Стан overlay: ${totalOverlays} на карті, ${overlaysWithHandlers} з handlers, ${overlaysWithData} з даними, ${storedOverlays} в localStorage, ${overlaysWithCorners} з corners`);
+    }
+    // Функція для видалення overlay
+    function deleteOverlay(overlay) {
+        var _a, _b, _c, _d, _e, _f;
+        if (!overlay) {
+            return;
+        }
+        let overlayUrl = overlay._customUrl || overlay._url || overlay.url;
+        if (!overlayUrl && overlay._overlay) {
+            overlayUrl = overlay._overlay._customUrl || overlay._overlay._url || overlay._overlay.url;
+        }
+        if (!overlayUrl && overlay._image) {
+            overlayUrl = overlay._image.src;
+        }
+        if (window.customLayers) {
+            for (const layer of window.customLayers) {
+                if (!layer || !layer.featureGroup) {
+                    continue;
+                }
+                let overlayIdx = (_a = layer.featureGroup.overlayInstances) === null || _a === void 0 ? void 0 : _a.indexOf(overlay);
+                if (overlayIdx === -1 && overlay._overlay) {
+                    overlayIdx = (_b = layer.featureGroup.overlayInstances) === null || _b === void 0 ? void 0 : _b.findIndex((inst) => {
+                        return inst === overlay._overlay || inst._overlay === overlay._overlay;
+                    });
+                }
+                if (overlayIdx === -1 && overlayUrl) {
+                    overlayIdx = (_c = layer.featureGroup.images) === null || _c === void 0 ? void 0 : _c.findIndex((img) => img.url === overlayUrl);
+                }
+                if (overlayIdx === -1 && overlay._overlayId) {
+                    overlayIdx = (_d = layer.featureGroup.images) === null || _d === void 0 ? void 0 : _d.findIndex((img) => img._overlayId === overlay._overlayId);
+                }
+                if (overlayIdx === -1) {
+                    overlayIdx = (_e = layer.featureGroup.overlayInstances) === null || _e === void 0 ? void 0 : _e.findIndex((inst) => {
+                        const instUrl = inst._customUrl || inst._url || inst.url;
+                        const overlayUrl = overlay._customUrl || overlay._url || overlay.url;
+                        if (instUrl && overlayUrl && instUrl === overlayUrl) {
+                            return true;
+                        }
+                        if (inst._overlayId && overlay._overlayId && inst._overlayId === overlay._overlayId) {
+                            return true;
+                        }
+                        return false;
+                    });
+                    if (overlayIdx === -1) {
+                        overlayIdx = (_f = layer.featureGroup.images) === null || _f === void 0 ? void 0 : _f.findIndex((img) => {
+                            const imgUrl = img._customUrl || img._url || img.url;
+                            const overlayUrl = overlay._customUrl || overlay._url || overlay.url;
+                            if (imgUrl && overlayUrl && imgUrl === overlayUrl) {
+                                return true;
+                            }
+                            if (img._overlayId && overlay._overlayId && img._overlayId === overlay._overlayId) {
+                                return true;
+                            }
+                            return false;
+                        });
+                    }
+                }
+                if (overlayIdx !== -1 && overlayIdx !== undefined) {
+                    if (layer.featureGroup.overlayInstances && layer.featureGroup.overlayInstances[overlayIdx]) {
+                        layer.featureGroup.overlayInstances.splice(overlayIdx, 1);
+                    }
+                    if (layer.featureGroup.images && layer.featureGroup.images[overlayIdx]) {
+                        layer.featureGroup.images.splice(overlayIdx, 1);
+                    }
+                    if (layer.featureGroup.overlays && layer.featureGroup.overlays[overlayIdx]) {
+                        layer.featureGroup.overlays.splice(overlayIdx, 1);
+                    }
+                    try {
+                        if (window.map && window.map.hasLayer(overlay)) {
+                            window.map.removeLayer(overlay);
+                        }
+                    }
+                    catch (error) {
+                        // Мовчазно обробляємо помилки видалення
+                    }
+                    if (window.saveLayersToStorage) {
+                        window.saveLayersToStorage();
+                    }
+                    if (overlayUrl) {
+                        const imgElements = document.querySelectorAll(`img.leaflet-image-layer[src="${overlayUrl}"]`);
+                        imgElements.forEach(el => el.remove());
+                    }
+                    return;
+                }
+            }
+        }
+        if (overlay) {
+            try {
+                if (window.map && window.map.hasLayer(overlay)) {
+                    window.map.removeLayer(overlay);
+                }
+                if (overlay._overlay && window.map && window.map.hasLayer(overlay._overlay)) {
+                    window.map.removeLayer(overlay._overlay);
+                }
+                if (window.saveLayersToStorage) {
+                    window.saveLayersToStorage();
+                }
+                if (overlayUrl) {
+                    const imgElements = document.querySelectorAll(`img.leaflet-image-layer[src="${overlayUrl}"]`);
+                    imgElements.forEach(el => el.remove());
+                }
+            }
+            catch (error) {
+                // Мовчазно обробляємо помилки видалення
+            }
+        }
+    }
+    // Перевіряємо наявність overlay без edit handlers
+    function checkForOrphanedOverlays() {
+        if (!window.customLayers) {
+            return;
+        }
+        window.customLayers.forEach((layer) => {
+            if (layer && layer.featureGroup && layer.featureGroup.overlayInstances) {
+                layer.featureGroup.overlayInstances.forEach((overlay) => {
+                    if (overlay && overlay.getCorners && !overlay._hasEditHandler) {
+                        debugLog('Виявлено overlay без edit handlers, переприв\'язуємо...');
+                        rebindEditHandlers();
+                        return;
+                    }
+                });
+            }
+        });
+    }
+    // Експортуємо функції
+    window.overlayPositionFix = {
+        createEditHandler,
+        rebindEditHandlers,
+        checkOverlayState,
+        deleteOverlay,
+        universalSave,
+        checkForOrphanedOverlays
+    };
+    // Ініціалізація
+    setTimeout(() => {
+        rebindEditHandlers();
+        checkOverlayState();
+        checkForOrphanedOverlays();
+    }, 1000);
+    // Періодична перевірка
+    setInterval(() => {
+        checkForOrphanedOverlays();
+    }, 5000);
+})();
+(function () {
+    'use strict';
+    // Флаг для попередження повторних викликів
+    if (window.dragSaveFixLoaded) {
+        return;
+    }
+    window.dragSaveFixLoaded = true;
+    let isDebugMode = false;
+    // Увімкнути debug режим
+    window.enableDragSaveDebug = function () {
+        isDebugMode = true;
+    };
+    function debugLog(message, data = null) {
+        // Debug логування вимкнено для production
+    }
+    // Функція збереження позиції overlay
+    function saveOverlayPosition(overlay, overlayId) {
+        var _a, _b, _c;
+        if (!window.saveLayersToStorage) {
+            return;
+        }
+        const newBounds = overlay.getBounds();
+        const newCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+            overlay.getCorners().map(c => ({ lat: c.lat, lng: c.lng })) : null;
+        debugLog(`DRAG ЗБЕРЕЖЕННЯ позиції overlay:`, {
+            bounds: newBounds,
+            corners: newCorners ? newCorners.length : 0
+        });
+        // Знаходимо overlay в системі шарів
+        if (window.customLayers) {
+            for (const layer of window.customLayers) {
+                if (!layer || !layer.featureGroup)
+                    continue;
+                let overlayIdx = (_b = layer.featureGroup.overlayInstances) === null || _b === void 0 ? void 0 : _b.indexOf(overlay);
+                if (overlayIdx === -1 && overlay._overlay) {
+                    overlayIdx = (_c = layer.featureGroup.overlayInstances) === null || _c === void 0 ? void 0 : _c.findIndex((inst) => {
+                        return inst === overlay._overlay || inst._overlay === overlay._overlay;
+                    });
+                }
+                if (overlayIdx !== -1) {
+                    // Оновлюємо в images масиві
+                    if (layer.featureGroup.images && layer.featureGroup.images[overlayIdx]) {
+                        layer.featureGroup.images[overlayIdx].bounds = newBounds;
+                        if (newCorners) {
+                            layer.featureGroup.images[overlayIdx].corners = newCorners;
+                        }
+                    }
+                    // Оновлюємо в overlays масиві
+                    if (layer.featureGroup.overlays && layer.featureGroup.overlays[overlayIdx]) {
+                        layer.featureGroup.overlays[overlayIdx].bounds = newBounds;
+                        if (newCorners) {
+                            layer.featureGroup.overlays[overlayIdx].corners = newCorners;
+                        }
+                    }
+                    // Зберігаємо зміни
+                    try {
+                        window.saveLayersToStorage();
+                        debugLog('DRAG ЗБЕРЕЖЕННЯ: Позиція збережена в localStorage');
+                    }
+                    catch (error) {
+                        // Мовчазно обробляємо помилки збереження
+                    }
+                    return;
+                }
+            }
+        }
+    }
+    // Функція для прив'язування drag handlers
+    function bindDragSaveHandlers() {
+        debugLog('Прив\'язуємо drag handlers для збереження позицій...');
+        if (!window.customLayers) {
+            return;
+        }
+        let bound = 0;
+        window.customLayers.forEach((layer, layerIdx) => {
+            if (!layer || !layer.featureGroup || !layer.featureGroup.overlayInstances) {
+                return;
+            }
+            layer.featureGroup.overlayInstances.forEach((overlay, overlayIdx) => {
+                if (!overlay || !overlay.getCorners || overlay._dragSaveHandlerBound) {
+                    return;
+                }
+                const overlayId = `${layerIdx}.${overlayIdx}`;
+                let initialBounds = null;
+                let isDragging = false;
+                // Обробник початку drag
+                const dragStartHandler = () => {
+                    initialBounds = overlay.getBounds();
+                    isDragging = true;
+                    debugLog(`DRAG ПОЧАТОК для overlay ${overlayId}`);
+                };
+                // Обробник кінця drag
+                const dragEndHandler = () => {
+                    if (isDragging && initialBounds) {
+                        const finalBounds = overlay.getBounds();
+                        // Перевіряємо чи позиція дійсно змінилася
+                        if (JSON.stringify(initialBounds) !== JSON.stringify(finalBounds)) {
+                            debugLog(`DRAG ЗАВЕРШЕНО для overlay ${overlayId} - позиція змінилася`, {
+                                було: initialBounds,
+                                стало: finalBounds
+                            });
+                            // Зберігаємо нову позицію
+                            saveOverlayPosition(overlay, overlayId);
+                        }
+                    }
+                    isDragging = false;
+                    initialBounds = null;
+                };
+                // Прив'язуємо обробники
+                overlay.on('dragstart', dragStartHandler);
+                overlay.on('dragend', dragEndHandler);
+                // Позначаємо що handler вже прив'язаний
+                overlay._dragSaveHandlerBound = true;
+                bound++;
+            });
+        });
+        debugLog(`Прив'язано drag save handlers для ${bound} overlay`);
+    }
+    // Функція для тестування
+    function testDragSaveMechanism() {
+        debugLog('ТЕСТ DRAG SAVE МЕХАНІЗМУ...');
+        if (!window.customLayers || window.customLayers.length === 0) {
+            debugLog('Немає шарів для тестування');
+            return;
+        }
+        let totalOverlays = 0;
+        let overlaysWithHandlers = 0;
+        window.customLayers.forEach((layer, layerIdx) => {
+            if (layer && layer.featureGroup && layer.featureGroup.overlayInstances) {
+                layer.featureGroup.overlayInstances.forEach((overlay, overlayIdx) => {
+                    totalOverlays++;
+                    if (overlay && overlay._dragSaveHandlerBound) {
+                        overlaysWithHandlers++;
+                        debugLog(`Overlay ${layerIdx}.${overlayIdx}:`, {
+                            bounds: overlay.getBounds(),
+                            dragHandler: overlay._dragSaveHandlerBound ? '✅' : '❌'
+                        });
+                    }
+                });
+            }
+        });
+        if (totalOverlays === 0) {
+            debugLog('Немає overlay для тестування');
+        }
+        else {
+            debugLog('Переміщуйте overlay і дивіться на логи збереження!');
+        }
+    }
+    // Експортуємо функції
+    window.dragSaveFix = {
+        bindHandlers: bindDragSaveHandlers,
+        test: testDragSaveMechanism,
+        enableDebug: () => { isDebugMode = true; }
+    };
+    // Ініціалізація
+    setTimeout(() => {
+        bindDragSaveHandlers();
+    }, 1000);
+    // Періодична перевірка
+    setInterval(() => {
+        bindDragSaveHandlers();
+    }, 5000);
+})();
