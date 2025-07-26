@@ -107,7 +107,33 @@ export function saveLayersToStorage(): void {
         corners: img.corners // Додаємо corners для збереження трансформацій
       }));
     }
-    const geojson = l.featureGroup.toGeoJSON();
+    // Створюємо GeoJSON вручну, щоб зберегти наші feature об'єкти
+    const features: any[] = [];
+    l.featureGroup.eachLayer((layer: any) => {
+      if (layer.feature) {
+        // Використовуємо наш створений feature об'єкт
+        features.push(layer.feature);
+        console.log(`💾 Зберігаємо feature об'єкт: ${layer.feature.geometry.type} для ${layer.properties?.name || 'об\'єкта'}`);
+      } else {
+        // Fallback до стандартного toGeoJSON для об'єктів без feature
+        try {
+          const layerGeoJSON = layer.toGeoJSON();
+          if (layerGeoJSON) {
+            features.push(layerGeoJSON);
+            console.log(`💾 Fallback toGeoJSON: ${layerGeoJSON.geometry.type} для ${layer.properties?.name || 'об\'єкта'}`);
+          }
+        } catch (error) {
+          console.warn('Помилка toGeoJSON для об\'єкта:', error);
+        }
+      }
+    });
+    
+    const geojson = {
+      type: 'FeatureCollection',
+      features: features
+    };
+    
+    console.log(`📊 Збережено ${features.length} об'єктів для шару "${l.title}"`);
 
     return {
       id: l.id,

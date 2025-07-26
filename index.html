@@ -250,6 +250,51 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet.polylinemeasure@2.4.0/Leaflet.PolylineMeasure.min.js"></script>
+  
+  <!-- Дебагінг скрипти -->
+  <script src="./debug-overlay.js"></script>
+  <script src="./overlay-position-fix.js"></script>
+  <script src="./drag-save-fix.js"></script>
+  <script src="./quick-debug.js"></script>
+  <script src="./detailed-debug.js"></script>
+  
   <script type="module" src="./dist/main.js"></script>
+  
+  <!-- Автоматичний запуск дебагінг функцій -->
+  <script>
+    // Запускаємо дебагінг після завантаження сторінки
+    window.addEventListener('load', function() {
+      console.log('🚀 Автоматичний запуск дебагінг функцій...');
+      
+      // Запускаємо швидку діагностику
+      if (typeof quickDebug === 'function') {
+        setTimeout(quickDebug, 1000);
+      }
+      
+      // Увімкнути debug режим для overlay позицій
+      if (window.overlayPositionFix && typeof window.overlayPositionFix.enableDebug === 'function') {
+        setTimeout(() => window.overlayPositionFix.enableDebug(), 1500);
+      }
+      
+      // Увімкнути debug режим для drag save
+      if (window.dragSaveFix && typeof window.dragSaveFix.enableDebug === 'function') {
+        setTimeout(() => window.dragSaveFix.enableDebug(), 2000);
+      }
+      
+      // Запустити детальний моніторинг edit подій
+      if (typeof setupDetailedEditMonitoring === 'function') {
+        setTimeout(setupDetailedEditMonitoring, 2500);
+      }
+      
+      console.log('✅ Дебагінг функції активовані!');
+      console.log('💡 Доступні команди:');
+      console.log('   - quickDebug() - швидка діагностика');
+      console.log('   - debugOverlay.full() - повний аналіз');
+      console.log('   - debugOverlay.analyzeCircleIssue() - аналіз проблеми з колами');
+      console.log('   - debugOverlay.analyzePolygonIssue() - аналіз проблеми з полігонами');
+      console.log('   - overlayPositionFix.checkState() - стан overlay позицій');
+      console.log('   - dragSaveFix.test() - тест drag збереження');
+    });
+  </script>
 </body>
 </html> 

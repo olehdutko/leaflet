@@ -115,6 +115,8 @@ export function initDrawControl() {
         layer.feature.properties.description = description;
       }
     } else if (type === 'polygon' && layer.getLatLngs) {
+      // Обробка для полігону
+      console.log('🎯 Створюю полігон з розрахунком площі...');
       const latlngs = layer.getLatLngs();
       if (!Array.isArray(latlngs) || latlngs.length === 0) {
         description = '';
@@ -136,26 +138,191 @@ export function initDrawControl() {
             } else {
               description = 'Площа: ' + area.toFixed(1) + ' м²';
             }
+            console.log('📐 Площа полігону:', description);
           } catch (err) {
             description = '';
+            console.warn('Помилка розрахунку площі полігону:', err);
           }
         }
       }
       if (!layer.properties) layer.properties = {};
       layer.properties.description = description;
-      // Явно створюю feature, якщо його немає
+      // Явно створюю feature для polygon
       if (!layer.feature) {
-        layer.feature = {
-          type: 'Feature',
-          geometry: layer.toGeoJSON().geometry,
-          properties: {}
-        };
+        console.log('🔍 latlngs для полігону:', latlngs);
+        
+        // Правильна обробка координат для полігону
+        let coords: number[][] = [];
+        
+        if (Array.isArray(latlngs)) {
+          if (Array.isArray(latlngs[0])) {
+            // Якщо latlngs - це масив масивів
+            coords = latlngs[0].map((latlng: any) => [latlng.lng, latlng.lat]);
+          } else {
+            // Якщо latlngs - це простий масив
+            coords = latlngs.map((latlng: any) => [latlng.lng, latlng.lat]);
+          }
+        }
+        
+        // Перевіряємо, чи координати валідні
+        const validCoords = coords.filter(coord => 
+          coord[0] !== null && coord[1] !== null && 
+          !isNaN(coord[0]) && !isNaN(coord[1])
+        );
+        
+        if (validCoords.length > 2) {
+          layer.feature = {
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [validCoords]
+            },
+            properties: {}
+          };
+          console.log('✅ Полігон створено як Polygon з', validCoords.length, 'точками');
+          console.log('🎨 Геометрія полігону:', layer.feature.geometry);
+          console.log('📍 Координати:', validCoords);
+        } else {
+          console.error('❌ Недостатньо валідних координат для полігону:', validCoords);
+        }
       }
       if (!layer.feature.properties) layer.feature.properties = {};
-      layer.feature.properties.name = layer.properties.name || `${objectType} ${timeStr}`;
+      layer.feature.properties.name = `${objectType} ${timeStr}`;
       layer.feature.properties.description = description;
+      layer.feature.properties.color = '#1976d2';
+      layer.feature.properties.fillColor = '#1976d2';
+      layer.feature.properties.fillOpacity = 0.3;
+    } else if (type === 'circle' && layer.getLatLng && layer.getRadius) {
+      // Обробка для кола
+      console.log('🎯 Створюю коло з полігонною геометрією...');
+      const center = layer.getLatLng();
+      const radius = layer.getRadius();
+      console.log('📍 Центр кола:', center, 'Радіус:', radius);
+      try {
+        const area = Math.PI * radius * radius;
+        if (area > 1000) {
+          description = 'Площа: ' + (area / 1000000).toFixed(3) + ' км²';
+        } else {
+          description = 'Площа: ' + area.toFixed(1) + ' м²';
+        }
+      } catch (err) {
+        description = '';
+      }
+      if (!layer.properties) layer.properties = {};
+      layer.properties.description = description;
+      // Явно створюю feature для circle як Polygon
+      if (!layer.feature) {
+        // Створюємо полігонну геометрію кола
+        const points = [];
+        const numPoints = 32; // кількість точок для апроксимації кола
+        for (let i = 0; i < numPoints; i++) {
+          const angle = (i / numPoints) * 2 * Math.PI;
+          const lat = center.lat + (radius / 111320) * Math.cos(angle);
+          const lng = center.lng + (radius / (111320 * Math.cos(center.lat * Math.PI / 180))) * Math.sin(angle);
+          points.push([lng, lat]);
+        }
+        // Замикаємо коло
+        points.push(points[0]);
+        
+        layer.feature = {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [points]
+          },
+          properties: {}
+        };
+        console.log('✅ Коло створено як Polygon з', points.length, 'точками');
+        console.log('🎨 Геометрія:', layer.feature.geometry);
+      }
+      if (!layer.feature.properties) layer.feature.properties = {};
+      layer.feature.properties.name = `${objectType} ${timeStr}`;
+      layer.feature.properties.description = description;
+      layer.feature.properties.color = '#1976d2';
+      layer.feature.properties.fillColor = '#1976d2';
+      layer.feature.properties.fillOpacity = 0.3;
+    } else if (type === 'rectangle' && layer.getLatLngs) {
+      // Обробка для прямокутника
+      console.log('🎯 Створюю прямокутник з розрахунком площі...');
+      const latlngs = layer.getLatLngs();
+      if (!Array.isArray(latlngs) || latlngs.length === 0) {
+        description = '';
+      } else {
+        // Для прямокутника беремо перший контур
+        const ring = Array.isArray(latlngs[0]) ? latlngs[0] : latlngs;
+        if (ring.length > 2) {
+          try {
+            let area = 0;
+            if (L.GeometryUtil && L.GeometryUtil.geodesicArea) {
+              area = L.GeometryUtil.geodesicArea(ring);
+            } else if (L.Polygon && L.Polygon.prototype && L.Polygon.prototype.getArea) {
+              area = layer.getArea();
+            } else {
+              area = Math.abs(L.GeometryUtil.geodesicArea(ring));
+            }
+            if (area > 1000) {
+              description = 'Площа: ' + (area / 1000000).toFixed(3) + ' км²';
+            } else {
+              description = 'Площа: ' + area.toFixed(1) + ' м²';
+            }
+            console.log('📐 Площа прямокутника:', description);
+          } catch (err) {
+            description = '';
+            console.warn('Помилка розрахунку площі прямокутника:', err);
+          }
+        }
+      }
+      if (!layer.properties) layer.properties = {};
+      layer.properties.description = description;
+      
+      // Явно створюю feature для rectangle як Polygon
+      if (!layer.feature) {
+        console.log('🔍 latlngs для прямокутника:', latlngs);
+        
+        // Правильна обробка координат для прямокутника
+        let coords: number[][] = [];
+        
+        if (Array.isArray(latlngs)) {
+          if (Array.isArray(latlngs[0])) {
+            // Якщо latlngs - це масив масивів
+            coords = latlngs[0].map((latlng: any) => [latlng.lng, latlng.lat]);
+          } else {
+            // Якщо latlngs - це простий масив
+            coords = latlngs.map((latlng: any) => [latlng.lng, latlng.lat]);
+          }
+        }
+        
+        // Перевіряємо, чи координати валідні
+        const validCoords = coords.filter(coord => 
+          coord[0] !== null && coord[1] !== null && 
+          !isNaN(coord[0]) && !isNaN(coord[1])
+        );
+        
+        if (validCoords.length > 2) {
+          layer.feature = {
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [validCoords]
+            },
+            properties: {}
+          };
+          console.log('✅ Прямокутник створено як Polygon з', validCoords.length, 'точками');
+          console.log('🎨 Геометрія прямокутника:', layer.feature.geometry);
+          console.log('📍 Координати:', validCoords);
+        } else {
+          console.error('❌ Недостатньо валідних координат для прямокутника:', validCoords);
+        }
+      }
+      if (!layer.feature.properties) layer.feature.properties = {};
+      layer.feature.properties.name = `${objectType} ${timeStr}`;
+      layer.feature.properties.description = description;
+      layer.feature.properties.color = '#1976d2';
+      layer.feature.properties.fillColor = '#1976d2';
+      layer.feature.properties.fillOpacity = 0.3;
     }
 
+    // Встановлюємо властивості для всіх типів об'єктів
     layer.properties = {
       name: `${objectType} ${timeStr}`,
       description: description,
@@ -165,9 +332,10 @@ export function initDrawControl() {
       opacity: 1,
       weight: 3
     };
-    // Явно копіюю description у feature.properties для polygon і polyline
-    if ((type === 'polygon' || type === 'polyline') && layer.feature && layer.feature.properties) {
-      layer.feature.properties.description = description;
+    
+    // Копіюємо властивості в feature.properties для всіх типів
+    if (layer.feature && layer.feature.properties) {
+      Object.assign(layer.feature.properties, layer.properties);
     }
 
     // Додаємо до активного шару

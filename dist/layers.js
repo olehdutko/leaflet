@@ -84,7 +84,34 @@ export function saveLayersToStorage() {
                 });
             });
         }
-        const geojson = l.featureGroup.toGeoJSON();
+        // Створюємо GeoJSON вручну, щоб зберегти наші feature об'єкти
+        const features = [];
+        l.featureGroup.eachLayer((layer) => {
+            var _a, _b;
+            if (layer.feature) {
+                // Використовуємо наш створений feature об'єкт
+                features.push(layer.feature);
+                console.log(`💾 Зберігаємо feature об'єкт: ${layer.feature.geometry.type} для ${((_a = layer.properties) === null || _a === void 0 ? void 0 : _a.name) || 'об\'єкта'}`);
+            }
+            else {
+                // Fallback до стандартного toGeoJSON для об'єктів без feature
+                try {
+                    const layerGeoJSON = layer.toGeoJSON();
+                    if (layerGeoJSON) {
+                        features.push(layerGeoJSON);
+                        console.log(`💾 Fallback toGeoJSON: ${layerGeoJSON.geometry.type} для ${((_b = layer.properties) === null || _b === void 0 ? void 0 : _b.name) || 'об\'єкта'}`);
+                    }
+                }
+                catch (error) {
+                    console.warn('Помилка toGeoJSON для об\'єкта:', error);
+                }
+            }
+        });
+        const geojson = {
+            type: 'FeatureCollection',
+            features: features
+        };
+        console.log(`📊 Збережено ${features.length} об'єктів для шару "${l.title}"`);
         return {
             id: l.id,
             tileType: l.tileType,

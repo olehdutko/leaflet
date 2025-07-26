@@ -795,41 +795,199 @@ if (typeof window !== 'undefined') {
         let overlaysWithCorners = 0;
 
         data.forEach((layer, layerIdx) => {
-            debugLog(`📋 Шар ${layerIdx}:`);
-            debugLog(`   images: ${layer.images?.length || 0}`);
-            debugLog(`   overlays: ${layer.overlays?.length || 0}`);
-
-            if (layer.overlays) {
-                layer.overlays.forEach((overlay, ovIdx) => {
-                    totalOverlays++;
-                    debugLog(`   📸 Overlay ${ovIdx}:`);
-                    debugLog(`      URL: ${overlay.url ? overlay.url.substring(0, 50) + '...' : 'немає'}`);
-                    debugLog(`      bounds: ${overlay.bounds ? 'є' : 'немає'}`);
-                    debugLog(`      corners: ${overlay.corners ? overlay.corners.length + ' точок' : 'немає'}`);
-
-                    if (overlay.corners && overlay.corners.length > 0) {
-                        overlaysWithCorners++;
-                        debugLog(`      🎯 Перші 2 координати:`, overlay.corners.slice(0, 2));
+            debugLog(`\n--- Шар ${layerIdx} "${layer.title}" ---`);
+            
+            // Перевіряємо GeoJSON об'єкти
+            if (layer.geojson && layer.geojson.features) {
+                debugLog(`📍 GeoJSON об'єктів: ${layer.geojson.features.length}`);
+                layer.geojson.features.forEach((feature, featureIdx) => {
+                    const geomType = feature.geometry?.type || 'unknown';
+                    const name = feature.properties?.name || '[без назви]';
+                    debugLog(`  ${featureIdx}: ${name} (${geomType})`);
+                    
+                    if (geomType === 'Point') {
+                        debugLog(`    🚨 ПРОБЛЕМА: Очікувався Polygon для кола!`);
+                    } else if (geomType === 'Polygon') {
+                        const coords = feature.geometry.coordinates[0];
+                        debugLog(`    ✅ Polygon з ${coords.length} точками`);
                     }
                 });
+            } else {
+                debugLog(`❌ GeoJSON відсутній або порожній`);
+            }
+
+            // Перевіряємо overlays
+            if (layer.overlays && layer.overlays.length > 0) {
+                totalOverlays += layer.overlays.length;
+                layer.overlays.forEach((ov, ovIdx) => {
+                    if (ov.corners && ov.corners.length > 0) {
+                        overlaysWithCorners++;
+                        debugLog(`  🖼️ Overlay ${ovIdx}: ${ov.corners.length} corners`);
+                    } else {
+                        debugLog(`  🖼️ Overlay ${ovIdx}: corners відсутні`);
+                    }
+                });
+            } else {
+                debugLog(`  🖼️ Overlays відсутні`);
             }
         });
 
-        debugLog('');
-        debugLog('=== ПІДСУМОК ===');
-        debugLog(`📊 Всього overlay: ${totalOverlays}`);
-        debugLog(`🎯 З координатами: ${overlaysWithCorners}`);
+        debugLog(`\n📊 ПІДСУМОК:`);
+        debugLog(`   Загалом overlay: ${totalOverlays}`);
+        debugLog(`   Overlay з corners: ${overlaysWithCorners}`);
+    };
 
-        if (overlaysWithCorners > 0) {
-            debugLog('✅ УСПІХ: Координати першого переміщення збережено!');
-        } else {
-            debugLog('❌ ПРОБЛЕМА: Координати першого переміщення НЕ збережено!');
+    // Нова функція для аналізу проблеми з колами
+    window.debugOverlay.analyzeCircleIssue = function () {
+        debugLog('=== АНАЛІЗ ПРОБЛЕМИ З КОЛАМИ ===');
+
+        if (!window.customLayers || window.customLayers.length === 0) {
+            debugLog('❌ customLayers не знайдено');
+            return;
         }
 
-        return {
-            totalOverlays,
-            overlaysWithCorners,
-            success: overlaysWithCorners > 0
-        };
+        window.customLayers.forEach((layer, layerIdx) => {
+            debugLog(`\n--- Шар ${layerIdx} "${layer.title}" ---`);
+            
+            const layers = layer.featureGroup.getLayers();
+            debugLog(`📍 Об'єктів у featureGroup: ${layers.length}`);
+
+            layers.forEach((obj, objIdx) => {
+                const objType = obj instanceof L.Marker && !(obj instanceof L.CircleMarker) ? 'marker' :
+                    obj instanceof L.CircleMarker ? 'circle' :
+                        obj instanceof L.Polygon && !(obj instanceof L.Rectangle) ? 'polygon' :
+                            obj instanceof L.Rectangle ? 'rectangle' :
+                                obj instanceof L.Polyline ? 'polyline' : 'unknown';
+
+                const name = obj.properties?.name || '[без назви]';
+                debugLog(`  ${objIdx}: ${name} (${objType})`);
+
+                // Перевіряємо feature об'єкт
+                if (obj.feature) {
+                    const geomType = obj.feature.geometry?.type || 'unknown';
+                    debugLog(`    Feature geometry: ${geomType}`);
+                    
+                    if (objType === 'circle' && geomType === 'Point') {
+                        debugLog(`    🚨 ПРОБЛЕМА: Коло має Point geometry замість Polygon!`);
+                    } else if (objType === 'circle' && geomType === 'Polygon') {
+                        const coords = obj.feature.geometry.coordinates[0];
+                        debugLog(`    ✅ Коло має Polygon geometry з ${coords.length} точками`);
+                    }
+                } else {
+                    debugLog(`    ❌ Feature об'єкт відсутній!`);
+                }
+
+                // Перевіряємо toGeoJSON результат
+                try {
+                    const geoJSON = obj.toGeoJSON();
+                    const geoJSONType = geoJSON.geometry?.type || 'unknown';
+                    debugLog(`    toGeoJSON(): ${geoJSONType}`);
+                    
+                    if (objType === 'circle' && geoJSONType === 'Point') {
+                        debugLog(`    🚨 ПРОБЛЕМА: toGeoJSON() повертає Point для кола!`);
+                    }
+                } catch (error) {
+                    debugLog(`    ❌ Помилка toGeoJSON(): ${error.message}`);
+                }
+            });
+        });
+
+        // Перевіряємо localStorage
+        const stored = localStorage.getItem('lefleat_layers');
+        if (stored) {
+            debugLog(`\n📋 АНАЛІЗ LOCALSTORAGE:`);
+            const data = JSON.parse(stored);
+            data.forEach((layer, layerIdx) => {
+                if (layer.geojson && layer.geojson.features) {
+                    layer.geojson.features.forEach((feature, featureIdx) => {
+                        const geomType = feature.geometry?.type || 'unknown';
+                        const name = feature.properties?.name || '[без назви]';
+                        
+                        if (name.includes('Коло') && geomType === 'Point') {
+                            debugLog(`🚨 LOCALSTORAGE: Коло "${name}" збережено як Point!`);
+                        } else if (name.includes('Коло') && geomType === 'Polygon') {
+                            debugLog(`✅ LOCALSTORAGE: Коло "${name}" збережено як Polygon`);
+                        }
+                    });
+                }
+            });
+        }
+    };
+
+    // Нова функція для діагностики проблем з полігонами та прямокутниками
+    window.debugOverlay.analyzePolygonIssue = function () {
+        debugLog('=== АНАЛІЗ ПРОБЛЕМИ З ПОЛІГОНАМИ ТА ПРЯМОКУТНИКАМИ ===');
+
+        if (!window.customLayers || window.customLayers.length === 0) {
+            debugLog('❌ customLayers не знайдено');
+            return;
+        }
+
+        window.customLayers.forEach((layer, layerIdx) => {
+            debugLog(`\n--- Шар ${layerIdx} "${layer.title}" ---`);
+            
+            const layers = layer.featureGroup.getLayers();
+            debugLog(`📍 Об'єктів у featureGroup: ${layers.length}`);
+
+            layers.forEach((obj, objIdx) => {
+                const objType = obj instanceof L.Marker && !(obj instanceof L.CircleMarker) ? 'marker' :
+                    obj instanceof L.CircleMarker ? 'circle' :
+                        obj instanceof L.Polygon && !(obj instanceof L.Rectangle) ? 'polygon' :
+                            obj instanceof L.Rectangle ? 'rectangle' :
+                                obj instanceof L.Polyline ? 'polyline' : 'unknown';
+
+                const name = obj.properties?.name || '[без назви]';
+                debugLog(`  ${objIdx}: ${name} (${objType})`);
+
+                // Перевіряємо feature об'єкт
+                if (obj.feature) {
+                    const geomType = obj.feature.geometry?.type || 'unknown';
+                    debugLog(`    Feature geometry: ${geomType}`);
+                    
+                    if ((objType === 'polygon' || objType === 'rectangle') && geomType === 'Polygon') {
+                        const coords = obj.feature.geometry.coordinates[0];
+                        debugLog(`    ✅ ${objType} має Polygon geometry з ${coords.length} точками`);
+                    } else if ((objType === 'polygon' || objType === 'rectangle') && geomType !== 'Polygon') {
+                        debugLog(`    🚨 ПРОБЛЕМА: ${objType} має ${geomType} geometry замість Polygon!`);
+                    }
+                } else {
+                    debugLog(`    ❌ Feature об'єкт відсутній!`);
+                }
+
+                // Перевіряємо toGeoJSON результат
+                try {
+                    const geoJSON = obj.toGeoJSON();
+                    const geoJSONType = geoJSON.geometry?.type || 'unknown';
+                    debugLog(`    toGeoJSON(): ${geoJSONType}`);
+                    
+                    if ((objType === 'polygon' || objType === 'rectangle') && geoJSONType !== 'Polygon') {
+                        debugLog(`    🚨 ПРОБЛЕМА: toGeoJSON() повертає ${geoJSONType} для ${objType}!`);
+                    }
+                } catch (error) {
+                    debugLog(`    ❌ Помилка toGeoJSON(): ${error.message}`);
+                }
+            });
+        });
+
+        // Перевіряємо localStorage
+        const stored = localStorage.getItem('lefleat_layers');
+        if (stored) {
+            debugLog(`\n📋 АНАЛІЗ LOCALSTORAGE:`);
+            const data = JSON.parse(stored);
+            data.forEach((layer, layerIdx) => {
+                if (layer.geojson && layer.geojson.features) {
+                    layer.geojson.features.forEach((feature, featureIdx) => {
+                        const geomType = feature.geometry?.type || 'unknown';
+                        const name = feature.properties?.name || '[без назви]';
+                        
+                        if ((name.includes('Полігон') || name.includes('Прямокутник')) && geomType !== 'Polygon') {
+                            debugLog(`🚨 LOCALSTORAGE: ${name} збережено як ${geomType} замість Polygon!`);
+                        } else if ((name.includes('Полігон') || name.includes('Прямокутник')) && geomType === 'Polygon') {
+                            debugLog(`✅ LOCALSTORAGE: ${name} збережено як Polygon`);
+                        }
+                    });
+                }
+            });
+        }
     };
 } 
