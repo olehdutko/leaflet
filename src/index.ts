@@ -19,6 +19,10 @@ export { MapManager } from './services/MapManager.js';
 
 // Компоненти
 export { ModalComponent } from './components/ModalComponent.js';
+export { ObjectEditComponent } from './components/ObjectEditComponent.js';
+export { LayerControlComponent } from './components/LayerControlComponent.js';
+export { SearchComponent } from './components/SearchComponent.js';
+export { SettingsComponent } from './components/SettingsComponent.js';
 
 // Утиліти
 export { Logger } from './utils/Logger.js';
