@@ -1444,6 +1444,35 @@ body.blurred > *:not(#confirm-modal) {
 
 #edit-object-modal {
   z-index: 3000 !important;
+}
+
+/* Зробити кнопки завжди видимими у вікні редагування об'єкта */
+#edit-object-modal .modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+#edit-object-modal .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+#edit-object-modal .modal-footer {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 0;
+  z-index: 10;
+}
+
+/* Темна тема для footer */
+.theme-dark #edit-object-modal .modal-footer {
+  background: #1f2937;
+  border-top-color: #374151;
 } 
 
 .modal-backdrop {
