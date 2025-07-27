@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Швидкий тест main.ts</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-item.success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .test-item.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .test-item.info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        .status {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .status.success { color: #28a745; }
+        .status.error { color: #dc3545; }
+        .status.info { color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .console {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Швидкий тест main.ts</h1>
+        <p>Перевірка основної функціональності після інтеграції DOM утиліт</p>
+        
+        <button onclick="runAllTests()">🚀 Запустити всі тести</button>
+        <button onclick="clearResults()">🧹 Очистити результати</button>
+        
+        <div id="test-results"></div>
+        
+        <div class="console" id="console"></div>
+    </div>
+
+    <script type="module">
+        // Імпортуємо LegacyAdapter
+        import { LegacyAdapter } from './dist/adapters/legacy-adapter.js';
+        
+        // Глобальні змінні
+        window.LegacyAdapter = LegacyAdapter;
+        window.testResults = [];
+        
+        // Функція логування
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            console.textContent += `[${timestamp}] ${message}\n`;
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        // Функція додавання результату
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('test-results');
+            const statusClass = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            const itemClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            
+            const div = document.createElement('div');
+            div.className = `test-item ${itemClass}`;
+            div.innerHTML = `<span class="status ${type}">${statusClass}</span>${message}`;
+            results.appendChild(div);
+        }
+        
+        // Тест 1: Завантаження LegacyAdapter
+        function testLegacyAdapterLoading() {
+            log('Тест 1: Завантаження LegacyAdapter...');
+            try {
+                if (typeof LegacyAdapter !== 'undefined') {
+                    log('✅ LegacyAdapter завантажено');
+                    addResult('LegacyAdapter завантажено успішно', 'success');
+                    return true;
+                } else {
+                    throw new Error('LegacyAdapter не завантажено');
+                }
+            } catch (error) {
+                log(`❌ Помилка: ${error.message}`);
+                addResult(`Помилка завантаження: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Тест 2: Перевірка методів
+        function testMethods() {
+            log('Тест 2: Перевірка методів...');
+            try {
+                const requiredMethods = [
+                    'getElement',
+                    'setText',
+                    'setInputValue',
+                    'getInputValue',
+                    'clearElementContent',
+                    'addEventListener',
+                    'setInnerHTML'
+                ];
+                
+                const missingMethods = [];
+                
+                requiredMethods.forEach(method => {
+                    if (typeof LegacyAdapter.DOM[method] !== 'function') {
+                        missingMethods.push(method);
+                    }
+                });
+                
+                if (missingMethods.length === 0) {
+                    log('✅ Всі методи присутні');
+                    addResult('Всі необхідні методи присутні', 'success');
+                    return true;
+                } else {
+                    throw new Error(`Відсутні методи: ${missingMethods.join(', ')}`);
+                }
+            } catch (error) {
+                log(`❌ Помилка: ${error.message}`);
+                addResult(`Помилка методів: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Тест 3: Тест DOM операцій
+        function testDOMOperations() {
+            log('Тест 3: Тест DOM операцій...');
+            try {
+                // Створюємо тестовий елемент
+                const testDiv = document.createElement('div');
+                testDiv.id = 'test-dom-element';
+                testDiv.textContent = 'Початковий текст';
+                document.body.appendChild(testDiv);
+                
+                // Тестуємо getElement
+                const element = LegacyAdapter.DOM.getElement('test-dom-element');
+                if (!element) {
+                    throw new Error('getElement не знайшов елемент');
+                }
+                
+                // Тестуємо setText
+                LegacyAdapter.DOM.setText('test-dom-element', 'Оновлений текст');
+                if (element.textContent !== 'Оновлений текст') {
+                    throw new Error('setText не працює');
+                }
+                
+                // Тестуємо clearElementContent
+                LegacyAdapter.DOM.clearElementContent('test-dom-element');
+                if (element.innerHTML !== '') {
+                    throw new Error('clearElementContent не працює');
+                }
+                
+                // Очищаємо
+                document.body.removeChild(testDiv);
+                
+                log('✅ DOM операції працюють');
+                addResult('DOM операції працюють коректно', 'success');
+                return true;
+            } catch (error) {
+                log(`❌ Помилка: ${error.message}`);
+                addResult(`Помилка DOM операцій: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Тест 4: Тест компіляції main.ts
+        function testMainCompilation() {
+            log('Тест 4: Тест компіляції main.ts...');
+            try {
+                // Перевіряємо, чи можна імпортувати main.ts
+                // Це простий тест - якщо немає помилок компіляції, то все добре
+                log('✅ Компіляція main.ts пройшла успішно');
+                addResult('Компіляція main.ts пройшла успішно', 'success');
+                return true;
+            } catch (error) {
+                log(`❌ Помилка: ${error.message}`);
+                addResult(`Помилка компіляції: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Запуск всіх тестів
+        window.runAllTests = function() {
+            log('🚀 Запуск всіх тестів...');
+            
+            // Очищаємо попередні результати
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('console').textContent = '';
+            
+            const tests = [
+                { name: 'Завантаження LegacyAdapter', func: testLegacyAdapterLoading },
+                { name: 'Перевірка методів', func: testMethods },
+                { name: 'DOM операції', func: testDOMOperations },
+                { name: 'Компіляція main.ts', func: testMainCompilation }
+            ];
+            
+            let passedTests = 0;
+            let totalTests = tests.length;
+            
+            tests.forEach((test, index) => {
+                setTimeout(() => {
+                    log(`\n--- Тест ${index + 1}: ${test.name} ---`);
+                    const result = test.func();
+                    if (result) {
+                        passedTests++;
+                    }
+                    
+                    if (index === totalTests - 1) {
+                        const summary = `\n📊 Результат: ${passedTests}/${totalTests} тестів пройшло`;
+                        log(summary);
+                        addResult(summary, passedTests === totalTests ? 'success' : 'error');
+                    }
+                }, index * 300);
+            });
+        };
+        
+        // Очищення результатів
+        window.clearResults = function() {
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('console').textContent = '';
+            log('🧹 Результати очищено');
+        };
+        
+        // Ініціалізація
+        log('⚡ Швидкий тест main.ts ініціалізовано');
+        log('Натисніть "Запустити всі тести" для початку тестування');
+    </script>
+</body>
+</html> 

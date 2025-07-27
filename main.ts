@@ -4,6 +4,7 @@ export const OVERLAY_FIX_VERSION = 'v3.4';
 // Імпорти
 import { showEditModal } from './ui.js';
 import { applyObjectProperties } from './objects.js';
+import { LegacyAdapter } from './adapters/legacy-adapter.js';
 
 // Функція для оновлення title сторінки з версією
 export function updatePageTitle(baseTitle: string = 'Мапа Львова на Leaflet') {
@@ -180,7 +181,7 @@ function clearOverlaySelection() {
     `;
     
     // Видаляємо попередній стиль якщо він є
-    const existingStyle = document.getElementById('overlay-cleanup-styles');
+    const existingStyle = LegacyAdapter.DOM.getElement<HTMLElement>('overlay-cleanup-styles');
     if (existingStyle) {
         existingStyle.remove();
     }
@@ -307,6 +308,8 @@ function performOverlayDeletion(overlay: any) {
                 import('./layers.js').then(({ saveLayersToStorage }) => {
                     saveLayersToStorage();
                 });
+                // Оновлюємо пошук об'єктів після зміни шарів
+                updateObjectSearchLayers(customLayers);
             
             // Очищуємо DOM елементи, пов'язані з overlay
             if (overlayUrl) {
@@ -342,6 +345,8 @@ function performOverlayDeletion(overlay: any) {
             import('./layers.js').then(({ saveLayersToStorage }) => {
                 saveLayersToStorage();
             });
+            // Оновлюємо пошук об'єктів після зміни шарів
+            updateObjectSearchLayers(customLayers);
             
             // Очищуємо DOM елементи, пов'язані з overlay
             if (overlayUrl) {
@@ -412,9 +417,9 @@ import { getLayerIcon, createTooltip, getObjectType, getObjectProperties, getCol
 
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
-  let input = document.getElementById('marker-icon') as HTMLInputElement | null;
-  const list = document.getElementById('marker-icon-autocomplete') as HTMLElement | null;
-  const preview = document.getElementById('marker-icon-preview') as HTMLElement | null;
+  let input = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-icon');
+  const list = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-autocomplete');
+  const preview = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-preview');
   if (!input || !list || !preview) return;
 
   // Клонуємо input, щоб скинути всі старі обробники
@@ -426,8 +431,8 @@ function setupMarkerIconAutocomplete() {
 
   input.addEventListener('input', function () {
     const val = input.value.trim().toLowerCase();
-    list.innerHTML = '';
-    preview.textContent = input.value;
+    LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+    LegacyAdapter.DOM.setText('marker-icon-preview', input.value);
     const matches = filterMaterialIcons(val);
     currentFocus = -1;
     matches.forEach((name: string) => {
@@ -435,9 +440,9 @@ function setupMarkerIconAutocomplete() {
       item.className = 'autocomplete-item';
       item.innerHTML = `<span class="material-icons">${name}</span> ${name}`;
       item.onclick = function () {
-        input.value = name;
-        preview.textContent = name;
-        list.innerHTML = '';
+        LegacyAdapter.DOM.setInputValue('marker-icon', name);
+        LegacyAdapter.DOM.setText('marker-icon-preview', name);
+        LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
         if (state.currentEditingObject.value) {
           (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
           (state.currentEditingObject.value as any).properties.icon = name;
@@ -469,7 +474,7 @@ function setupMarkerIconAutocomplete() {
   };
   input.onfocus = input.oninput;
   document.addEventListener('click', function (e) {
-    if (e.target !== input) list.innerHTML = '';
+    if (e.target !== input) LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
   });
 }
 
@@ -499,8 +504,8 @@ function waitForMaterialIconsAndInitAutocomplete() {
 
 // Функція для закриття модального вікна
 export function closeEditModal() {
-  const editModal = document.getElementById('edit-object-modal');
-  if (editModal) (editModal as HTMLElement).classList.add('hidden');
+  const editModal = LegacyAdapter.DOM.getElement<HTMLElement>('edit-object-modal');
+  if (editModal) editModal.classList.add('hidden');
   state.currentEditingObject.value = null;
 }
 
@@ -510,18 +515,18 @@ function saveObjectChanges() {
 
   const type = getObjectType(state.currentEditingObject.value as L.Layer);
   const properties: any = {
-    name: (document.getElementById('object-name') as HTMLInputElement).value,
-    description: (document.getElementById('object-description') as HTMLTextAreaElement).value
+    name: LegacyAdapter.DOM.getInputValue('object-name'),
+    description: LegacyAdapter.DOM.getInputValue('object-description')
   };
 
   if (type === 'marker') {
-    const markerColor = document.getElementById('object-color');
-    if (markerColor) properties.color = (markerColor as HTMLInputElement).value;
-    const markerIcon = document.getElementById('marker-icon');
-    if (markerIcon) properties.icon = (markerIcon as HTMLInputElement).value;
+    const markerColor = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
+    if (markerColor) properties.color = markerColor.value;
+    const markerIcon = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-icon');
+    if (markerIcon) properties.icon = markerIcon.value;
     // --- координати ---
-    const latInput = document.getElementById('marker-lat');
-    const lngInput = document.getElementById('marker-lng');
+    const latInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-lat');
+    const lngInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-lng');
     if (latInput && lngInput && state.currentEditingObject.value && (state.currentEditingObject.value as any).setLatLng) {
       const lat = parseFloat((latInput as HTMLInputElement).value);
       const lng = parseFloat((lngInput as HTMLInputElement).value);
@@ -533,30 +538,30 @@ function saveObjectChanges() {
       }
     }
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-    const fillColor = document.getElementById('object-color');
-    if (fillColor) properties.fillColor = (fillColor as HTMLInputElement).value;
+    const fillColor = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
+    if (fillColor) properties.fillColor = fillColor.value;
     // Для полігонів колір рамки та прозорість можна додати за потреби
-    properties.color = fillColor ? (fillColor as HTMLInputElement).value : undefined;
-    const objectOpacity = document.getElementById('object-opacity');
-    if (objectOpacity) properties.fillOpacity = parseFloat((objectOpacity as HTMLInputElement).value);
+    properties.color = fillColor ? fillColor.value : undefined;
+    const objectOpacity = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-opacity');
+    if (objectOpacity) properties.fillOpacity = parseFloat(objectOpacity.value);
     properties.opacity = 1;
   } else if (type === 'polyline') {
-    const objectColor = document.getElementById('object-color');
-    if (objectColor) properties.color = (objectColor as HTMLInputElement).value;
-    const lineWidth = document.getElementById('line-width');
-    if (lineWidth) properties.weight = parseInt((lineWidth as HTMLInputElement).value);
-    const lineStyle = document.getElementById('line-style');
-    if (lineStyle) properties.style = (lineStyle as HTMLInputElement).value;
+    const objectColor = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
+    if (objectColor) properties.color = objectColor.value;
+    const lineWidth = LegacyAdapter.DOM.getElement<HTMLInputElement>('line-width');
+    if (lineWidth) properties.weight = parseInt(lineWidth.value);
+    const lineStyle = LegacyAdapter.DOM.getElement<HTMLInputElement>('line-style');
+    if (lineStyle) properties.style = lineStyle.value;
     // opacity не зчитуємо для polyline
   } else if (type === 'image') {
-    const objectOpacity = document.getElementById('object-opacity');
-    if (objectOpacity) properties.opacity = parseFloat((objectOpacity as HTMLInputElement).value);
+    const objectOpacity = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-opacity');
+    if (objectOpacity) properties.opacity = parseFloat(objectOpacity.value);
   }
 
   // зображення
-  const imagePreview = document.getElementById('object-image-preview');
-  if (imagePreview && (imagePreview as HTMLImageElement).src && !(imagePreview as HTMLElement).classList.contains('hidden')) {
-    properties.image = (imagePreview as HTMLImageElement).src;
+  const imagePreview = LegacyAdapter.DOM.getElement<HTMLImageElement>('object-image-preview');
+  if (imagePreview && imagePreview.src && !imagePreview.classList.contains('hidden')) {
+    properties.image = imagePreview.src;
   }
 
   applyObjectProperties(state.currentEditingObject.value as L.Layer, properties);
@@ -565,18 +570,22 @@ function saveObjectChanges() {
     (state.currentEditingObject.value as any).feature.properties = { ...(state.currentEditingObject.value as any).properties };
   }
   saveLayersToStorage();
+  // Оновлюємо пошук об'єктів після зміни об'єкта
+  updateObjectSearchLayers(customLayers);
   closeEditModal();
 }
 
 // Ініціалізація модального вікна
 function initEditModal() {
   // Обробники подій для кнопок
-  (document.getElementById('modal-close') as HTMLElement).addEventListener('click', closeEditModal);
-  (document.getElementById('cancel-edit') as HTMLElement).addEventListener('click', closeEditModal);
-  (document.getElementById('save-object') as HTMLElement).addEventListener('click', saveObjectChanges);
+  LegacyAdapter.DOM.addEventListener<HTMLElement>('modal-close', 'click', closeEditModal);
+  LegacyAdapter.DOM.addEventListener<HTMLElement>('cancel-edit', 'click', closeEditModal);
+  LegacyAdapter.DOM.addEventListener<HTMLElement>('save-object', 'click', saveObjectChanges);
 
   // --- Додаю підтвердження для видалення об'єкта ---
-  (document.getElementById('delete-object') as HTMLElement).onclick = function () {
+  const deleteButton = LegacyAdapter.DOM.getElement<HTMLElement>('delete-object');
+  if (deleteButton) {
+    deleteButton.onclick = function () {
       if (!state.currentEditingObject.value) return;
   const type = getObjectType(state.currentEditingObject.value as L.Layer);
     let typeName = 'обʼєкт';
@@ -599,12 +608,15 @@ function initEditModal() {
         }
         map.removeLayer(state.currentEditingObject.value as L.Layer);
         saveLayersToStorage();
+        // Оновлюємо пошук об'єктів після видалення об'єкта
+        updateObjectSearchLayers(customLayers);
       },
       buttons: [
         { text: 'Видалити', action: 'delete', className: 'btn-danger' },
         { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
       ]
     });
+  }
   };
 
   // Обробники для range слайдерів
@@ -633,126 +645,8 @@ function initEditModal() {
 
 // Функція addDoubleClickToLayer перенесена в ui.ts
 
-// --- Геопошук з автокомплітом ---
-let searchMarker: any = null;
-(function setupGeoSearch() {
-  const input = document.getElementById('geosearch-input') as HTMLInputElement | null;
-  const list = document.getElementById('geosearch-autocomplete') as HTMLElement | null;
-  if (!input || !list) return;
-  let timer: number | null = null;
-  let results: any[] = [];
-  let activeIdx = -1;
-
-  input.addEventListener('input', function () {
-    const val = (input as HTMLInputElement).value.trim();
-    list.innerHTML = '';
-    list.classList.remove('active');
-    activeIdx = -1;
-    if (!val) return;
-    if (timer) clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&addressdetails=1&limit=7&accept-language=uk`)
-        .then(r => r.json())
-        .then((data: any[]) => {
-          results = data;
-          if (!results.length) return;
-          list.innerHTML = '';
-          results.forEach((item: any, idx: number) => {
-            const div = document.createElement('div');
-            div.className = 'autocomplete-item';
-            div.textContent = item.display_name;
-            div.addEventListener('mousedown', function (e: MouseEvent) {
-              e.preventDefault();
-              selectResult(idx);
-            });
-            list.appendChild(div);
-          });
-          list.classList.add('active');
-        });
-    }, 250);
-  });
-
-  input.addEventListener('keydown', function (e: KeyboardEvent) {
-    if (!results.length) return;
-    if (e.key === 'ArrowDown') {
-      activeIdx = Math.min(activeIdx + 1, results.length - 1);
-      updateActive();
-      e.preventDefault();
-    } else if (e.key === 'ArrowUp') {
-      activeIdx = Math.max(activeIdx - 1, 0);
-      updateActive();
-      e.preventDefault();
-    } else if (e.key === 'Enter') {
-      if (activeIdx >= 0) {
-        selectResult(activeIdx);
-        e.preventDefault();
-      }
-    }
-  });
-
-  document.addEventListener('click', function (e: MouseEvent) {
-    if (!input.contains(e.target as Node) && !list.contains(e.target as Node)) {
-      list.classList.remove('active');
-    }
-  });
-
-  function updateActive() {
-    if (list) Array.from(list.children).forEach((el, idx) => {
-      if (idx === activeIdx) (el as HTMLElement).classList.add('active');
-      else (el as HTMLElement).classList.remove('active');
-    });
-  }
-
-  function selectResult(idx: number) {
-    const item = results[idx];
-    if (!item) return;
-    (input as HTMLInputElement).value = item.display_name;
-    (list as HTMLElement).classList.remove('active');
-    // @ts-ignore
-    if ((window as any).map && item.lat && item.lon) {
-      // @ts-ignore
-      (map as any).setView([parseFloat(item.lat), parseFloat(item.lon)], 16, { animate: true });
-      // --- Додаємо тимчасовий маркер ---
-      // @ts-ignore
-      if ((window as any).searchMarker) {
-        // @ts-ignore
-        (map as any).removeLayer((window as any).searchMarker);
-        // @ts-ignore
-        (window as any).searchMarker = null;
-      }
-      // @ts-ignore
-      (window as any).searchMarker = L.marker([parseFloat(item.lat), parseFloat(item.lon)], {
-        icon: L.icon({
-          iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-          shadowSize: [41, 41]
-        })
-      }).addTo(map);
-      // додати обробник подвійного кліку та тултіпів
-      import('./ui.js').then(({ addDoubleClickToLayer }) => {
-        addDoubleClickToLayer((window as any).searchMarker);
-      });
-      // @ts-ignore
-      (window as any).searchMarker.bindPopup(item.display_name).openPopup();
-    }
-  }
-})();
-
-function centerGeoSearchBar() {
-  const bar = document.getElementById('geosearch-bar');
-  const mapDiv = document.getElementById('map');
-  if (!bar || !mapDiv) return;
-  const mapRect = mapDiv.getBoundingClientRect();
-  // Центр мапи
-  const centerX = mapRect.left + mapRect.width / 2;
-  (bar as HTMLElement).style.left = centerX + 'px';
-  (bar as HTMLElement).style.transform = 'translateX(-50%)';
-}
-
-window.addEventListener('resize', centerGeoSearchBar);
+// Імпорт модуля ініціалізації пошуку
+import { initializeSearch, updateObjectSearchLayers, destroySearch } from './search-init.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Оновлюємо title сторінки з версією
@@ -765,7 +659,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   waitForMaterialIconsAndInitAutocomplete();
   initEditModal();
-  centerGeoSearchBar();
+  
+  // Ініціалізуємо нову систему пошуку
+  initializeSearch(customLayers);
 });
 
 // --- функція для обробки KMZ файлів ---
@@ -902,6 +798,8 @@ async function handleKmzFile(file: File) {
       const control = createLayerControl(layerObj);
       if (layerControlsDiv) (layerControlsDiv as HTMLElement).appendChild(control as any);
       saveLayersToStorage();
+      // Оновлюємо пошук об'єктів після додавання KMZ шару
+      updateObjectSearchLayers(customLayers);
       if (featureGroup.getBounds().isValid()) {
         (map as any).fitBounds(featureGroup.getBounds());
       }
@@ -912,142 +810,7 @@ async function handleKmzFile(file: File) {
   }
 }
 
-// --- Глобальний пошук по об'єктах ---
-const globalSearchInput = document.getElementById('global-object-search') as HTMLInputElement | null;
-const globalSearchResults = document.getElementById('global-object-search-results') as HTMLElement | null;
-
-if (globalSearchInput && globalSearchResults) {
-  globalSearchInput.addEventListener('input', function (this: HTMLInputElement) {
-    const query = (this as HTMLInputElement).value.trim().toLowerCase();
-    globalSearchResults.innerHTML = '';
-    if (!query) return;
-
-    // шукати лише у видимих шарах та об'єктах
-    let results: any[] = [];
-    customLayers.forEach(layerObj => {
-      if (!layerObj.visible) return;
-      const fg = layerObj.featureGroup;
-      fg.eachLayer((layer: any) => {
-        if (layer.visible === false) return; // @ts-ignore
-        const name = layer.properties?.name || layer.feature?.properties?.name || '';
-        const desc = layer.properties?.description || layer.feature?.properties?.description || '';
-        if (
-          name.toLowerCase().includes(query) ||
-          desc.toLowerCase().includes(query)
-        ) {
-          results.push({
-            layer,
-            name,
-            desc,
-            layerObj
-          });
-        }
-      });
-      // зображення
-      if ((fg as any).images && (fg as any).images.length > 0 && (fg as any).overlays) {
-        (fg as any).images.forEach((img: any, idx: number) => {
-          const overlay = (fg as any).overlays[idx]; // @ts-ignore
-          if (!overlay || overlay.visible === false) return;
-          const name = img.properties?.name || '';
-          const desc = img.properties?.description || '';
-          if (
-            name.toLowerCase().includes(query) ||
-            desc.toLowerCase().includes(query)
-          ) {
-            results.push({
-              layer: overlay,
-              name,
-              desc,
-              layerObj
-            });
-          }
-        });
-      }
-    });
-
-    if (results.length === 0) {
-      const noRes = document.createElement('div');
-      noRes.className = 'global-object-search-item';
-      noRes.textContent = 'Нічого не знайдено';
-      globalSearchResults.appendChild(noRes);
-      return;
-    }
-
-    results.forEach(res => {
-      const item = document.createElement('div');
-      item.className = 'global-object-search-item';
-      item.innerHTML = `<span><b>${res.name || '[без назви]'}</b></span>` +
-        (res.desc ? `<span style="color:#888;">${res.desc}</span>` : '');
-      item.onclick = () => {
-        // зняти попереднє виділення
-        document.querySelectorAll('.global-object-search-highlight').forEach(el => {
-          (el as HTMLElement).classList.remove('global-object-search-highlight');
-        });
-
-        // виділити на мапі
-        const isLineOrPoly = res.layer instanceof L.Polyline || res.layer instanceof L.Polygon;
-        const isMarker = res.layer instanceof L.Marker && !(res.layer instanceof L.CircleMarker);
-        if (isLineOrPoly) {
-          // зберегти попередній стиль
-          const prevStyle = {
-            color: res.layer.options.color,
-            weight: res.layer.options.weight,
-            dashArray: res.layer.options.dashArray,
-            opacity: res.layer.options.opacity,
-            fillColor: res.layer.options.fillColor,
-            fillOpacity: res.layer.options.fillOpacity
-          };
-          res.layer.setStyle({
-            color: '#cd1d1d',
-            weight: 8,
-            dashArray: '8,4',
-            opacity: 1,
-            fillColor: '#ffe066',
-            fillOpacity: 0.7
-          });
-          setTimeout(() => {
-            res.layer.setStyle(prevStyle);
-          }, 2000);
-        } else if (isMarker) {
-          // зберегти попередню іконку
-          const prevIcon = res.layer.getIcon();
-          // створити яскраву іконку
-          const highlightIcon = L.divIcon({
-            className: 'highlight-marker-icon',
-            html: '<div style="background:#cd1d1d;width:32px;height:32px;border-radius:50%;border:3px solid #ffe066;box-shadow:0 0 12px #cd1d1d;"></div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32]
-          });
-          res.layer.setIcon(highlightIcon);
-          setTimeout(() => {
-            res.layer.setIcon(prevIcon);
-          }, 2000);
-        } else if (res.layer.getElement && res.layer.getElement()) {
-          (res.layer.getElement() as HTMLElement).classList.add('global-object-search-highlight');
-          setTimeout(() => {
-            (res.layer.getElement() as HTMLElement).classList.remove('global-object-search-highlight');
-          }, 2000);
-        } else if ((res.layer as any)._path) {
-          (res.layer as any)._path.classList.add('global-object-search-highlight');
-          setTimeout(() => {
-            (res.layer as any)._path.classList.remove('global-object-search-highlight');
-          }, 2000);
-        }
-
-        // приблизити
-        if (res.layer.getBounds) {
-          (map as any).fitBounds(res.layer.getBounds(), { maxZoom: 17 });
-        } else if (res.layer.getLatLng) {
-          (map as any).setView(res.layer.getLatLng(), 17);
-        }
-
-        globalSearchResults.innerHTML = '';
-        globalSearchInput.value = '';
-      };
-      globalSearchResults.appendChild(item);
-    });
-  });
-}
+// Глобальний пошук об'єктів тепер обробляється через ObjectSearchUI в search-init.ts
 
 // ... після ініціалізації карти і customLayers ...
 
@@ -1059,6 +822,8 @@ const observeOverlayOpacity = () => {
     if (opacityTimeout) clearTimeout(opacityTimeout);
     opacityTimeout = window.setTimeout(() => {
       saveLayersToStorage();
+      // Оновлюємо пошук об'єктів після зміни прозорості
+      updateObjectSearchLayers(customLayers);
       opacityTimeout = null;
     }, 200); // Трохи більший delay для opacity змін
   };

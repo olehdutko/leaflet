@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <title>Тест пошуку - Lefleat</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+</head>
+<body>
+  <!-- Геопошук -->
+  <div id="geosearch-bar">
+    <input type="text" id="geosearch-input" placeholder="Пошук по геоназвах..." autocomplete="off" />
+    <div id="geosearch-autocomplete" class="autocomplete-list"></div>
+  </div>
+
+  <!-- Глобальний пошук об'єктів -->
+  <div id="layers-panel-drawer">
+    <div id="layers-panel">
+      <div class="layers-panel-header">
+        <span class="layers-panel-title">Тест пошуку</span>
+      </div>
+      <div id="global-object-search-wrap">
+        <input type="text" id="global-object-search" placeholder="Пошук об'єктів ...">
+        <div id="global-object-search-results"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <script type="module">
+    import L from 'https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js';
+    
+    // Ініціалізація карти
+    const map = L.map('map').setView([49.8397, 24.0297], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Додаємо глобальні змінні
+    window.map = map;
+    window.L = L;
+    window.customLayers = [];
+
+    // Створюємо тестові об'єкти
+    function createTestObjects() {
+      const testLayer = {
+        id: 1,
+        name: 'Тестовий шар',
+        visible: true,
+        featureGroup: L.featureGroup()
+      };
+
+      // Тестовий маркер
+      const marker = L.marker([49.8397, 24.0297], {
+        icon: L.icon({
+          iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41]
+        })
+      });
+      marker.properties = {
+        name: 'Площа Ринок',
+        description: 'Центральна площа Львова'
+      };
+      testLayer.featureGroup.addLayer(marker);
+
+      // Тестова лінія
+      const polyline = L.polyline([
+        [49.8397, 24.0297],
+        [49.8400, 24.0300]
+      ], {
+        color: '#1976d2',
+        weight: 3
+      });
+      polyline.properties = {
+        name: 'Тестова лінія',
+        description: 'Лінія для тестування'
+      };
+      testLayer.featureGroup.addLayer(polyline);
+
+      // Тестовий полігон
+      const polygon = L.polygon([
+        [49.8390, 24.0280],
+        [49.8390, 24.0290],
+        [49.8400, 24.0290],
+        [49.8400, 24.0280]
+      ], {
+        color: '#1976d2',
+        fillColor: '#1976d2',
+        fillOpacity: 0.2
+      });
+      polygon.properties = {
+        name: 'Тестовий полігон',
+        description: 'Полігон для тестування'
+      };
+      testLayer.featureGroup.addLayer(polygon);
+
+      testLayer.featureGroup.addTo(map);
+      window.customLayers.push(testLayer);
+
+      console.log('Тестові об\'єкти створено:', window.customLayers);
+    }
+
+    // Завантажуємо модулі пошуку
+    async function loadSearchModules() {
+      try {
+        const { searchManager } = await import('./search-init.js');
+        
+        // Ініціалізуємо пошук
+        searchManager.init({
+          geoSearch: {
+            enabled: true,
+            debounceMs: 300,
+            minQueryLength: 2,
+            maxResults: 7
+          },
+          objectSearch: {
+            enabled: true,
+            debounceMs: 250,
+            minQueryLength: 2,
+            maxResults: 15,
+            highlightDuration: 3000
+          }
+        });
+
+        // Оновлюємо шари в пошуку
+        searchManager.updateLayers(window.customLayers);
+
+        console.log('Пошук ініціалізовано:', searchManager);
+        
+        // Додаємо тестові об'єкти
+        createTestObjects();
+        
+        // Оновлюємо пошук з тестовими об'єктами
+        searchManager.updateLayers(window.customLayers);
+
+      } catch (error) {
+        console.error('Помилка завантаження модулів пошуку:', error);
+      }
+    }
+
+    // Запускаємо тест
+    loadSearchModules();
+  </script>
+</body>
+</html> 

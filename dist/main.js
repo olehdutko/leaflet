@@ -1,6 +1,7 @@
 // Версія виправлень overlay
 export const OVERLAY_FIX_VERSION = 'v3.4';
 import { applyObjectProperties } from './objects.js';
+import { LegacyAdapter } from './adapters/legacy-adapter.js';
 // Функція для оновлення title сторінки з версією
 export function updatePageTitle(baseTitle = 'Мапа Львова на Leaflet') {
     document.title = `${baseTitle} ${OVERLAY_FIX_VERSION}`;
@@ -158,7 +159,7 @@ function clearOverlaySelection() {
         }
     `;
         // Видаляємо попередній стиль якщо він є
-        const existingStyle = document.getElementById('overlay-cleanup-styles');
+        const existingStyle = LegacyAdapter.DOM.getElement('overlay-cleanup-styles');
         if (existingStyle) {
             existingStyle.remove();
         }
@@ -353,9 +354,9 @@ import { getObjectType, getObjectProperties } from './utils.js';
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
-    let input = document.getElementById('marker-icon');
-    const list = document.getElementById('marker-icon-autocomplete');
-    const preview = document.getElementById('marker-icon-preview');
+    let input = LegacyAdapter.DOM.getElement('marker-icon');
+    const list = LegacyAdapter.DOM.getElement('marker-icon-autocomplete');
+    const preview = LegacyAdapter.DOM.getElement('marker-icon-preview');
     if (!input || !list || !preview)
         return;
     // Клонуємо input, щоб скинути всі старі обробники
@@ -365,8 +366,8 @@ function setupMarkerIconAutocomplete() {
     let currentFocus = -1;
     input.addEventListener('input', function () {
         const val = input.value.trim().toLowerCase();
-        list.innerHTML = '';
-        preview.textContent = input.value;
+        LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+        LegacyAdapter.DOM.setText('marker-icon-preview', input.value);
         const matches = filterMaterialIcons(val);
         currentFocus = -1;
         matches.forEach((name) => {
@@ -374,9 +375,9 @@ function setupMarkerIconAutocomplete() {
             item.className = 'autocomplete-item';
             item.innerHTML = `<span class="material-icons">${name}</span> ${name}`;
             item.onclick = function () {
-                input.value = name;
-                preview.textContent = name;
-                list.innerHTML = '';
+                LegacyAdapter.DOM.setInputValue('marker-icon', name);
+                LegacyAdapter.DOM.setText('marker-icon-preview', name);
+                LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
                 if (state.currentEditingObject.value) {
                     state.currentEditingObject.value.properties = state.currentEditingObject.value.properties || {};
                     state.currentEditingObject.value.properties.icon = name;
@@ -412,7 +413,7 @@ function setupMarkerIconAutocomplete() {
     input.onfocus = input.oninput;
     document.addEventListener('click', function (e) {
         if (e.target !== input)
-            list.innerHTML = '';
+            LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
     });
 }
 // --- Додаю глобальний флаг для готовності іконок ---
@@ -436,7 +437,7 @@ function waitForMaterialIconsAndInitAutocomplete() {
 // Використовуємо showEditModal з ui.ts замість дублікату
 // Функція для закриття модального вікна
 export function closeEditModal() {
-    const editModal = document.getElementById('edit-object-modal');
+    const editModal = LegacyAdapter.DOM.getElement('edit-object-modal');
     if (editModal)
         editModal.classList.add('hidden');
     state.currentEditingObject.value = null;
@@ -447,19 +448,19 @@ function saveObjectChanges() {
         return;
     const type = getObjectType(state.currentEditingObject.value);
     const properties = {
-        name: document.getElementById('object-name').value,
-        description: document.getElementById('object-description').value
+        name: LegacyAdapter.DOM.getInputValue('object-name'),
+        description: LegacyAdapter.DOM.getInputValue('object-description')
     };
     if (type === 'marker') {
-        const markerColor = document.getElementById('object-color');
+        const markerColor = LegacyAdapter.DOM.getElement('object-color');
         if (markerColor)
             properties.color = markerColor.value;
-        const markerIcon = document.getElementById('marker-icon');
+        const markerIcon = LegacyAdapter.DOM.getElement('marker-icon');
         if (markerIcon)
             properties.icon = markerIcon.value;
         // --- координати ---
-        const latInput = document.getElementById('marker-lat');
-        const lngInput = document.getElementById('marker-lng');
+        const latInput = LegacyAdapter.DOM.getElement('marker-lat');
+        const lngInput = LegacyAdapter.DOM.getElement('marker-lng');
         if (latInput && lngInput && state.currentEditingObject.value && state.currentEditingObject.value.setLatLng) {
             const lat = parseFloat(latInput.value);
             const lng = parseFloat(lngInput.value);
@@ -472,35 +473,35 @@ function saveObjectChanges() {
         }
     }
     else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-        const fillColor = document.getElementById('object-color');
+        const fillColor = LegacyAdapter.DOM.getElement('object-color');
         if (fillColor)
             properties.fillColor = fillColor.value;
         // Для полігонів колір рамки та прозорість можна додати за потреби
         properties.color = fillColor ? fillColor.value : undefined;
-        const objectOpacity = document.getElementById('object-opacity');
+        const objectOpacity = LegacyAdapter.DOM.getElement('object-opacity');
         if (objectOpacity)
             properties.fillOpacity = parseFloat(objectOpacity.value);
         properties.opacity = 1;
     }
     else if (type === 'polyline') {
-        const objectColor = document.getElementById('object-color');
+        const objectColor = LegacyAdapter.DOM.getElement('object-color');
         if (objectColor)
             properties.color = objectColor.value;
-        const lineWidth = document.getElementById('line-width');
+        const lineWidth = LegacyAdapter.DOM.getElement('line-width');
         if (lineWidth)
             properties.weight = parseInt(lineWidth.value);
-        const lineStyle = document.getElementById('line-style');
+        const lineStyle = LegacyAdapter.DOM.getElement('line-style');
         if (lineStyle)
             properties.style = lineStyle.value;
         // opacity не зчитуємо для polyline
     }
     else if (type === 'image') {
-        const objectOpacity = document.getElementById('object-opacity');
+        const objectOpacity = LegacyAdapter.DOM.getElement('object-opacity');
         if (objectOpacity)
             properties.opacity = parseFloat(objectOpacity.value);
     }
     // зображення
-    const imagePreview = document.getElementById('object-image-preview');
+    const imagePreview = LegacyAdapter.DOM.getElement('object-image-preview');
     if (imagePreview && imagePreview.src && !imagePreview.classList.contains('hidden')) {
         properties.image = imagePreview.src;
     }
@@ -515,47 +516,51 @@ function saveObjectChanges() {
 // Ініціалізація модального вікна
 function initEditModal() {
     // Обробники подій для кнопок
-    document.getElementById('modal-close').addEventListener('click', closeEditModal);
-    document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
-    document.getElementById('save-object').addEventListener('click', saveObjectChanges);
+    LegacyAdapter.DOM.addEventListener('modal-close', 'click', closeEditModal);
+    LegacyAdapter.DOM.addEventListener('cancel-edit', 'click', closeEditModal);
+    LegacyAdapter.DOM.addEventListener('save-object', 'click', saveObjectChanges);
     // --- Додаю підтвердження для видалення об'єкта ---
-    document.getElementById('delete-object').onclick = function () {
-        if (!state.currentEditingObject.value)
-            return;
-        const type = getObjectType(state.currentEditingObject.value);
-        let typeName = 'обʼєкт';
-        if (type === 'marker')
-            typeName = 'маркер';
-        else if (type === 'polygon')
-            typeName = 'полігон';
-        else if (type === 'polyline')
-            typeName = 'полілінію';
-        else if (type === 'rectangle')
-            typeName = 'прямокутник';
-        else if (type === 'circle')
-            typeName = 'коло';
-        const properties = getObjectProperties(state.currentEditingObject.value);
-        const objectName = properties.name ? `"${properties.name}"` : typeName;
-        closeEditModal();
-        showConfirmDialog({
-            title: `Видалення об'єкта: ${objectName}`,
-            message: `Ви дійсно хочете видалити об'єкт ${objectName}?`,
-            onConfirm: function (action) {
-                if (!state.currentEditingObject.value)
-                    return;
-                const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(state.currentEditingObject.value));
-                if (layerObj && layerObj.featureGroup) {
-                    layerObj.featureGroup.removeLayer(state.currentEditingObject.value);
-                }
-                map.removeLayer(state.currentEditingObject.value);
-                saveLayersToStorage();
-            },
-            buttons: [
-                { text: 'Видалити', action: 'delete', className: 'btn-danger' },
-                { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
-            ]
-        });
-    };
+    const deleteButton = LegacyAdapter.DOM.getElement('delete-object');
+    if (deleteButton) {
+        deleteButton.onclick = function () {
+            if (!state.currentEditingObject.value)
+                return;
+            const type = getObjectType(state.currentEditingObject.value);
+            let typeName = 'обʼєкт';
+            if (type === 'marker')
+                typeName = 'маркер';
+            else if (type === 'polygon')
+                typeName = 'полігон';
+            else if (type === 'polyline')
+                typeName = 'полілінію';
+            else if (type === 'rectangle')
+                typeName = 'прямокутник';
+            else if (type === 'circle')
+                typeName = 'коло';
+            const properties = getObjectProperties(state.currentEditingObject.value);
+            const objectName = properties.name ? `"${properties.name}"` : typeName;
+            closeEditModal();
+            showConfirmDialog({
+                title: `Видалення об'єкта: ${objectName}`,
+                message: `Ви дійсно хочете видалити об'єкт ${objectName}?`,
+                onConfirm: function (action) {
+                    if (!state.currentEditingObject.value)
+                        return;
+                    const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(state.currentEditingObject.value));
+                    if (layerObj && layerObj.featureGroup) {
+                        layerObj.featureGroup.removeLayer(state.currentEditingObject.value);
+                    }
+                    map.removeLayer(state.currentEditingObject.value);
+                    saveLayersToStorage();
+                },
+                buttons: [
+                    { text: 'Видалити', action: 'delete', className: 'btn-danger' },
+                    { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+                ]
+            });
+        };
+    }
+    ;
     // Обробники для range слайдерів
     document.getElementById('line-width').addEventListener('input', function () {
         document.getElementById('line-width-value').textContent = this.value;

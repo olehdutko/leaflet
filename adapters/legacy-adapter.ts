@@ -1,6 +1,6 @@
 // Адаптер для поступової міграції існуючого коду
 
-import { getElementById, setElementText, setInputValue, getInputValue, clearElementContent } from '../utils/dom-utils.js';
+import { getElementById, setElementText, setInputValue, getInputValue, clearElementContent, addEventListener, setElementHTML } from '../utils/dom-utils.js';
 import { StorageService } from '../services/storage-service.js';
 import { ObjectService } from '../services/object-service.js';
 import type { LayerObj, ObjectProperties } from '../types/index.js';
@@ -37,7 +37,17 @@ export class LegacyAdapter {
     /**
      * Безпечне очищення вмісту елемента (заміна element.innerHTML = '')
      */
-    clearElementContent: clearElementContent
+    clearElementContent: clearElementContent,
+    
+    /**
+     * Безпечне додавання обробника події (заміна element.addEventListener)
+     */
+    addEventListener: addEventListener,
+    
+    /**
+     * Безпечне встановлення HTML вмісту (заміна element.innerHTML = html)
+     */
+    setInnerHTML: setElementHTML
   };
   
   /**

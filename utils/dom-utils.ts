@@ -160,4 +160,14 @@ export function clearElementContent(id: string): void {
   if (element) {
     element.innerHTML = '';
   }
+}
+
+/**
+ * Безпечне встановлення HTML вмісту елемента
+ */
+export function setElementHTML(id: string, html: string): void {
+  const element = getElementById<HTMLElement>(id);
+  if (element) {
+    element.innerHTML = html;
+  }
 } 
