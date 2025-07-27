@@ -32,7 +32,6 @@ import { state } from './state.js';
 export function saveLayersToStorage() {
     customLayers.forEach(l => {
         l.featureGroup.eachLayer((layer) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h;
             const type = getObjectType(layer);
             if (!layer.feature)
                 return;
@@ -43,18 +42,18 @@ export function saveLayersToStorage() {
             }
             Object.assign(layer.feature.properties, layer.properties || {});
             if (type === 'marker') {
-                layer.feature.properties.color = ((_a = layer.properties) === null || _a === void 0 ? void 0 : _a.color) || '#1976d2';
+                layer.feature.properties.color = layer.properties?.color || '#1976d2';
             }
             else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-                layer.feature.properties.fillColor = ((_b = layer.options) === null || _b === void 0 ? void 0 : _b.fillColor) || '#1976d2';
-                layer.feature.properties.color = ((_c = layer.options) === null || _c === void 0 ? void 0 : _c.color) || '#1976d2';
-                layer.feature.properties.fillOpacity = ((_d = layer.options) === null || _d === void 0 ? void 0 : _d.fillOpacity) || 0.2;
-                layer.feature.properties.opacity = ((_e = layer.options) === null || _e === void 0 ? void 0 : _e.opacity) || 1;
+                layer.feature.properties.fillColor = layer.options?.fillColor || '#1976d2';
+                layer.feature.properties.color = layer.options?.color || '#1976d2';
+                layer.feature.properties.fillOpacity = layer.options?.fillOpacity || 0.2;
+                layer.feature.properties.opacity = layer.options?.opacity || 1;
             }
             else if (type === 'polyline') {
-                layer.feature.properties.color = ((_f = layer.options) === null || _f === void 0 ? void 0 : _f.color) || '#1976d2';
-                layer.feature.properties.weight = ((_g = layer.options) === null || _g === void 0 ? void 0 : _g.weight) || 3;
-                layer.feature.properties.opacity = ((_h = layer.options) === null || _h === void 0 ? void 0 : _h.opacity) || 1;
+                layer.feature.properties.color = layer.options?.color || '#1976d2';
+                layer.feature.properties.weight = layer.options?.weight || 3;
+                layer.feature.properties.opacity = layer.options?.opacity || 1;
                 let dash = layer.options && layer.options.dashArray !== undefined && layer.options.dashArray !== null ? String(layer.options.dashArray) : '';
                 if (dash === '10, 10')
                     layer.feature.properties.style = 'dashed';
@@ -74,15 +73,12 @@ export function saveLayersToStorage() {
         // Перевіряємо і в overlays, і в images для сумісності
         const imageData = l.featureGroup.images || l.featureGroup.overlays;
         if (imageData && Array.isArray(imageData)) {
-            overlays = imageData.map((img) => {
-                var _a;
-                return ({
-                    url: img.url,
-                    bounds: img.bounds,
-                    opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1,
-                    corners: img.corners // Додаємо corners для збереження трансформацій
-                });
-            });
+            overlays = imageData.map((img) => ({
+                url: img.url,
+                bounds: img.bounds,
+                opacity: img.opacity ?? 1,
+                corners: img.corners // Додаємо corners для збереження трансформацій
+            }));
         }
         // Створюємо GeoJSON вручну, щоб зберегти наші feature об'єкти
         const features = [];
@@ -153,32 +149,29 @@ export function loadLayersFromStorage() {
             if (obj.geojson) {
                 L.geoJSON(obj.geojson, {
                     pointToLayer: function (feature, latlng) {
-                        var _a, _b;
-                        const color = ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.color) || '#1976d2'; // Дефолтний колір
-                        const iconName = ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.icon) || 'place';
+                        const color = feature.properties?.color || '#1976d2'; // Дефолтний колір
+                        const iconName = feature.properties?.icon || 'place';
                         return L.marker(latlng, {
                             icon: getColoredMarkerIcon(color, iconName)
                         });
                     },
                     style: function (feature) {
-                        var _a, _b, _c, _d, _e, _f, _g;
                         return {
-                            color: ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.color) || '#1976d2',
-                            weight: ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.weight) || 3,
-                            opacity: (_d = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c.opacity) !== null && _d !== void 0 ? _d : 1,
-                            fillColor: ((_e = feature.properties) === null || _e === void 0 ? void 0 : _e.fillColor) || '#1976d2',
-                            fillOpacity: (_g = (_f = feature.properties) === null || _f === void 0 ? void 0 : _f.fillOpacity) !== null && _g !== void 0 ? _g : 0.2
+                            color: feature.properties?.color || '#1976d2',
+                            weight: feature.properties?.weight || 3,
+                            opacity: feature.properties?.opacity ?? 1,
+                            fillColor: feature.properties?.fillColor || '#1976d2',
+                            fillOpacity: feature.properties?.fillOpacity ?? 0.2
                         };
                     },
                     onEachFeature: function (feature, layer) {
-                        var _a;
                         featureGroup.addLayer(layer);
                         addDoubleClickToLayer(layer);
                         if (feature.properties) {
-                            layer.properties = Object.assign({}, feature.properties);
+                            layer.properties = { ...feature.properties };
                             // Виправляємо undefined значення для назви та опису
                             if (!layer.properties.name || layer.properties.name === 'undefined') {
-                                const type = (_a = feature.geometry) === null || _a === void 0 ? void 0 : _a.type;
+                                const type = feature.geometry?.type;
                                 const objectType = type === 'Point' ? 'Маркер' :
                                     type === 'Polygon' ? 'Полігон' :
                                         type === 'LineString' ? 'Лінія' : 'Об\'єкт';
@@ -206,15 +199,12 @@ export function loadLayersFromStorage() {
             }
             // Відновлюємо overlays (зображення)
             if (obj.overlays && Array.isArray(obj.overlays)) {
-                const imageData = obj.overlays.map((img) => {
-                    var _a;
-                    return ({
-                        url: img.url,
-                        bounds: img.bounds,
-                        opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1,
-                        corners: img.corners
-                    });
-                });
+                const imageData = obj.overlays.map((img) => ({
+                    url: img.url,
+                    bounds: img.bounds,
+                    opacity: img.opacity ?? 1,
+                    corners: img.corners
+                }));
                 // Зберігаємо в обох форматах для сумісності
                 featureGroup.images = imageData;
                 featureGroup.overlays = [];
@@ -369,7 +359,6 @@ export function updateActiveLayerUI() {
     }
     customLayers.forEach(l => {
         l.featureGroup.eachLayer((layer) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h;
             const type = getObjectType(layer);
             if (!layer.feature)
                 return;
@@ -379,18 +368,18 @@ export function updateActiveLayerUI() {
                 Object.assign(layer.feature.properties, layer.properties);
             Object.assign(layer.feature.properties, layer.properties || {});
             if (type === 'marker') {
-                layer.feature.properties.color = ((_a = layer.properties) === null || _a === void 0 ? void 0 : _a.color) || '#1976d2';
+                layer.feature.properties.color = layer.properties?.color || '#1976d2';
             }
             else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-                layer.feature.properties.fillColor = ((_b = layer.options) === null || _b === void 0 ? void 0 : _b.fillColor) || '#1976d2';
-                layer.feature.properties.color = ((_c = layer.options) === null || _c === void 0 ? void 0 : _c.color) || '#1976d2';
-                layer.feature.properties.fillOpacity = ((_d = layer.options) === null || _d === void 0 ? void 0 : _d.fillOpacity) || 0.2;
-                layer.feature.properties.opacity = ((_e = layer.options) === null || _e === void 0 ? void 0 : _e.opacity) || 1;
+                layer.feature.properties.fillColor = layer.options?.fillColor || '#1976d2';
+                layer.feature.properties.color = layer.options?.color || '#1976d2';
+                layer.feature.properties.fillOpacity = layer.options?.fillOpacity || 0.2;
+                layer.feature.properties.opacity = layer.options?.opacity || 1;
             }
             else if (type === 'polyline') {
-                layer.feature.properties.color = ((_f = layer.options) === null || _f === void 0 ? void 0 : _f.color) || '#1976d2';
-                layer.feature.properties.weight = ((_g = layer.options) === null || _g === void 0 ? void 0 : _g.weight) || 3;
-                layer.feature.properties.opacity = ((_h = layer.options) === null || _h === void 0 ? void 0 : _h.opacity) || 1;
+                layer.feature.properties.color = layer.options?.color || '#1976d2';
+                layer.feature.properties.weight = layer.options?.weight || 3;
+                layer.feature.properties.opacity = layer.options?.opacity || 1;
                 let dash = layer.options && layer.options.dashArray !== undefined && layer.options.dashArray !== null ? String(layer.options.dashArray) : '';
                 if (dash === '10, 10')
                     layer.feature.properties.style = 'dashed';
@@ -416,7 +405,6 @@ export function removeFeatureGroupAndOverlays(featureGroup) {
 }
 // --- Overlay logic ---
 export function addOverlayToFeatureGroup(featureGroup, url) {
-    var _a;
     const center = map.getCenter();
     const bounds = [
         [center.lat - 0.005, center.lng - 0.01],
@@ -433,7 +421,7 @@ export function addOverlayToFeatureGroup(featureGroup, url) {
     if (!featureGroup.overlayInstances)
         featureGroup.overlayInstances = [];
     // Створюємо imageData з повними даними включно з corners
-    const initialCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+    const initialCorners = overlay.getCorners?.() ?
         overlay.getCorners().map((c) => ({ lat: c.lat, lng: c.lng })) : null;
     const imageData = {
         url,
@@ -443,7 +431,7 @@ export function addOverlayToFeatureGroup(featureGroup, url) {
     };
     // Додаємо метадані
     featureGroup.images.push(imageData);
-    featureGroup.overlays.push(Object.assign({}, imageData)); // Копія для сумісності
+    featureGroup.overlays.push({ ...imageData }); // Копія для сумісності
     featureGroup.overlayInstances.push(overlay); // Leaflet об'єкт окремо
     // Debounced збереження
     let saveTimeout = null;
@@ -462,10 +450,9 @@ export function addOverlayToFeatureGroup(featureGroup, url) {
     }
     else {
         overlay.on('edit', () => {
-            var _a;
             const overlayUrl = overlay._customUrl || url;
             const newBounds = overlay.getBounds();
-            const newCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+            const newCorners = overlay.getCorners?.() ?
                 overlay.getCorners().map((c) => ({ lat: c.lat, lng: c.lng })) : null;
             const idx = featureGroup.images.findIndex((img) => img.url === url);
             const overlayIdx = featureGroup.overlays.findIndex((img) => img.url === url);
@@ -567,7 +554,6 @@ export function restoreOverlaysForFeatureGroup(featureGroup) {
         }, 200); // Більший delay для групування змін
     };
     featureGroup.images.forEach((img, originalIndex) => {
-        var _a;
         // Перевіряємо, чи overlay вже існує в DOM
         const existingImg = document.querySelector(`img.leaflet-image-layer[src="${img.url}"]`);
         if (existingImg) {
@@ -604,7 +590,7 @@ export function restoreOverlaysForFeatureGroup(featureGroup) {
         featureGroup.overlays.push({
             url: img.url,
             bounds: img.bounds,
-            opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1,
+            opacity: img.opacity ?? 1,
             corners: img.corners
         });
         // Використовуємо покращений edit handler якщо доступний
@@ -615,9 +601,8 @@ export function restoreOverlaysForFeatureGroup(featureGroup) {
         else {
             // Обробник подій edit - використовуємо URL для пошуку замість індексу
             overlay.on('edit', () => {
-                var _a;
                 const newBounds = overlay.getBounds();
-                const newCorners = ((_a = overlay.getCorners()) === null || _a === void 0 ? void 0 : _a.map((c) => ({ lat: c.lat, lng: c.lng }))) || null;
+                const newCorners = overlay.getCorners()?.map((c) => ({ lat: c.lat, lng: c.lng })) || null;
                 const overlayUrl = overlay._customUrl || img.url;
                 // Оновлюємо в images (основний масив) - шукаємо по URL
                 const imageIdx = featureGroup.images.findIndex((image) => image.url === overlayUrl);
@@ -641,3 +626,4 @@ export function restoreOverlaysForFeatureGroup(featureGroup) {
 // Експортуємо customLayers та saveLayersToStorage в глобальну область для requestOverlayDelete
 window.customLayers = customLayers;
 window.saveLayersToStorage = saveLayersToStorage;
+//# sourceMappingURL=layers.js.map

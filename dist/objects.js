@@ -1,6 +1,5 @@
 import { getObjectType, setObjectProperty, applyObjectStyle } from './utils.js';
 export function applyObjectProperties(layer, properties) {
-    var _a, _b;
     const type = getObjectType(layer);
     // Встановлюємо базові властивості
     setObjectProperty(layer, 'name', properties.name);
@@ -21,7 +20,7 @@ export function applyObjectProperties(layer, properties) {
     else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
         const color = properties.color || '#1976d2';
         const fillColor = properties.fillColor || '#1976d2';
-        const fillOpacity = (_a = properties.fillOpacity) !== null && _a !== void 0 ? _a : 0.2;
+        const fillOpacity = properties.fillOpacity ?? 0.2;
         applyObjectStyle(layer, {
             fillColor: fillColor,
             color: color,
@@ -34,7 +33,7 @@ export function applyObjectProperties(layer, properties) {
     else if (type === 'polyline') {
         const color = properties.color || '#1976d2';
         const weight = properties.weight || 3;
-        const opacity = (_b = properties.opacity) !== null && _b !== void 0 ? _b : 1;
+        const opacity = properties.opacity ?? 1;
         const dashArray = properties.style === 'dashed' ? '10, 10' :
             properties.style === 'dotted' ? '2, 8' : null;
         applyObjectStyle(layer, {
@@ -49,3 +48,4 @@ export function applyObjectProperties(layer, properties) {
         setObjectProperty(layer, 'style', properties.style);
     }
 }
+//# sourceMappingURL=objects.js.map

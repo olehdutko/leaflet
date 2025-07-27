@@ -129,8 +129,8 @@ export function showEditModal(layer) {
         let opacity = properties.opacity;
         if (type === 'polygon' || type === 'circle' || type === 'rectangle')
             opacity = properties.fillOpacity;
-        objectOpacity.value = opacity !== null && opacity !== void 0 ? opacity : 1;
-        opacityValue.textContent = Math.round((opacity !== null && opacity !== void 0 ? opacity : 1) * 100) + '%';
+        objectOpacity.value = opacity ?? 1;
+        opacityValue.textContent = Math.round((opacity ?? 1) * 100) + '%';
     }
     // --- Ініціалізація контролів зображень ---
     if (imageGroup) {
@@ -410,10 +410,9 @@ export function addDoubleClickToLayer(layer) {
     layer.on('mouseout', hideTooltip);
     // --- Подвійний клік функціональність ---
     layer.on('dblclick', function (e) {
-        var _a, _b, _c, _d;
         layer._wasDblClicked = true;
-        (_b = (_a = e.originalEvent) === null || _a === void 0 ? void 0 : _a.stopPropagation) === null || _b === void 0 ? void 0 : _b.call(_a);
-        (_d = (_c = e.originalEvent) === null || _c === void 0 ? void 0 : _c.preventDefault) === null || _d === void 0 ? void 0 : _d.call(_c);
+        e.originalEvent?.stopPropagation?.();
+        e.originalEvent?.preventDefault?.();
         showEditModal(layer);
     });
     // Для маркерів — явний DOM-обробник
@@ -435,10 +434,9 @@ export function addDoubleClickToLayer(layer) {
         addDomDblClickHandler(layer);
         // Дублюючий обробник для leaflet-івенту
         layer.on('dblclick', function (e) {
-            var _a, _b, _c, _d;
             layer._wasDblClicked = true;
-            (_b = (_a = e.originalEvent) === null || _a === void 0 ? void 0 : _a.stopPropagation) === null || _b === void 0 ? void 0 : _b.call(_a);
-            (_d = (_c = e.originalEvent) === null || _c === void 0 ? void 0 : _c.preventDefault) === null || _d === void 0 ? void 0 : _d.call(_c);
+            e.originalEvent?.stopPropagation?.();
+            e.originalEvent?.preventDefault?.();
             showEditModal(layer);
         });
     }
@@ -448,7 +446,7 @@ export function showConfirmDialog({ title = 'Підтвердження', messag
     const backdrop = document.getElementById('confirm-modal-backdrop');
     const titleEl = document.getElementById('confirm-modal-title');
     const msgEl = document.getElementById('confirm-modal-message');
-    const footer = modal === null || modal === void 0 ? void 0 : modal.querySelector('.modal-footer');
+    const footer = modal?.querySelector('.modal-footer');
     if (!modal || !titleEl || !msgEl || !footer)
         return;
     modal.classList.remove('hidden');
@@ -661,7 +659,6 @@ export function createLayerControl(layerObj) {
                 return;
             const reader = new FileReader();
             reader.onload = (evt) => {
-                var _a;
                 const imgUrl = evt.target.result;
                 // Додаємо зображення у центр карти з дефолтними розмірами
                 const mapCenter = map.getCenter();
@@ -697,7 +694,7 @@ export function createLayerControl(layerObj) {
                     return;
                 }
                 // Створюємо imageData об'єкт з повними даними включно з corners
-                const initialCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+                const initialCorners = overlay.getCorners?.() ?
                     overlay.getCorners().map((c) => ({ lat: c.lat, lng: c.lng })) : null;
                 const imageData = {
                     url: imgUrl,
@@ -707,7 +704,7 @@ export function createLayerControl(layerObj) {
                 };
                 // Додаємо в усі масиви
                 layerObj.featureGroup.images.push(imageData);
-                layerObj.featureGroup.overlays.push(Object.assign({}, imageData)); // Копія для сумісності
+                layerObj.featureGroup.overlays.push({ ...imageData }); // Копія для сумісності
                 layerObj.featureGroup.overlayInstances.push(overlay);
                 // ДІЙСНО СИНХРОННЕ збереження - використовуємо вже завантажену функцію
                 if (window.saveLayersToStorage && typeof window.saveLayersToStorage === 'function') {
@@ -742,11 +739,10 @@ export function createLayerControl(layerObj) {
                 };
                 // Функція оновлення стану overlay з додатковими перевірками
                 const updateOverlayState = () => {
-                    var _a;
                     editEventCount++;
                     const isFirstEdit = editEventCount === 1;
                     const newBounds = overlay.getBounds();
-                    const newCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+                    const newCorners = overlay.getCorners?.() ?
                         overlay.getCorners().map((c) => ({ lat: c.lat, lng: c.lng })) : null;
                     // Знаходимо overlay по URL в обох масивах
                     const overlayIdx = layerObj.featureGroup.overlays.findIndex((img) => img.url === imgUrl);
@@ -818,13 +814,20 @@ export function createLayerControl(layerObj) {
         // @ts-ignore
         const images = l.featureGroup.images || [];
         const imagesWithCorners = images.map((img) => {
-            var _a;
             // @ts-ignore
-            const overlay = (_a = l.featureGroup.overlays) === null || _a === void 0 ? void 0 : _a.find((o) => { var _a; return o._customUrl === img.url || o._url === img.url || ((_a = o._image) === null || _a === void 0 ? void 0 : _a.src) === img.url; });
+            const overlay = l.featureGroup.overlays?.find((o) => o._customUrl === img.url || o._url === img.url || o._image?.src === img.url);
             if (overlay && overlay.getCorners) {
-                return Object.assign(Object.assign({}, img), { corners: overlay.getCorners(), bounds: overlay.getBounds(), properties: overlay.properties || {} });
+                return {
+                    ...img,
+                    corners: overlay.getCorners(),
+                    bounds: overlay.getBounds(),
+                    properties: overlay.properties || {}
+                };
             }
-            return Object.assign(Object.assign({}, img), { properties: img.properties || {} });
+            return {
+                ...img,
+                properties: img.properties || {}
+            };
         });
         const layerData = {
             id: l.id,
@@ -1006,9 +1009,8 @@ export function createLayerControl(layerObj) {
         objectsListWrap.innerHTML = '';
         const objectItems = [];
         layerObj.featureGroup.eachLayer((layer) => {
-            var _a;
             const type = getObjectType(layer);
-            const props = layer.properties || ((_a = layer.feature) === null || _a === void 0 ? void 0 : _a.properties) || {};
+            const props = layer.properties || layer.feature?.properties || {};
             const item = document.createElement('div');
             item.className = 'layer-object-item';
             item.title = props.name || type;
@@ -1119,7 +1121,7 @@ export function createLayerControl(layerObj) {
                     return;
                 // підсвічування
                 if (layer.setStyle) {
-                    const prev = Object.assign({}, (layer.options || {}));
+                    const prev = { ...(layer.options || {}) };
                     layer.setStyle({ color: '#cd1d1d', weight: 8 });
                     setTimeout(() => layer.setStyle(prev), 1500);
                 }
@@ -1222,11 +1224,10 @@ export function createLayerControl(layerObj) {
     }
     if (layerObj.featureGroup.images && Array.isArray(layerObj.featureGroup.images)) {
         layerObj.featureGroup.images.forEach((img) => {
-            var _a, _b;
             const item = document.createElement('div');
             item.className = 'layer-object-item';
-            item.title = ((_a = img.properties) === null || _a === void 0 ? void 0 : _a.name) || 'image';
-            item.innerHTML = '<i class="fa fa-image"></i> ' + (((_b = img.properties) === null || _b === void 0 ? void 0 : _b.name) || '[зображення]');
+            item.title = img.properties?.name || 'image';
+            item.innerHTML = '<i class="fa fa-image"></i> ' + (img.properties?.name || '[зображення]');
             // клік — підсвічування (можна додати для overlay)
             // item.onclick = ...
             // подвійний клік — модалка (можна додати, якщо потрібно)
@@ -1378,3 +1379,4 @@ if (typeof window !== 'undefined' && typeof L !== 'undefined') {
     if (mapEl)
         markerObserver.observe(mapEl, { childList: true, subtree: true });
 }
+//# sourceMappingURL=ui.js.map

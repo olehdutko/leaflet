@@ -85,7 +85,7 @@ class StateManager {
     }
     // Отримання повного стану
     getState() {
-        return Object.assign({}, this.state);
+        return { ...this.state };
     }
     // Встановлення стану
     setState(newState) {
@@ -99,3 +99,4 @@ export const stateManager = new StateManager();
 export const state = {
     currentEditingObject: { value: null }
 };
+//# sourceMappingURL=state.js.map

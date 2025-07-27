@@ -102,6 +102,76 @@ export class UIManager {
   querySelectorAll<T extends HTMLElement>(selector: string): NodeListOf<T> {
     return document.querySelectorAll(selector) as NodeListOf<T>;
   }
+  
+  // Показ повідомлень
+  showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
+    // Створюємо елемент повідомлення
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    // Додаємо стилі
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 4px;
+      color: white;
+      font-weight: 500;
+      z-index: 10000;
+      max-width: 300px;
+      word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+    `;
+    
+    // Встановлюємо кольори залежно від типу
+    switch (type) {
+      case 'success':
+        notification.style.backgroundColor = '#4caf50';
+        break;
+      case 'error':
+        notification.style.backgroundColor = '#f44336';
+        break;
+      case 'warning':
+        notification.style.backgroundColor = '#ff9800';
+        break;
+      case 'info':
+      default:
+        notification.style.backgroundColor = '#2196f3';
+        break;
+    }
+    
+    // Додаємо до DOM
+    document.body.appendChild(notification);
+    
+    // Автоматично видаляємо через 5 секунд
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }
+    }, 5000);
+    
+    // Додаємо можливість закрити кліком
+    notification.addEventListener('click', () => {
+      if (notification.parentNode) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }
+    });
+  }
 }
 
 export const uiManager = UIManager.getInstance(); 

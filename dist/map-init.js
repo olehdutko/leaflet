@@ -24,3 +24,4 @@ export const map = L.map('map', {
     zoom: 13,
 });
 map.attributionControl.addAttribution('<a href="mailto:oleh.dutko@gmail.com">oleh.dutko@gmail.com</a>');
+//# sourceMappingURL=map-init.js.map

@@ -74,8 +74,7 @@ export function setObjectProperty(layer, key, value) {
     layer.properties[key] = value;
 }
 export function getObjectProperty(layer, key, defaultValue = null) {
-    var _a, _b;
-    return (_b = (_a = layer.properties) === null || _a === void 0 ? void 0 : _a[key]) !== null && _b !== void 0 ? _b : defaultValue;
+    return layer.properties?.[key] ?? defaultValue;
 }
 // Утиліта для застосування стилів до об'єктів
 export function applyObjectStyle(layer, style) {
@@ -86,3 +85,4 @@ export function applyObjectStyle(layer, style) {
         Object.assign(layer.options, style);
     }
 }
+//# sourceMappingURL=utils.js.map

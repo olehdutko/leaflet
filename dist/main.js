@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 // Версія виправлень overlay
 export const OVERLAY_FIX_VERSION = 'v3.4';
 import { applyObjectProperties } from './objects.js';
@@ -179,7 +170,6 @@ function clearOverlaySelection() {
 }
 // Функція для виконання видалення overlay
 function performOverlayDeletion(overlay) {
-    var _a, _b, _c, _d, _e, _f;
     // Отримуємо URL overlay для пошуку - додаємо підтримку різних структур
     let overlayUrl = overlay._customUrl || overlay._url || overlay.url;
     // Якщо overlay має властивість _overlay, спробуємо отримати URL з неї
@@ -197,29 +187,29 @@ function performOverlayDeletion(overlay) {
                 continue;
             }
             // Спочатку шукаємо за посиланням на об'єкт
-            let overlayIdx = (_a = layer.featureGroup.overlayInstances) === null || _a === void 0 ? void 0 : _a.indexOf(overlay);
+            let overlayIdx = layer.featureGroup.overlayInstances?.indexOf(overlay);
             // Якщо не знайдено за прямим посиланням, шукаємо за вкладеним _overlay
             if (overlayIdx === -1 && overlay._overlay) {
-                overlayIdx = (_b = layer.featureGroup.overlayInstances) === null || _b === void 0 ? void 0 : _b.findIndex((inst) => {
+                overlayIdx = layer.featureGroup.overlayInstances?.findIndex((inst) => {
                     return inst === overlay._overlay || inst._overlay === overlay._overlay;
                 });
             }
             // Якщо не знайдено, шукаємо за URL
             if (overlayIdx === -1 && overlayUrl) {
-                overlayIdx = (_c = layer.featureGroup.images) === null || _c === void 0 ? void 0 : _c.findIndex((img) => {
+                overlayIdx = layer.featureGroup.images?.findIndex((img) => {
                     return img.url === overlayUrl;
                 });
             }
             // Додатково шукаємо за _overlayId
             if (overlayIdx === -1 && overlay._overlayId) {
-                overlayIdx = (_d = layer.featureGroup.images) === null || _d === void 0 ? void 0 : _d.findIndex((img) => {
+                overlayIdx = layer.featureGroup.images?.findIndex((img) => {
                     return img._overlayId === overlay._overlayId;
                 });
             }
             // Якщо все ще не знайдено, шукаємо за всіма можливими властивостями
             if (overlayIdx === -1) {
                 // Шукаємо в overlayInstances
-                overlayIdx = (_e = layer.featureGroup.overlayInstances) === null || _e === void 0 ? void 0 : _e.findIndex((inst) => {
+                overlayIdx = layer.featureGroup.overlayInstances?.findIndex((inst) => {
                     const instUrl = inst._customUrl || inst._url || inst.url;
                     const overlayUrl = overlay._customUrl || overlay._url || overlay.url;
                     // Порівнюємо URL
@@ -234,7 +224,7 @@ function performOverlayDeletion(overlay) {
                 });
                 // Якщо не знайдено в overlayInstances, шукаємо в images
                 if (overlayIdx === -1) {
-                    overlayIdx = (_f = layer.featureGroup.images) === null || _f === void 0 ? void 0 : _f.findIndex((img) => {
+                    overlayIdx = layer.featureGroup.images?.findIndex((img) => {
                         const imgUrl = img._customUrl || img._url || img.url;
                         const overlayUrl = overlay._customUrl || overlay._url || overlay.url;
                         // Порівнюємо URL
@@ -367,7 +357,6 @@ import { getObjectType, getObjectProperties } from './utils.js';
 import { createLayerControl } from './ui.js';
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
-    var _a;
     let input = document.getElementById('marker-icon');
     const list = document.getElementById('marker-icon-autocomplete');
     const preview = document.getElementById('marker-icon-preview');
@@ -375,7 +364,7 @@ function setupMarkerIconAutocomplete() {
         return;
     // Клонуємо input, щоб скинути всі старі обробники
     const newInput = input.cloneNode(true);
-    (_a = input.parentNode) === null || _a === void 0 ? void 0 : _a.replaceChild(newInput, input);
+    input.parentNode?.replaceChild(newInput, input);
     input = newInput;
     let currentFocus = -1;
     input.addEventListener('input', function () {
@@ -522,7 +511,7 @@ function saveObjectChanges() {
     applyObjectProperties(state.currentEditingObject.value, properties);
     // --- Додаємо копіювання у feature.properties ---
     if (state.currentEditingObject.value.feature && state.currentEditingObject.value.properties) {
-        state.currentEditingObject.value.feature.properties = Object.assign({}, state.currentEditingObject.value.properties);
+        state.currentEditingObject.value.feature.properties = { ...state.currentEditingObject.value.properties };
     }
     saveLayersToStorage();
     closeEditModal();
@@ -730,144 +719,142 @@ document.addEventListener('DOMContentLoaded', () => {
     centerGeoSearchBar();
 });
 // --- функція для обробки KMZ файлів ---
-function handleKmzFile(file) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // @ts-ignore
-            const zip = yield JSZip.loadAsync(file);
-            // знайти перший .kml файл
-            const kmlFileName = Object.keys(zip.files).find(name => name.endsWith('.kml'));
-            if (!kmlFileName) {
-                alert('KMZ файл не містить KML даних');
-                return;
-            }
-            const kmlText = yield zip.files[kmlFileName].async('string');
-            // створити новий шар для KMZ
-            const tileType = 'План';
-            const tileLayer = createTileLayer(tileType, 1);
-            const featureGroup = new L.FeatureGroup();
-            tileLayer.addTo(map);
-            featureGroup.addTo(map);
-            // парсити KML через omnivore
-            // @ts-ignore
-            const kmlLayer = omnivore.kml.parse(kmlText);
-            // додати всі об'єкти з KML до featureGroup
-            kmlLayer.eachLayer((layer) => {
-                featureGroup.addLayer(layer);
-                import('./ui.js').then(({ addDoubleClickToLayer }) => {
-                    addDoubleClickToLayer(layer);
-                });
-                // зберегти властивості з KML
-                if (layer.feature && layer.feature.properties) {
-                    layer.properties = Object.assign({}, layer.feature.properties);
-                    // Виправляємо undefined значення для назви та опису
-                    if (!layer.properties.name || layer.properties.name === 'undefined') {
-                        const type = getObjectType(layer);
-                        const objectType = type === 'marker' ? 'Маркер' :
-                            type === 'polygon' ? 'Полігон' :
-                                type === 'polyline' ? 'Лінія' : 'Об\'єкт';
-                        layer.properties.name = `${objectType} [з KML]`;
-                    }
-                    if (!layer.properties.description || layer.properties.description === 'undefined') {
-                        layer.properties.description = '';
-                    }
-                    // застосувати стилі для різних типів об'єктів
-                    const type = getObjectType(layer);
-                    if (type === 'marker') {
-                        // для маркерів з KML
-                        if (layer.feature.properties.name) {
-                            layer.bindPopup(layer.feature.properties.name);
-                        }
-                        if (layer.feature.properties.description) {
-                            layer.bindTooltip(layer.feature.properties.description);
-                        }
-                    }
-                    else if (type === 'polyline') {
-                        // для ліній з KML
-                        layer.setStyle({
-                            color: '#1976d2',
-                            weight: 3,
-                            opacity: 1
-                        });
-                    }
-                    else if (type === 'polygon') {
-                        // для полігонів з KML
-                        layer.setStyle({
-                            color: '#1976d2',
-                            weight: 2,
-                            opacity: 1,
-                            fillColor: '#1976d2',
-                            fillOpacity: 0.2
-                        });
-                    }
-                }
+async function handleKmzFile(file) {
+    try {
+        // @ts-ignore
+        const zip = await JSZip.loadAsync(file);
+        // знайти перший .kml файл
+        const kmlFileName = Object.keys(zip.files).find(name => name.endsWith('.kml'));
+        if (!kmlFileName) {
+            alert('KMZ файл не містить KML даних');
+            return;
+        }
+        const kmlText = await zip.files[kmlFileName].async('string');
+        // створити новий шар для KMZ
+        const tileType = 'План';
+        const tileLayer = createTileLayer(tileType, 1);
+        const featureGroup = new L.FeatureGroup();
+        tileLayer.addTo(map);
+        featureGroup.addTo(map);
+        // парсити KML через omnivore
+        // @ts-ignore
+        const kmlLayer = omnivore.kml.parse(kmlText);
+        // додати всі об'єкти з KML до featureGroup
+        kmlLayer.eachLayer((layer) => {
+            featureGroup.addLayer(layer);
+            import('./ui.js').then(({ addDoubleClickToLayer }) => {
+                addDoubleClickToLayer(layer);
             });
-            // створити ім'я шару за іменем файлу
-            const layerTitle = file.name.replace(/\.(kmz|kml)$/i, '');
-            // перевірити, чи вже є шар з таким ім'ям
-            const existsIdx = customLayers.findIndex(l => l.title === layerTitle);
-            if (existsIdx !== -1) {
-                showConfirmDialog({
-                    title: `Шар "${layerTitle}" вже існує`,
-                    message: `Шар з назвою "${layerTitle}" вже існує. Що зробити?`,
-                    onConfirm: (action) => {
-                        if (action === 'duplicate') {
-                            // Дублювати з новою назвою
-                            let copyTitle = layerTitle + ' (копія)';
-                            let n = 2;
-                            while (customLayers.some(l => l.title === copyTitle)) {
-                                copyTitle = layerTitle + ` (копія ${n++})`;
-                            }
-                            actuallyAddKmzLayer(copyTitle);
-                        }
-                        else if (action === 'overwrite') {
-                            // Перезаписати: видалити старий і додати новий
-                            const oldLayer = customLayers[existsIdx];
-                            if (oldLayer && oldLayer.featureGroup) {
-                                map.removeLayer(oldLayer.featureGroup);
-                            }
-                            customLayers.splice(existsIdx, 1);
-                            if (layerControlsDiv) {
-                                layerControlsDiv.innerHTML = '';
-                                customLayers.forEach(layer => createLayerControl(layer));
-                            }
-                            actuallyAddKmzLayer(layerTitle);
-                        } // cancel — нічого не робити
-                    },
-                    buttons: [
-                        { text: 'Дублювати', action: 'duplicate', className: 'btn-primary' },
-                        { text: 'Перезаписати', action: 'overwrite', className: 'btn-danger' },
-                        { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
-                    ]
-                });
-                return;
-            }
-            else {
-                actuallyAddKmzLayer(layerTitle);
-            }
-            function actuallyAddKmzLayer(title) {
-                const layerObj = {
-                    id: getNextLayerId(),
-                    tileLayer,
-                    featureGroup,
-                    tileType,
-                    title,
-                    visible: true
-                };
-                customLayers.push(layerObj);
-                const control = createLayerControl(layerObj);
-                if (layerControlsDiv)
-                    layerControlsDiv.appendChild(control);
-                saveLayersToStorage();
-                if (featureGroup.getBounds().isValid()) {
-                    map.fitBounds(featureGroup.getBounds());
+            // зберегти властивості з KML
+            if (layer.feature && layer.feature.properties) {
+                layer.properties = { ...layer.feature.properties };
+                // Виправляємо undefined значення для назви та опису
+                if (!layer.properties.name || layer.properties.name === 'undefined') {
+                    const type = getObjectType(layer);
+                    const objectType = type === 'marker' ? 'Маркер' :
+                        type === 'polygon' ? 'Полігон' :
+                            type === 'polyline' ? 'Лінія' : 'Об\'єкт';
+                    layer.properties.name = `${objectType} [з KML]`;
+                }
+                if (!layer.properties.description || layer.properties.description === 'undefined') {
+                    layer.properties.description = '';
+                }
+                // застосувати стилі для різних типів об'єктів
+                const type = getObjectType(layer);
+                if (type === 'marker') {
+                    // для маркерів з KML
+                    if (layer.feature.properties.name) {
+                        layer.bindPopup(layer.feature.properties.name);
+                    }
+                    if (layer.feature.properties.description) {
+                        layer.bindTooltip(layer.feature.properties.description);
+                    }
+                }
+                else if (type === 'polyline') {
+                    // для ліній з KML
+                    layer.setStyle({
+                        color: '#1976d2',
+                        weight: 3,
+                        opacity: 1
+                    });
+                }
+                else if (type === 'polygon') {
+                    // для полігонів з KML
+                    layer.setStyle({
+                        color: '#1976d2',
+                        weight: 2,
+                        opacity: 1,
+                        fillColor: '#1976d2',
+                        fillOpacity: 0.2
+                    });
                 }
             }
+        });
+        // створити ім'я шару за іменем файлу
+        const layerTitle = file.name.replace(/\.(kmz|kml)$/i, '');
+        // перевірити, чи вже є шар з таким ім'ям
+        const existsIdx = customLayers.findIndex(l => l.title === layerTitle);
+        if (existsIdx !== -1) {
+            showConfirmDialog({
+                title: `Шар "${layerTitle}" вже існує`,
+                message: `Шар з назвою "${layerTitle}" вже існує. Що зробити?`,
+                onConfirm: (action) => {
+                    if (action === 'duplicate') {
+                        // Дублювати з новою назвою
+                        let copyTitle = layerTitle + ' (копія)';
+                        let n = 2;
+                        while (customLayers.some(l => l.title === copyTitle)) {
+                            copyTitle = layerTitle + ` (копія ${n++})`;
+                        }
+                        actuallyAddKmzLayer(copyTitle);
+                    }
+                    else if (action === 'overwrite') {
+                        // Перезаписати: видалити старий і додати новий
+                        const oldLayer = customLayers[existsIdx];
+                        if (oldLayer && oldLayer.featureGroup) {
+                            map.removeLayer(oldLayer.featureGroup);
+                        }
+                        customLayers.splice(existsIdx, 1);
+                        if (layerControlsDiv) {
+                            layerControlsDiv.innerHTML = '';
+                            customLayers.forEach(layer => createLayerControl(layer));
+                        }
+                        actuallyAddKmzLayer(layerTitle);
+                    } // cancel — нічого не робити
+                },
+                buttons: [
+                    { text: 'Дублювати', action: 'duplicate', className: 'btn-primary' },
+                    { text: 'Перезаписати', action: 'overwrite', className: 'btn-danger' },
+                    { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+                ]
+            });
+            return;
         }
-        catch (error) {
-            alert('Помилка при імпорті KMZ файлу: ' + error.message); // @ts-ignore
+        else {
+            actuallyAddKmzLayer(layerTitle);
         }
-    });
+        function actuallyAddKmzLayer(title) {
+            const layerObj = {
+                id: getNextLayerId(),
+                tileLayer,
+                featureGroup,
+                tileType,
+                title,
+                visible: true
+            };
+            customLayers.push(layerObj);
+            const control = createLayerControl(layerObj);
+            if (layerControlsDiv)
+                layerControlsDiv.appendChild(control);
+            saveLayersToStorage();
+            if (featureGroup.getBounds().isValid()) {
+                map.fitBounds(featureGroup.getBounds());
+            }
+        }
+    }
+    catch (error) {
+        alert('Помилка при імпорті KMZ файлу: ' + error.message); // @ts-ignore
+    }
 }
 // --- Глобальний пошук по об'єктах ---
 const globalSearchInput = document.getElementById('global-object-search');
@@ -885,11 +872,10 @@ if (globalSearchInput && globalSearchResults) {
                 return;
             const fg = layerObj.featureGroup;
             fg.eachLayer((layer) => {
-                var _a, _b, _c, _d, _e, _f;
                 if (layer.visible === false)
                     return; // @ts-ignore
-                const name = ((_a = layer.properties) === null || _a === void 0 ? void 0 : _a.name) || ((_c = (_b = layer.feature) === null || _b === void 0 ? void 0 : _b.properties) === null || _c === void 0 ? void 0 : _c.name) || '';
-                const desc = ((_d = layer.properties) === null || _d === void 0 ? void 0 : _d.description) || ((_f = (_e = layer.feature) === null || _e === void 0 ? void 0 : _e.properties) === null || _f === void 0 ? void 0 : _f.description) || '';
+                const name = layer.properties?.name || layer.feature?.properties?.name || '';
+                const desc = layer.properties?.description || layer.feature?.properties?.description || '';
                 if (name.toLowerCase().includes(query) ||
                     desc.toLowerCase().includes(query)) {
                     results.push({
@@ -903,12 +889,11 @@ if (globalSearchInput && globalSearchResults) {
             // зображення
             if (fg.images && fg.images.length > 0 && fg.overlays) {
                 fg.images.forEach((img, idx) => {
-                    var _a, _b;
                     const overlay = fg.overlays[idx]; // @ts-ignore
                     if (!overlay || overlay.visible === false)
                         return;
-                    const name = ((_a = img.properties) === null || _a === void 0 ? void 0 : _a.name) || '';
-                    const desc = ((_b = img.properties) === null || _b === void 0 ? void 0 : _b.description) || '';
+                    const name = img.properties?.name || '';
+                    const desc = img.properties?.description || '';
                     if (name.toLowerCase().includes(query) ||
                         desc.toLowerCase().includes(query)) {
                         results.push({
@@ -1098,11 +1083,10 @@ if (importAllBtn && importAllInput) {
         importAllInput.click();
     });
     importAllInput.addEventListener('change', (e) => {
-        var _a;
         const file = e.target.files[0];
         if (!file)
             return;
-        const ext = (_a = file.name.split('.').pop()) === null || _a === void 0 ? void 0 : _a.toLowerCase();
+        const ext = file.name.split('.').pop()?.toLowerCase();
         if (ext === 'kmz' || ext === 'kml') {
             // Імпорт KMZ/KML через leaflet-omnivore
             handleKmzFile(file);
@@ -1235,14 +1219,13 @@ if (typeof window.L !== 'undefined' &&
             clearTimeout(saveTimeout);
         }
         saveTimeout = setTimeout(() => {
-            var _a, _b;
             debugLog(`Виконуємо збереження: ${reason}`);
             try {
                 // Зберігаємо стан ПЕРЕД збереженням для порівняння
                 const beforeState = localStorage.getItem('lefleat_layers');
                 const beforeCount = beforeState ? JSON.parse(beforeState).length : 0;
                 // Виконуємо збереження
-                (_b = (_a = window).saveLayersToStorage) === null || _b === void 0 ? void 0 : _b.call(_a);
+                window.saveLayersToStorage?.();
                 // Перевіряємо результат
                 setTimeout(() => {
                     const afterState = localStorage.getItem('lefleat_layers');
@@ -1274,13 +1257,12 @@ if (typeof window.L !== 'undefined' &&
     function createEditHandler(overlay, imageUrl, featureGroup, isFirstMove = false) {
         let editCount = 0;
         return function handleEdit() {
-            var _a;
             editCount++;
             const isFirstEdit = editCount === 1;
             const newBounds = overlay.getBounds();
-            const newCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+            const newCorners = overlay.getCorners?.() ?
                 overlay.getCorners().map(c => ({ lat: c.lat, lng: c.lng })) : null;
-            debugLog(`Edit подія #${editCount} для overlay: ${imageUrl === null || imageUrl === void 0 ? void 0 : imageUrl.substring(0, 30)}...`);
+            debugLog(`Edit подія #${editCount} для overlay: ${imageUrl?.substring(0, 30)}...`);
             // Оновлюємо дані в масивах
             if (featureGroup && featureGroup.images) {
                 const imageIdx = featureGroup.images.findIndex(img => img.url === imageUrl);
@@ -1316,9 +1298,8 @@ if (typeof window.L !== 'undefined' &&
             const { overlayInstances, images } = layer.featureGroup;
             if (overlayInstances && images) {
                 overlayInstances.forEach((overlay, overlayIdx) => {
-                    var _a;
                     if (overlay && overlay.getCorners) {
-                        const imageUrl = (_a = images[overlayIdx]) === null || _a === void 0 ? void 0 : _a.url;
+                        const imageUrl = images[overlayIdx]?.url;
                         if (imageUrl) {
                             // Видаляємо старі обробники
                             overlay.off('edit');
@@ -1383,7 +1364,6 @@ if (typeof window.L !== 'undefined' &&
     }
     // Функція для видалення overlay
     function deleteOverlay(overlay) {
-        var _a, _b, _c, _d, _e, _f;
         if (!overlay) {
             return;
         }
@@ -1399,20 +1379,20 @@ if (typeof window.L !== 'undefined' &&
                 if (!layer || !layer.featureGroup) {
                     continue;
                 }
-                let overlayIdx = (_a = layer.featureGroup.overlayInstances) === null || _a === void 0 ? void 0 : _a.indexOf(overlay);
+                let overlayIdx = layer.featureGroup.overlayInstances?.indexOf(overlay);
                 if (overlayIdx === -1 && overlay._overlay) {
-                    overlayIdx = (_b = layer.featureGroup.overlayInstances) === null || _b === void 0 ? void 0 : _b.findIndex((inst) => {
+                    overlayIdx = layer.featureGroup.overlayInstances?.findIndex((inst) => {
                         return inst === overlay._overlay || inst._overlay === overlay._overlay;
                     });
                 }
                 if (overlayIdx === -1 && overlayUrl) {
-                    overlayIdx = (_c = layer.featureGroup.images) === null || _c === void 0 ? void 0 : _c.findIndex((img) => img.url === overlayUrl);
+                    overlayIdx = layer.featureGroup.images?.findIndex((img) => img.url === overlayUrl);
                 }
                 if (overlayIdx === -1 && overlay._overlayId) {
-                    overlayIdx = (_d = layer.featureGroup.images) === null || _d === void 0 ? void 0 : _d.findIndex((img) => img._overlayId === overlay._overlayId);
+                    overlayIdx = layer.featureGroup.images?.findIndex((img) => img._overlayId === overlay._overlayId);
                 }
                 if (overlayIdx === -1) {
-                    overlayIdx = (_e = layer.featureGroup.overlayInstances) === null || _e === void 0 ? void 0 : _e.findIndex((inst) => {
+                    overlayIdx = layer.featureGroup.overlayInstances?.findIndex((inst) => {
                         const instUrl = inst._customUrl || inst._url || inst.url;
                         const overlayUrl = overlay._customUrl || overlay._url || overlay.url;
                         if (instUrl && overlayUrl && instUrl === overlayUrl) {
@@ -1424,7 +1404,7 @@ if (typeof window.L !== 'undefined' &&
                         return false;
                     });
                     if (overlayIdx === -1) {
-                        overlayIdx = (_f = layer.featureGroup.images) === null || _f === void 0 ? void 0 : _f.findIndex((img) => {
+                        overlayIdx = layer.featureGroup.images?.findIndex((img) => {
                             const imgUrl = img._customUrl || img._url || img.url;
                             const overlayUrl = overlay._customUrl || overlay._url || overlay.url;
                             if (imgUrl && overlayUrl && imgUrl === overlayUrl) {
@@ -1541,12 +1521,11 @@ if (typeof window.L !== 'undefined' &&
     }
     // Функція збереження позиції overlay
     function saveOverlayPosition(overlay, overlayId) {
-        var _a, _b, _c;
         if (!window.saveLayersToStorage) {
             return;
         }
         const newBounds = overlay.getBounds();
-        const newCorners = ((_a = overlay.getCorners) === null || _a === void 0 ? void 0 : _a.call(overlay)) ?
+        const newCorners = overlay.getCorners?.() ?
             overlay.getCorners().map(c => ({ lat: c.lat, lng: c.lng })) : null;
         debugLog(`DRAG ЗБЕРЕЖЕННЯ позиції overlay:`, {
             bounds: newBounds,
@@ -1557,9 +1536,9 @@ if (typeof window.L !== 'undefined' &&
             for (const layer of window.customLayers) {
                 if (!layer || !layer.featureGroup)
                     continue;
-                let overlayIdx = (_b = layer.featureGroup.overlayInstances) === null || _b === void 0 ? void 0 : _b.indexOf(overlay);
+                let overlayIdx = layer.featureGroup.overlayInstances?.indexOf(overlay);
                 if (overlayIdx === -1 && overlay._overlay) {
-                    overlayIdx = (_c = layer.featureGroup.overlayInstances) === null || _c === void 0 ? void 0 : _c.findIndex((inst) => {
+                    overlayIdx = layer.featureGroup.overlayInstances?.findIndex((inst) => {
                         return inst === overlay._overlay || inst._overlay === overlay._overlay;
                     });
                 }
@@ -1687,3 +1666,4 @@ if (typeof window.L !== 'undefined' &&
         bindDragSaveHandlers();
     }, 5000);
 })();
+//# sourceMappingURL=main.js.map

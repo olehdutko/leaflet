@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "outDir": "dist",
+    "outDir": "../dist/src",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "declaration": true,
     "declarationMap": true,
@@ -19,12 +19,9 @@
     "noUnusedParameters": false
   },
   "include": [
-    "src/**/*.ts",
-    "*.ts"
+    "**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "dist",
     "**/*.test.ts",
     "**/*.spec.ts"
   ]
