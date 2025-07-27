@@ -1,5 +1,6 @@
 import { BaseService } from '../base/BaseService';
 import { Logger } from '../utils/Logger';
+import * as L from 'leaflet';
 
 export interface MapConfig {
   center: [number, number];
@@ -68,7 +69,7 @@ export class MapManager extends BaseService {
       this.logger.info('Ініціалізація карти');
 
       // Створити карту
-      this.map = (window as any).L.map('map', {
+      this.map = L.map('map', {
         center: this.config.center,
         zoom: this.config.zoom,
         minZoom: this.config.minZoom,
@@ -76,7 +77,7 @@ export class MapManager extends BaseService {
       });
 
       // Додати базовий tile layer
-      (window as any).L.tileLayer(this.config.tileLayerUrl, this.config.tileLayerOptions)
+      L.tileLayer(this.config.tileLayerUrl, this.config.tileLayerOptions)
         .addTo(this.map);
 
       // Зберегти посилання на карту глобально
@@ -110,7 +111,7 @@ export class MapManager extends BaseService {
       this.logger.info('Додавання шару:', layerData.title);
 
       // Створити feature group
-      const featureGroup = new (window as any).L.FeatureGroup();
+      const featureGroup = new L.FeatureGroup();
       
       // Додати до карти
       if (this.map) {
@@ -288,7 +289,7 @@ export class MapManager extends BaseService {
   private restoreLayer(layerData: any): void {
     try {
       // Створити feature group
-      const featureGroup = new (window as any).L.FeatureGroup();
+      const featureGroup = new L.FeatureGroup();
       
       // Відновити overlay зображення
       if (layerData.featureGroup.images) {
@@ -327,16 +328,16 @@ export class MapManager extends BaseService {
       let bounds: any;
 
       if (imageData.bounds) {
-        bounds = (window as any).L.latLngBounds(
-          (window as any).L.latLng(imageData.bounds.south, imageData.bounds.west),
-          (window as any).L.latLng(imageData.bounds.north, imageData.bounds.east)
+        bounds = L.latLngBounds(
+          L.latLng(imageData.bounds.south, imageData.bounds.west),
+          L.latLng(imageData.bounds.north, imageData.bounds.east)
         );
       } else if (imageData.corners && imageData.corners.length >= 3) {
         const lats = imageData.corners.map((c: any) => c.lat);
         const lngs = imageData.corners.map((c: any) => c.lng);
-        bounds = (window as any).L.latLngBounds(
-          (window as any).L.latLng(Math.min(...lats), Math.min(...lngs)),
-          (window as any).L.latLng(Math.max(...lats), Math.max(...lngs))
+        bounds = L.latLngBounds(
+          L.latLng(Math.min(...lats), Math.min(...lngs)),
+          L.latLng(Math.max(...lats), Math.max(...lngs))
         );
       } else {
         // Використати bounds карти
@@ -344,7 +345,7 @@ export class MapManager extends BaseService {
       }
 
       // Створити overlay
-      const overlay = (window as any).L.imageOverlay(imageData.url, bounds, {
+      const overlay = L.imageOverlay(imageData.url, bounds, {
         interactive: true,
         crossOrigin: 'anonymous'
       });

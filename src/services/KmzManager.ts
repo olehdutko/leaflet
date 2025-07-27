@@ -1,5 +1,6 @@
 import { BaseService } from '../base/BaseService';
 import { Logger } from '../utils/Logger';
+import * as L from 'leaflet';
 
 export interface KmzLayerData {
   title: string;
@@ -231,7 +232,7 @@ export class KmzManager extends BaseService {
       this.logger.info('Додано overlay:', overlayData.url);
 
     } catch (error) {
-      this.logger.error('Помилка додавання overlay:', error);
+      this.logger.error('Помилка додавання overlay:', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -240,9 +241,9 @@ export class KmzManager extends BaseService {
    */
   private createTileLayer(tileType: string, opacity: number): L.TileLayer {
     // Це заглушка - в реальному коді тут буде логіка створення tile layer
-    return (window as any).L.tileLayer('', {
+    return L.tileLayer('', {
       opacity: opacity
-    }) as any;
+    });
   }
 
   /**

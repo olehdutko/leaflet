@@ -348,10 +348,9 @@ import { customLayers, getNextLayerId, createTileLayer, saveLayersToStorage, loa
 import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput, showConfirmDialog, createLayerControl } from './ui.js';
 import { state } from './state.js';
 import { filterMaterialIcons } from './material-icons.js';
+import { getObjectType, getObjectProperties } from './utils.js';
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
-// ... existing code ...
-import { getObjectType, getObjectProperties } from './utils.js';
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
     let input = document.getElementById('marker-icon');

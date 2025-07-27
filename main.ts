@@ -3,7 +3,6 @@ export const OVERLAY_FIX_VERSION = 'v3.4';
 
 // Імпорти
 import { showEditModal } from './ui.js';
-import { getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 
 // Функція для оновлення title сторінки з версією
@@ -406,13 +405,10 @@ import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, sa
 import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput, showConfirmDialog, createLayerControl } from './ui.js';
 import { stateManager, state } from './state.js';
 import { materialIcons, filterMaterialIcons } from './material-icons.js';
+import { getLayerIcon, createTooltip, getObjectType, getObjectProperties, getColoredMarkerIcon } from './utils.js';
 
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
-
-// ... existing code ...
-
-import { getLayerIcon, createTooltip, getObjectType, getObjectProperties } from './utils.js';
 
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {

@@ -1,5 +1,6 @@
 import { BaseService } from '../base/BaseService';
 import { Logger } from '../utils/Logger';
+import * as L from 'leaflet';
 
 export interface GeoSearchResult {
   display_name: string;
@@ -300,8 +301,8 @@ export class GeoSearchManager extends BaseService {
       }
 
       // Створити новий маркер
-      (window as any).searchMarker = (window as any).L.marker([lat, lon], {
-        icon: (window as any).L.icon({
+      (window as any).searchMarker = L.marker([lat, lon], {
+        icon: L.icon({
           iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
           iconSize: [25, 41],
           iconAnchor: [12, 41],

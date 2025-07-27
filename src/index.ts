@@ -1,45 +1,49 @@
-// Головний індексний файл для експорту всіх модулів
+// Експорт менеджерів
+export { AppManager } from './managers/AppManager';
+export { StateManager } from './managers/StateManager';
+export { EventManager } from './managers/EventManager';
 
-// Базові класи
-export { BaseService } from './base/BaseService.js';
-export { BaseComponent } from './base/BaseComponent.js';
+// Експорт сервісів
+export { MapManager } from './services/MapManager';
+export { OverlayManager } from './services/OverlayManager';
+export { KmzManager } from './services/KmzManager';
+export { GeoSearchManager } from './services/GeoSearchManager';
+export { ModalManager } from './services/ModalManager';
+export { StorageService } from './services/StorageService';
 
-// Менеджери
-export { AppManager, appManager } from './managers/AppManager.js';
-export { StateManager } from './managers/StateManager.js';
-export { EventManager } from './managers/EventManager.js';
+// Експорт компонентів
+export { ModalComponent } from './components/ModalComponent';
+export { LayerControlComponent } from './components/LayerControlComponent';
+export { ObjectEditComponent } from './components/ObjectEditComponent';
+export { SearchComponent } from './components/SearchComponent';
+export { SettingsComponent } from './components/SettingsComponent';
 
-// Сервіси
-export { StorageService } from './services/StorageService.js';
-export { OverlayManager } from './services/OverlayManager.js';
-export { KmzManager } from './services/KmzManager.js';
-export { GeoSearchManager } from './services/GeoSearchManager.js';
-export { ModalManager } from './services/ModalManager.js';
-export { MapManager } from './services/MapManager.js';
+// Експорт базових класів
+export { BaseService } from './base/BaseService';
+export { BaseComponent } from './base/BaseComponent';
 
-// Компоненти
-export { ModalComponent } from './components/ModalComponent.js';
-export { ObjectEditComponent } from './components/ObjectEditComponent.js';
-export { LayerControlComponent } from './components/LayerControlComponent.js';
-export { SearchComponent } from './components/SearchComponent.js';
-export { SettingsComponent } from './components/SettingsComponent.js';
+// Експорт утиліт
+export { Logger } from './utils/Logger';
+export { DOMUtils } from './utils/DOMUtils';
 
-// Утиліти
-export { Logger } from './utils/Logger.js';
-export { DOMUtils } from './utils/DOMUtils.js';
+// Експорт інтерфейсів
+export { ILayer } from './interfaces/ILayer';
+export { IStorage } from './interfaces/IStorage';
 
-// Типи
-export * from './types/index.js';
+// Експорт типів
+export * from './types/index';
 
-// Enum'и
-export * from './enums/index.js';
+// Експорт enum'ів
+export * from './enums/index';
 
-// Інтерфейси
-export * from './interfaces/ILayer.js';
-export * from './interfaces/IStorage.js';
+// Експорт адаптерів
+export { LegacyAdapter, legacyAdapter } from './adapters/LegacyAdapter';
 
-// Приклади
-export * from './examples/ArchitectureExample.js';
+// Експорт інтеграції
+export { IntegrationManager, integrationManager } from './integration/IntegrationManager';
 
-// Головний файл
-export * from './main.js'; 
+// Експорт головної функції ініціалізації
+export { initializeApp } from './main';
+
+// Версія архітектури
+export const ARCHITECTURE_VERSION = 'v4.0.0'; 
