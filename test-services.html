@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест нових сервісів</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Тест нових сервісів</h1>
+        
+        <div class="test-section">
+            <h2>1. DOM утиліти</h2>
+            <p>Тестування безпечної роботи з DOM елементами</p>
+            <button onclick="testDOMUtils()">Тестувати DOM утиліти</button>
+            <div id="dom-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. Storage Service</h2>
+            <p>Тестування збереження та завантаження даних</p>
+            <button onclick="testStorageService()">Тестувати Storage Service</button>
+            <div id="storage-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. Object Service</h2>
+            <p>Тестування роботи з об'єктами на карті</p>
+            <button onclick="testObjectService()">Тестувати Object Service</button>
+            <div id="object-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. Типи та інтерфейси</h2>
+            <p>Тестування TypeScript типів</p>
+            <button onclick="testTypes()">Тестувати типи</button>
+            <div id="types-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>5. Інтеграційний тест</h2>
+            <p>Тестування всіх сервісів разом</p>
+            <button onclick="runIntegrationTest()">Запустити всі тести</button>
+            <div id="integration-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>6. Консоль</h2>
+            <div class="console" id="console-output"></div>
+            <button onclick="clearConsole()">Очистити консоль</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Імпортуємо наші сервіси
+        import { getElementById, setElementText, setInputValue, getInputValue, setElementVisibility } from './utils/dom-utils.js';
+        import { StorageService } from './services/storage-service.js';
+        import { ObjectService } from './services/object-service.js';
+        import { IntegrationTest } from './test-integration.js';
+        
+        // Глобальні функції для тестування
+        window.testServices = {
+            getElementById,
+            setElementText,
+            setInputValue,
+            getInputValue,
+            setElementVisibility,
+            StorageService,
+            ObjectService,
+            IntegrationTest
+        };
+        
+        // Логування в консоль
+        function logToConsole(message, type = 'info') {
+            const consoleDiv = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logEntry.className = `console-${type}`;
+            consoleDiv.appendChild(logEntry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        // Допоміжна функція для додавання результатів тестів
+        function addTestResult(containerId, type, message) {
+            const container = document.getElementById(containerId);
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = message;
+            container.appendChild(resultDiv);
+            logToConsole(message, type === 'success' ? 'info' : 'error');
+        }
+        
+        // Тест DOM утиліт
+        window.testDOMUtils = function() {
+            const resultsDiv = document.getElementById('dom-test-results');
+            resultsDiv.innerHTML = '';
+            logToConsole('Запуск тесту DOM утиліт...');
+            
+            try {
+                // Тест 1: Отримання елемента
+                const testElement = getElementById('dom-test-results');
+                if (testElement) {
+                    addTestResult('dom-test-results', 'success', '✅ getElementById працює коректно');
+                } else {
+                    addTestResult('dom-test-results', 'error', '❌ getElementById не знайшов елемент');
+                }
+                
+                // Тест 2: Встановлення тексту
+                setElementText('dom-test-results', 'Тестовий текст');
+                addTestResult('dom-test-results', 'success', '✅ setElementText працює коректно');
+                
+                // Тест 3: Створення тестового input
+                const testInput = document.createElement('input');
+                testInput.id = 'test-input';
+                document.body.appendChild(testInput);
+                
+                setInputValue('test-input', 'тестове значення');
+                const value = getInputValue('test-input');
+                
+                if (value === 'тестове значення') {
+                    addTestResult('dom-test-results', 'success', '✅ setInputValue/getInputValue працюють коректно');
+                } else {
+                    addTestResult('dom-test-results', 'error', '❌ setInputValue/getInputValue не працюють');
+                }
+                
+                // Тест 4: Показування/приховування
+                setElementVisibility('test-input', false);
+                addTestResult('dom-test-results', 'success', '✅ setElementVisibility працює коректно');
+                
+                // Очищення
+                document.body.removeChild(testInput);
+                
+                logToConsole('Тест DOM утиліт завершено успішно');
+                
+            } catch (error) {
+                addTestResult('dom-test-results', 'error', `❌ Помилка: ${error.message}`);
+                logToConsole(`Помилка в тесті DOM утиліт: ${error.message}`, 'error');
+            }
+        };
+        
+        // Тест Storage Service
+        window.testStorageService = function() {
+            const resultsDiv = document.getElementById('storage-test-results');
+            resultsDiv.innerHTML = '';
+            logToConsole('Запуск тесту Storage Service...');
+            
+            try {
+                // Тест 1: Збереження даних
+                const testData = [{ id: 1, name: 'Test Layer' }];
+                StorageService.saveLayers(testData);
+                addTestResult('storage-test-results', 'success', '✅ saveLayers працює коректно');
+                
+                // Тест 2: Завантаження даних
+                const loadedData = StorageService.loadLayers();
+                addTestResult('storage-test-results', 'success', '✅ loadLayers працює коректно');
+                
+                // Тест 3: Перевірка наявності даних
+                const hasData = StorageService.hasLayers();
+                if (hasData) {
+                    addTestResult('storage-test-results', 'success', '✅ hasLayers повертає true для збережених даних');
+                } else {
+                    addTestResult('storage-test-results', 'error', '❌ hasLayers повертає false для збережених даних');
+                }
+                
+                // Тест 4: Очищення
+                StorageService.clearLayers();
+                const hasDataAfterClear = StorageService.hasLayers();
+                if (!hasDataAfterClear) {
+                    addTestResult('storage-test-results', 'success', '✅ clearLayers працює коректно');
+                } else {
+                    addTestResult('storage-test-results', 'error', '❌ clearLayers не очистив дані');
+                }
+                
+                logToConsole('Тест Storage Service завершено успішно');
+                
+            } catch (error) {
+                addTestResult('storage-test-results', 'error', `❌ Помилка: ${error.message}`);
+                logToConsole(`Помилка в тесті Storage Service: ${error.message}`, 'error');
+            }
+        };
+        
+        // Тест Object Service
+        window.testObjectService = function() {
+            const resultsDiv = document.getElementById('object-test-results');
+            resultsDiv.innerHTML = '';
+            logToConsole('Запуск тесту Object Service...');
+            
+            try {
+                // Тест 1: Отримання властивостей
+                const mockLayer = {
+                    properties: { name: 'Test', color: '#ff0000' },
+                    feature: { properties: { description: 'Test description' } }
+                };
+                
+                const properties = ObjectService.getObjectProperties(mockLayer);
+                if (properties.name === 'Test' && properties.description === 'Test description') {
+                    addTestResult('object-test-results', 'success', '✅ getObjectProperties працює коректно');
+                } else {
+                    addTestResult('object-test-results', 'error', '❌ getObjectProperties не працює');
+                }
+                
+                // Тест 2: Встановлення властивості
+                ObjectService.setObjectProperty(mockLayer, 'newProperty', 'newValue');
+                if (mockLayer.properties.newProperty === 'newValue') {
+                    addTestResult('object-test-results', 'success', '✅ setObjectProperty працює коректно');
+                } else {
+                    addTestResult('object-test-results', 'error', '❌ setObjectProperty не працює');
+                }
+                
+                // Тест 3: Визначення типу об'єкта
+                const mockMarker = { 
+                    getLatLng: () => ({ lat: 0, lng: 0 }),
+                    setIcon: () => {},
+                    options: {}
+                };
+                
+                const type = ObjectService.getObjectType(mockMarker);
+                addTestResult('object-test-results', 'success', `✅ getObjectType повертає: ${type}`);
+                
+                logToConsole('Тест Object Service завершено успішно');
+                
+            } catch (error) {
+                addTestResult('object-test-results', 'error', `❌ Помилка: ${error.message}`);
+                logToConsole(`Помилка в тесті Object Service: ${error.message}`, 'error');
+            }
+        };
+        
+        // Тест типів
+        window.testTypes = function() {
+            const resultsDiv = document.getElementById('types-test-results');
+            resultsDiv.innerHTML = '';
+            logToConsole('Запуск тесту типів...');
+            
+            try {
+                // Тест 1: Створення об'єкта з правильним типом
+                const layerObj = {
+                    id: 1,
+                    tileLayer: {},
+                    featureGroup: {
+                        eachLayer: () => {},
+                        addLayer: () => {},
+                        removeLayer: () => {},
+                        hasLayer: () => false,
+                        bringToFront: () => {}
+                    },
+                    tileType: 'План',
+                    visible: true,
+                    title: 'Test Layer'
+                };
+                
+                addTestResult('types-test-results', 'success', '✅ LayerObj тип працює коректно');
+                
+                // Тест 2: Створення ObjectProperties
+                const objectProperties = {
+                    name: 'Test Object',
+                    description: 'Test Description',
+                    color: '#ff0000',
+                    weight: 3
+                };
+                
+                addTestResult('types-test-results', 'success', '✅ ObjectProperties тип працює коректно');
+                
+                // Тест 3: Створення ModalConfig
+                const modalConfig = {
+                    title: 'Test Modal',
+                    message: 'Test Message',
+                    onConfirm: () => {},
+                    buttons: [
+                        { text: 'OK', action: 'confirm', className: 'btn-primary' }
+                    ]
+                };
+                
+                addTestResult('types-test-results', 'success', '✅ ModalConfig тип працює коректно');
+                
+                logToConsole('Тест типів завершено успішно');
+                
+            } catch (error) {
+                addTestResult('types-test-results', 'error', `❌ Помилка: ${error.message}`);
+                logToConsole(`Помилка в тесті типів: ${error.message}`, 'error');
+            }
+        };
+        
+        // Інтеграційний тест
+        window.runIntegrationTest = async function() {
+            const resultsDiv = document.getElementById('integration-test-results');
+            resultsDiv.innerHTML = '';
+            logToConsole('Запуск інтеграційного тесту...');
+            
+            try {
+                await IntegrationTest.runAllTests();
+                addTestResult('integration-test-results', 'success', '✅ Всі інтеграційні тести пройшли успішно!');
+                logToConsole('Інтеграційний тест завершено успішно');
+            } catch (error) {
+                addTestResult('integration-test-results', 'error', `❌ Помилка в інтеграційному тесті: ${error.message}`);
+                logToConsole(`Помилка в інтеграційному тесті: ${error.message}`, 'error');
+            }
+        };
+        
+        // Очищення консолі
+        window.clearConsole = function() {
+            const consoleDiv = document.getElementById('console-output');
+            consoleDiv.innerHTML = '';
+        };
+        
+        // Ініціалізація
+        logToConsole('Тестова сторінка завантажена. Готово до тестування!');
+    </script>
+</body>
+</html> 

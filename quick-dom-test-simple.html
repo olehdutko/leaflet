@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Швидкий тест DOM утиліт (Спрощена версія)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        input, textarea {
+            margin: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 200px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Швидкий тест DOM утиліт (Спрощена версія)</h1>
+    <p>Цей тест перевіряє роботу DOM утиліт в браузері без імпорту модулів.</p>
+
+    <div class="test-section">
+        <h2>Тест 1: Базові DOM операції</h2>
+        <button id="test-getElement" class="btn-primary">Тест getElement</button>
+        <button id="test-setText" class="btn-primary">Тест setText</button>
+        <button id="test-setInputValue" class="btn-primary">Тест setInputValue</button>
+        <button id="test-getInputValue" class="btn-primary">Тест getInputValue</button>
+        
+        <div>
+            <input id="test-input" type="text" placeholder="Тестове поле">
+            <div id="test-text">Початковий текст</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 2: Модальне вікно (симуляція)</h2>
+        <button id="open-modal" class="btn-primary">Відкрити модальне вікно</button>
+        <button id="close-modal" class="btn-secondary">Закрити модальне вікно</button>
+        
+        <div id="modal-simulation" style="display: none; border: 2px solid #007bff; padding: 20px; margin: 10px 0; border-radius: 5px;">
+            <h3 id="modal-title">Заголовок модального вікна</h3>
+            <input id="modal-input" type="text" placeholder="Поле в модальному вікні">
+            <div id="modal-text">Текст в модальному вікні</div>
+            <button id="modal-button" class="btn-primary">Кнопка в модальному вікні</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 3: Панель шарів (симуляція)</h2>
+        <button id="test-layer-controls" class="btn-primary">Тест панелі шарів</button>
+        
+        <div id="layer-panel-simulation" style="border: 1px solid #ddd; padding: 15px; margin: 10px 0;">
+            <button id="add-layer-btn">Додати шар</button>
+            <button id="export-btn">Експорт</button>
+            <button id="import-btn">Імпорт</button>
+            <input id="import-input" type="file" style="display: none;">
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Результати тестування</h2>
+        <div id="test-output"></div>
+        <button id="clear-output" class="btn-secondary">Очистити результати</button>
+    </div>
+
+    <script>
+        // Прості DOM утиліти для тестування
+        const DOMUtils = {
+            getElement: function(id) {
+                const element = document.getElementById(id);
+                if (!element) {
+                    console.warn(`Element with id '${id}' not found`);
+                    return null;
+                }
+                return element;
+            },
+            
+            setText: function(id, text) {
+                const element = this.getElement(id);
+                if (element) {
+                    element.textContent = text;
+                    return true;
+                }
+                return false;
+            },
+            
+            setInputValue: function(id, value) {
+                const element = this.getElement(id);
+                if (element && element.tagName === 'INPUT') {
+                    element.value = value;
+                    return true;
+                }
+                return false;
+            },
+            
+            getInputValue: function(id) {
+                const element = this.getElement(id);
+                if (element && element.tagName === 'INPUT') {
+                    return element.value;
+                }
+                return '';
+            }
+        };
+
+        // Глобальні змінні для тестування
+        let testResults = [];
+        const output = document.getElementById('test-output');
+
+        // Функція для додавання результатів
+        function addResult(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            testResults.push(`[${timestamp}] ${message}`);
+            output.textContent = testResults.join('\n');
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Функція для тестування
+        function runTest(testName, testFunction) {
+            try {
+                addResult(`🧪 Запуск тесту: ${testName}`);
+                const result = testFunction();
+                addResult(`✅ Тест пройшов: ${testName}`, 'success');
+                return result;
+            } catch (error) {
+                addResult(`❌ Помилка в тесті ${testName}: ${error.message}`, 'error');
+                console.error(`Помилка в тесті ${testName}:`, error);
+                return false;
+            }
+        }
+
+        // Тест 1: Базові DOM операції
+        document.getElementById('test-getElement').addEventListener('click', () => {
+            runTest('getElement', () => {
+                const element = DOMUtils.getElement('test-input');
+                if (!element) throw new Error('Елемент не знайдено');
+                if (element.tagName !== 'INPUT') throw new Error('Неправильний тип елемента');
+                addResult(`✅ getElement працює: знайдено ${element.tagName}`);
+                return true;
+            });
+        });
+
+        document.getElementById('test-setText').addEventListener('click', () => {
+            runTest('setText', () => {
+                const testText = `Текст оновлено: ${new Date().toLocaleTimeString()}`;
+                const success = DOMUtils.setText('test-text', testText);
+                if (!success) throw new Error('Не вдалося встановити текст');
+                
+                const element = document.getElementById('test-text');
+                if (element.textContent !== testText) {
+                    throw new Error('Текст не оновився');
+                }
+                addResult(`✅ setText працює: "${testText}"`);
+                return true;
+            });
+        });
+
+        document.getElementById('test-setInputValue').addEventListener('click', () => {
+            runTest('setInputValue', () => {
+                const testValue = `Значення: ${new Date().toLocaleTimeString()}`;
+                const success = DOMUtils.setInputValue('test-input', testValue);
+                if (!success) throw new Error('Не вдалося встановити значення');
+                
+                const element = document.getElementById('test-input');
+                if (element.value !== testValue) {
+                    throw new Error('Значення не оновилося');
+                }
+                addResult(`✅ setInputValue працює: "${testValue}"`);
+                return true;
+            });
+        });
+
+        document.getElementById('test-getInputValue').addEventListener('click', () => {
+            runTest('getInputValue', () => {
+                const currentValue = DOMUtils.getInputValue('test-input');
+                addResult(`✅ getInputValue працює: "${currentValue}"`);
+                return true;
+            });
+        });
+
+        // Тест 2: Модальне вікно
+        document.getElementById('open-modal').addEventListener('click', () => {
+            runTest('Відкриття модального вікна', () => {
+                const modal = DOMUtils.getElement('modal-simulation');
+                if (!modal) throw new Error('Модальне вікно не знайдено');
+                
+                modal.style.display = 'block';
+                DOMUtils.setText('modal-title', `Модальне вікно відкрито: ${new Date().toLocaleTimeString()}`);
+                DOMUtils.setInputValue('modal-input', 'Тестове значення');
+                DOMUtils.setText('modal-text', 'Текст оновлено через DOM утиліти');
+                
+                addResult('✅ Модальне вікно відкрито та заповнено');
+                return true;
+            });
+        });
+
+        document.getElementById('close-modal').addEventListener('click', () => {
+            runTest('Закриття модального вікна', () => {
+                const modal = DOMUtils.getElement('modal-simulation');
+                if (!modal) throw new Error('Модальне вікно не знайдено');
+                
+                modal.style.display = 'none';
+                addResult('✅ Модальне вікно закрито');
+                return true;
+            });
+        });
+
+        // Тест 3: Панель шарів
+        document.getElementById('test-layer-controls').addEventListener('click', () => {
+            runTest('Панель шарів', () => {
+                const addBtn = DOMUtils.getElement('add-layer-btn');
+                const exportBtn = DOMUtils.getElement('export-btn');
+                const importBtn = DOMUtils.getElement('import-btn');
+                
+                if (!addBtn || !exportBtn || !importBtn) {
+                    throw new Error('Кнопки панелі шарів не знайдено');
+                }
+                
+                // Симулюємо кліки
+                addBtn.click();
+                addResult('✅ Кнопка "Додати шар" працює');
+                
+                exportBtn.click();
+                addResult('✅ Кнопка "Експорт" працює');
+                
+                importBtn.click();
+                addResult('✅ Кнопка "Імпорт" працює');
+                
+                return true;
+            });
+        });
+
+        // Очищення результатів
+        document.getElementById('clear-output').addEventListener('click', () => {
+            testResults = [];
+            output.textContent = '';
+        });
+
+        // Автоматичний тест при завантаженні
+        window.addEventListener('load', () => {
+            addResult('🚀 Сторінка завантажена, готово до тестування');
+            addResult('📋 Використовуйте кнопки вище для тестування різних функцій');
+            addResult('🔍 Перевірте консоль браузера для детальної інформації');
+            addResult('💡 Це спрощена версія тесту без імпорту модулів');
+        });
+
+        // Глобальний доступ для тестування
+        window.DOMUtils = DOMUtils;
+        window.runTest = runTest;
+        window.addResult = addResult;
+    </script>
+</body>
+</html> 

@@ -61,6 +61,7 @@ import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import { state } from './state.js';
+import { LegacyAdapter } from './adapters/legacy-adapter.js';
 
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage(): void {
@@ -165,7 +166,7 @@ export function loadLayersFromStorage(): boolean {
     });
     customLayers = [];
     if (layerControlsDiv) {
-      layerControlsDiv.innerHTML = '';
+      LegacyAdapter.DOM.clearElementContent('layer-controls');
     }
     arr.forEach((obj: any) => {
       const tileLayer = createTileLayer(obj.tileType, obj.opacity, obj.showLabels);
@@ -333,7 +334,7 @@ export function loadLayersFromStorage(): boolean {
       saveLayersToStorage();
       // Перегенеровуємо UI щоб оновити всі data-layer-id
       if (layerControlsDiv) {
-        layerControlsDiv.innerHTML = '';
+        LegacyAdapter.DOM.clearElementContent('layer-controls');
         customLayers.forEach(layer => {
           createLayerControl(layer);
         });

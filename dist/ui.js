@@ -5,6 +5,7 @@ import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './util
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
 import { updateActiveLayerUI } from './layers.js';
+import { LegacyAdapter } from './adapters/legacy-adapter.js';
 export const layerIdToRenderObjectsList = new Map();
 export function updateObjectsListForLayer(layerObj) {
     const fn = layerIdToRenderObjectsList.get(layerObj.id);
@@ -16,24 +17,24 @@ export function showEditModal(layer) {
     const type = getObjectType(layer);
     const properties = getObjectProperties(layer);
     // Оновлюємо заголовок
-    const modalTitle = document.getElementById('modal-title');
+    const modalTitle = LegacyAdapter.DOM.getElement('modal-title');
     if (modalTitle) {
-        modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'обʼєкта'}`;
+        LegacyAdapter.DOM.setText('modal-title', `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'обʼєкта'}`);
     }
     // Заповнюємо поля
-    const objectName = document.getElementById('object-name');
+    const objectName = LegacyAdapter.DOM.getElement('object-name');
     if (objectName)
-        objectName.value = properties.name || '';
-    const objectDescription = document.getElementById('object-description');
+        LegacyAdapter.DOM.setInputValue('object-name', properties.name || '');
+    const objectDescription = LegacyAdapter.DOM.getElement('object-description');
     if (objectDescription)
-        objectDescription.value = properties.description || '';
+        LegacyAdapter.DOM.setInputValue('object-description', properties.description || '');
     // Групи контролів
-    const colorPickerGroup = document.getElementById('color-picker-group');
-    const lineWidthGroup = document.getElementById('line-width-group');
-    const styleGroup = document.getElementById('style-group');
-    const opacityGroup = document.getElementById('opacity-group');
-    const markerIconGroup = document.getElementById('marker-icon-group');
-    const imageGroup = document.getElementById('object-image-group');
+    const colorPickerGroup = LegacyAdapter.DOM.getElement('color-picker-group');
+    const lineWidthGroup = LegacyAdapter.DOM.getElement('line-width-group');
+    const styleGroup = LegacyAdapter.DOM.getElement('style-group');
+    const opacityGroup = LegacyAdapter.DOM.getElement('opacity-group');
+    const markerIconGroup = LegacyAdapter.DOM.getElement('marker-icon-group');
+    const imageGroup = LegacyAdapter.DOM.getElement('object-image-group');
     // Приховуємо всі групи
     [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup].forEach(group => {
         if (group)
@@ -48,25 +49,25 @@ export function showEditModal(layer) {
         if (imageGroup)
             imageGroup.style.display = 'block';
         // Встановити значення інпуту та превʼю
-        const markerIconInput = document.getElementById('marker-icon');
-        const markerIconPreview = document.getElementById('marker-icon-preview');
+        const markerIconInput = LegacyAdapter.DOM.getElement('marker-icon');
+        const markerIconPreview = LegacyAdapter.DOM.getElement('marker-icon-preview');
         if (markerIconInput && markerIconPreview) {
-            markerIconInput.value = properties.icon || 'place';
-            markerIconPreview.textContent = markerIconInput.value;
+            LegacyAdapter.DOM.setInputValue('marker-icon', properties.icon || 'place');
+            LegacyAdapter.DOM.setText('marker-icon-preview', markerIconInput.value);
             markerIconInput.oninput = function () {
-                markerIconPreview.textContent = markerIconInput.value;
+                LegacyAdapter.DOM.setText('marker-icon-preview', markerIconInput.value);
             };
         }
         // Показати/заповнити координати
         const coordsGroup = document.querySelector('.marker-coords-group');
         if (coordsGroup)
             coordsGroup.style.display = '';
-        const latInput = document.getElementById('marker-lat');
-        const lngInput = document.getElementById('marker-lng');
+        const latInput = LegacyAdapter.DOM.getElement('marker-lat');
+        const lngInput = LegacyAdapter.DOM.getElement('marker-lng');
         if (latInput && lngInput && state.currentEditingObject.value && state.currentEditingObject.value.getLatLng) {
             const latlng = state.currentEditingObject.value.getLatLng();
-            latInput.value = latlng.lat.toString();
-            lngInput.value = latlng.lng.toString();
+            LegacyAdapter.DOM.setInputValue('marker-lat', latlng.lat.toString());
+            LegacyAdapter.DOM.setInputValue('marker-lng', latlng.lng.toString());
         }
     }
     else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
@@ -108,36 +109,36 @@ export function showEditModal(layer) {
     }
     // Заповнюємо значення контролів
     // Колір
-    const objectColorInput = document.getElementById('object-color');
+    const objectColorInput = LegacyAdapter.DOM.getElement('object-color');
     if (objectColorInput)
-        objectColorInput.value = properties.color || properties.fillColor || '#1976d2';
+        LegacyAdapter.DOM.setInputValue('object-color', properties.color || properties.fillColor || '#1976d2');
     // Товщина
-    const lineWidth = document.getElementById('line-width');
-    const lineWidthValue = document.getElementById('line-width-value');
+    const lineWidth = LegacyAdapter.DOM.getElement('line-width');
+    const lineWidthValue = LegacyAdapter.DOM.getElement('line-width-value');
     if (lineWidth && lineWidthValue && properties.weight) {
-        lineWidth.value = properties.weight;
-        lineWidthValue.textContent = properties.weight + 'px';
+        LegacyAdapter.DOM.setInputValue('line-width', properties.weight);
+        LegacyAdapter.DOM.setText('line-width-value', properties.weight + 'px');
     }
     // Стиль лінії (за замовчуванням solid)
-    const lineStyle = document.getElementById('line-style');
+    const lineStyle = LegacyAdapter.DOM.getElement('line-style');
     if (lineStyle)
-        lineStyle.value = properties.style || 'solid';
+        LegacyAdapter.DOM.setInputValue('line-style', properties.style || 'solid');
     // Прозорість
-    const objectOpacity = document.getElementById('object-opacity');
-    const opacityValue = document.getElementById('opacity-value');
+    const objectOpacity = LegacyAdapter.DOM.getElement('object-opacity');
+    const opacityValue = LegacyAdapter.DOM.getElement('opacity-value');
     if (objectOpacity && opacityValue) {
         let opacity = properties.opacity;
         if (type === 'polygon' || type === 'circle' || type === 'rectangle')
             opacity = properties.fillOpacity;
-        objectOpacity.value = opacity ?? 1;
-        opacityValue.textContent = Math.round((opacity ?? 1) * 100) + '%';
+        LegacyAdapter.DOM.setInputValue('object-opacity', opacity ?? 1);
+        LegacyAdapter.DOM.setText('opacity-value', Math.round((opacity ?? 1) * 100) + '%');
     }
     // --- Ініціалізація контролів зображень ---
     if (imageGroup) {
-        const imageInput = document.getElementById('object-image');
-        const imagePreviewContainer = document.getElementById('object-image-preview-container');
-        const imagePreview = document.getElementById('object-image-preview');
-        const imageRemoveBtn = document.getElementById('object-image-remove');
+        const imageInput = LegacyAdapter.DOM.getElement('object-image');
+        const imagePreviewContainer = LegacyAdapter.DOM.getElement('object-image-preview-container');
+        const imagePreview = LegacyAdapter.DOM.getElement('object-image-preview');
+        const imageRemoveBtn = LegacyAdapter.DOM.getElement('object-image-remove');
         // Показуємо попередній перегляд якщо є зображення
         if (properties.image) {
             if (imagePreviewContainer)
@@ -198,15 +199,15 @@ export function showEditModal(layer) {
     }
     // --- Додаю інтерактивність для вибору кольору ---
     if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle')) {
-        const colorPalette = document.getElementById('color-palette');
-        const objectColorInput = document.getElementById('object-color');
+        const colorPalette = LegacyAdapter.DOM.getElement('color-palette');
+        const objectColorInput = LegacyAdapter.DOM.getElement('object-color');
         if (colorPalette && objectColorInput) {
             // Клік по swatch
             colorPalette.querySelectorAll('.color-swatch').forEach(swatch => {
                 swatch.onclick = function () {
                     colorPalette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
                     swatch.classList.add('selected');
-                    objectColorInput.value = swatch.dataset.color || '';
+                    LegacyAdapter.DOM.setInputValue('object-color', swatch.dataset.color || '');
                     if (state.currentEditingObject.value) {
                         state.currentEditingObject.value.properties = state.currentEditingObject.value.properties || {};
                         state.currentEditingObject.value.properties.color = swatch.dataset.color;
@@ -233,7 +234,7 @@ export function showEditModal(layer) {
     }
     // --- Додаю інтерактивність для вибору стилю лінії ---
     if (type === 'polyline') {
-        const lineStyle = document.getElementById('line-style');
+        const lineStyle = LegacyAdapter.DOM.getElement('line-style');
         if (lineStyle && state.currentEditingObject.value) {
             lineStyle.onchange = function (e) {
                 if (!e.target)
@@ -264,13 +265,13 @@ export function showEditModal(layer) {
         }
     }
     // Показуємо модальне вікно
-    const editModal = document.getElementById('edit-object-modal');
+    const editModal = LegacyAdapter.DOM.getElement('edit-object-modal');
     if (editModal)
         editModal.classList.remove('hidden');
     // --- Зображення ---
     // видалено: imageInput, imagePreviewContainer, imagePreview, imageRemoveBtn, preview, вибір, видалення зображення
     // видалення об'єкта
-    const deleteObjectBtn = document.getElementById('delete-object');
+    const deleteObjectBtn = LegacyAdapter.DOM.getElement('delete-object');
     if (deleteObjectBtn) {
         deleteObjectBtn.onclick = function () {
             let typeName = 'обʼєкта';
@@ -442,10 +443,10 @@ export function addDoubleClickToLayer(layer) {
     }
 }
 export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel, buttons }) {
-    const modal = document.getElementById('confirm-modal');
-    const backdrop = document.getElementById('confirm-modal-backdrop');
-    const titleEl = document.getElementById('confirm-modal-title');
-    const msgEl = document.getElementById('confirm-modal-message');
+    const modal = LegacyAdapter.DOM.getElement('confirm-modal');
+    const backdrop = LegacyAdapter.DOM.getElement('confirm-modal-backdrop');
+    const titleEl = LegacyAdapter.DOM.getElement('confirm-modal-title');
+    const msgEl = LegacyAdapter.DOM.getElement('confirm-modal-message');
     const footer = modal?.querySelector('.modal-footer');
     if (!modal || !titleEl || !msgEl || !footer)
         return;
@@ -453,8 +454,8 @@ export function showConfirmDialog({ title = 'Підтвердження', messag
     modal.style.display = 'block';
     if (backdrop)
         backdrop.classList.remove('hidden');
-    titleEl.textContent = title;
-    msgEl.textContent = message;
+    LegacyAdapter.DOM.setText('confirm-modal-title', title);
+    LegacyAdapter.DOM.setText('confirm-modal-message', message);
     // Очищаємо футер
     footer.innerHTML = '';
     if (buttons && buttons.length) {
@@ -1273,11 +1274,11 @@ export function createLayerControl(layerObj) {
     layerControlsDiv.appendChild(layerCard);
     return layerCard;
 }
-export const layerControlsDiv = document.getElementById('layer-controls');
-export const addLayerBtn = document.getElementById('add-layer');
-export const exportAllBtn = document.getElementById('export-all');
-export const importAllBtn = document.getElementById('import-all');
-export const importAllInput = document.getElementById('import-all-input');
+export const layerControlsDiv = LegacyAdapter.DOM.getElement('layer-controls');
+export const addLayerBtn = LegacyAdapter.DOM.getElement('add-layer');
+export const exportAllBtn = LegacyAdapter.DOM.getElement('export-all');
+export const importAllBtn = LegacyAdapter.DOM.getElement('import-all');
+export const importAllInput = LegacyAdapter.DOM.getElement('import-all-input');
 export let isDraggingObject = false;
 // Function to get currently selected layer
 export function getSelectedLayer() {
@@ -1304,7 +1305,7 @@ import { updateDrawControlVisibility } from './draw-control.js';
 // Робимо renderObjectsList глобально доступною
 // (window as any).renderObjectsList = renderObjectsList; // більше не потрібно
 // --- Додаю оновлення списку об'єктів після збереження змін у модалці ---
-const saveObjectBtn = document.getElementById('save-object');
+const saveObjectBtn = LegacyAdapter.DOM.getElement('save-object');
 if (saveObjectBtn) {
     saveObjectBtn.addEventListener('click', () => {
         // Оновлюємо картку активного шару після збереження змін
@@ -1324,8 +1325,8 @@ if (saveObjectBtn) {
     });
 }
 // Панель шарів: приховування/показ
-const layersPanelDrawer = document.getElementById('layers-panel-drawer');
-const layersPanelToggle = document.getElementById('layers-panel-toggle');
+const layersPanelDrawer = LegacyAdapter.DOM.getElement('layers-panel-drawer');
+const layersPanelToggle = LegacyAdapter.DOM.getElement('layers-panel-toggle');
 if (layersPanelDrawer && layersPanelToggle) {
     layersPanelToggle.addEventListener('click', () => {
         const isClosed = layersPanelDrawer.classList.toggle('closed');
@@ -1375,7 +1376,7 @@ if (typeof window !== 'undefined' && typeof L !== 'undefined') {
             }
         });
     });
-    const mapEl = document.getElementById('map');
+    const mapEl = LegacyAdapter.DOM.getElement('map');
     if (mapEl)
         markerObserver.observe(mapEl, { childList: true, subtree: true });
 }

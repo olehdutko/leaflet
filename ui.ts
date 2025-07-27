@@ -7,6 +7,7 @@ import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './util
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
 import { updateActiveLayerUI } from './layers.js';
+import { LegacyAdapter } from './adapters/legacy-adapter.js';
 
 export const layerIdToRenderObjectsList = new Map();
 
@@ -20,22 +21,22 @@ export function showEditModal(layer: any) {
   const type = getObjectType(layer);
   const properties = getObjectProperties(layer);
   // Оновлюємо заголовок
-  const modalTitle = document.getElementById('modal-title');
+  const modalTitle = LegacyAdapter.DOM.getElement('modal-title');
   if (modalTitle) {
-    modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'обʼєкта'}`;
+    LegacyAdapter.DOM.setText('modal-title', `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'обʼєкта'}`);
   }
   // Заповнюємо поля
-  const objectName = document.getElementById('object-name') as HTMLInputElement | null;
-  if (objectName) objectName.value = properties.name || '';
-  const objectDescription = document.getElementById('object-description') as HTMLTextAreaElement | null;
-  if (objectDescription) objectDescription.value = properties.description || '';
+  const objectName = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-name');
+  if (objectName) LegacyAdapter.DOM.setInputValue('object-name', properties.name || '');
+  const objectDescription = LegacyAdapter.DOM.getElement<HTMLTextAreaElement>('object-description');
+  if (objectDescription) LegacyAdapter.DOM.setInputValue('object-description', properties.description || '');
   // Групи контролів
-  const colorPickerGroup = document.getElementById('color-picker-group') as HTMLElement | null;
-  const lineWidthGroup = document.getElementById('line-width-group') as HTMLElement | null;
-  const styleGroup = document.getElementById('style-group') as HTMLElement | null;
-  const opacityGroup = document.getElementById('opacity-group') as HTMLElement | null;
-  const markerIconGroup = document.getElementById('marker-icon-group') as HTMLElement | null;
-  const imageGroup = document.getElementById('object-image-group') as HTMLElement | null;
+  const colorPickerGroup = LegacyAdapter.DOM.getElement<HTMLElement>('color-picker-group');
+  const lineWidthGroup = LegacyAdapter.DOM.getElement<HTMLElement>('line-width-group');
+  const styleGroup = LegacyAdapter.DOM.getElement<HTMLElement>('style-group');
+  const opacityGroup = LegacyAdapter.DOM.getElement<HTMLElement>('opacity-group');
+  const markerIconGroup = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-group');
+  const imageGroup = LegacyAdapter.DOM.getElement<HTMLElement>('object-image-group');
   // Приховуємо всі групи
   [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
@@ -46,24 +47,24 @@ export function showEditModal(layer: any) {
     if (markerIconGroup) markerIconGroup.style.display = 'block';
     if (imageGroup) imageGroup.style.display = 'block';
     // Встановити значення інпуту та превʼю
-    const markerIconInput = document.getElementById('marker-icon') as HTMLInputElement | null;
-    const markerIconPreview = document.getElementById('marker-icon-preview') as HTMLElement | null;
+    const markerIconInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-icon');
+    const markerIconPreview = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-preview');
     if (markerIconInput && markerIconPreview) {
-      (markerIconInput as HTMLInputElement).value = properties.icon || 'place';
-      (markerIconPreview as HTMLElement).textContent = (markerIconInput as HTMLInputElement).value;
-      (markerIconInput as HTMLInputElement).oninput = function () {
-        (markerIconPreview as HTMLElement).textContent = (markerIconInput as HTMLInputElement).value;
+      LegacyAdapter.DOM.setInputValue('marker-icon', properties.icon || 'place');
+      LegacyAdapter.DOM.setText('marker-icon-preview', markerIconInput.value);
+      markerIconInput.oninput = function () {
+        LegacyAdapter.DOM.setText('marker-icon-preview', markerIconInput.value);
       };
     }
     // Показати/заповнити координати
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = '';
-    const latInput = document.getElementById('marker-lat');
-    const lngInput = document.getElementById('marker-lng');
+    const latInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-lat');
+    const lngInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-lng');
     if (latInput && lngInput && state.currentEditingObject.value && (state.currentEditingObject.value as any).getLatLng) {
       const latlng = (state.currentEditingObject.value as any).getLatLng();
-      (latInput as HTMLInputElement).value = latlng.lat.toString();
-      (lngInput as HTMLInputElement).value = latlng.lng.toString();
+      LegacyAdapter.DOM.setInputValue('marker-lat', latlng.lat.toString());
+      LegacyAdapter.DOM.setInputValue('marker-lng', latlng.lng.toString());
     }
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
     if (colorPickerGroup) colorPickerGroup.style.display = 'block';
@@ -90,33 +91,33 @@ export function showEditModal(layer: any) {
   }
   // Заповнюємо значення контролів
   // Колір
-  const objectColorInput = document.getElementById('object-color');
-  if (objectColorInput) (objectColorInput as HTMLInputElement).value = properties.color || properties.fillColor || '#1976d2';
+  const objectColorInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
+  if (objectColorInput) LegacyAdapter.DOM.setInputValue('object-color', properties.color || properties.fillColor || '#1976d2');
   // Товщина
-  const lineWidth = document.getElementById('line-width');
-  const lineWidthValue = document.getElementById('line-width-value');
+  const lineWidth = LegacyAdapter.DOM.getElement<HTMLInputElement>('line-width');
+  const lineWidthValue = LegacyAdapter.DOM.getElement<HTMLElement>('line-width-value');
   if (lineWidth && lineWidthValue && properties.weight) {
-    (lineWidth as HTMLInputElement).value = properties.weight;
-    (lineWidthValue as HTMLElement).textContent = properties.weight + 'px';
+    LegacyAdapter.DOM.setInputValue('line-width', properties.weight);
+    LegacyAdapter.DOM.setText('line-width-value', properties.weight + 'px');
   }
   // Стиль лінії (за замовчуванням solid)
-  const lineStyle = document.getElementById('line-style');
-  if (lineStyle) (lineStyle as HTMLInputElement).value = properties.style || 'solid';
+  const lineStyle = LegacyAdapter.DOM.getElement<HTMLInputElement>('line-style');
+  if (lineStyle) LegacyAdapter.DOM.setInputValue('line-style', properties.style || 'solid');
   // Прозорість
-  const objectOpacity = document.getElementById('object-opacity');
-  const opacityValue = document.getElementById('opacity-value');
+  const objectOpacity = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-opacity');
+  const opacityValue = LegacyAdapter.DOM.getElement<HTMLElement>('opacity-value');
   if (objectOpacity && opacityValue) {
     let opacity = properties.opacity;
     if (type === 'polygon' || type === 'circle' || type === 'rectangle') opacity = properties.fillOpacity;
-    (objectOpacity as HTMLInputElement).value = opacity ?? 1;
-    (opacityValue as HTMLElement).textContent = Math.round((opacity ?? 1) * 100) + '%';
+    LegacyAdapter.DOM.setInputValue('object-opacity', opacity ?? 1);
+    LegacyAdapter.DOM.setText('opacity-value', Math.round((opacity ?? 1) * 100) + '%');
   }
   // --- Ініціалізація контролів зображень ---
   if (imageGroup) {
-    const imageInput = document.getElementById('object-image') as HTMLInputElement | null;
-    const imagePreviewContainer = document.getElementById('object-image-preview-container') as HTMLElement | null;
-    const imagePreview = document.getElementById('object-image-preview') as HTMLImageElement | null;
-    const imageRemoveBtn = document.getElementById('object-image-remove') as HTMLButtonElement | null;
+    const imageInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-image');
+    const imagePreviewContainer = LegacyAdapter.DOM.getElement<HTMLElement>('object-image-preview-container');
+    const imagePreview = LegacyAdapter.DOM.getElement<HTMLImageElement>('object-image-preview');
+    const imageRemoveBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('object-image-remove');
 
     // Показуємо попередній перегляд якщо є зображення
     if (properties.image) {
@@ -176,15 +177,15 @@ export function showEditModal(layer: any) {
 
   // --- Додаю інтерактивність для вибору кольору ---
   if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle')) {
-    const colorPalette = document.getElementById('color-palette');
-    const objectColorInput = document.getElementById('object-color');
+    const colorPalette = LegacyAdapter.DOM.getElement<HTMLElement>('color-palette');
+    const objectColorInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
     if (colorPalette && objectColorInput) {
       // Клік по swatch
       (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(swatch => {
         (swatch as HTMLElement).onclick = function () {
           (colorPalette as HTMLElement).querySelectorAll('.color-swatch').forEach(s => (s as HTMLElement).classList.remove('selected'));
           (swatch as HTMLElement).classList.add('selected');
-          (objectColorInput as HTMLInputElement).value = (swatch as HTMLElement).dataset.color || '';
+          LegacyAdapter.DOM.setInputValue('object-color', (swatch as HTMLElement).dataset.color || '');
           if (state.currentEditingObject.value) {
             (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
             (state.currentEditingObject.value as any).properties.color = (swatch as HTMLElement).dataset.color;
@@ -211,7 +212,7 @@ export function showEditModal(layer: any) {
   }
   // --- Додаю інтерактивність для вибору стилю лінії ---
   if (type === 'polyline') {
-    const lineStyle = document.getElementById('line-style');
+    const lineStyle = LegacyAdapter.DOM.getElement<HTMLInputElement>('line-style');
     if (lineStyle && state.currentEditingObject.value) {
       (lineStyle as HTMLInputElement).onchange = function (e) {
         if (!e.target) return;
@@ -235,12 +236,12 @@ export function showEditModal(layer: any) {
     }
   }
   // Показуємо модальне вікно
-  const editModal = document.getElementById('edit-object-modal');
-  if (editModal) (editModal as HTMLElement).classList.remove('hidden');
+  const editModal = LegacyAdapter.DOM.getElement<HTMLElement>('edit-object-modal');
+  if (editModal) editModal.classList.remove('hidden');
   // --- Зображення ---
   // видалено: imageInput, imagePreviewContainer, imagePreview, imageRemoveBtn, preview, вибір, видалення зображення
   // видалення об'єкта
-  const deleteObjectBtn = document.getElementById('delete-object');
+  const deleteObjectBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('delete-object');
   if (deleteObjectBtn) {
     deleteObjectBtn.onclick = function () {
       let typeName = 'обʼєкта';
@@ -419,17 +420,17 @@ export function addDoubleClickToLayer(layer: any) {
 }
 
 export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel, buttons }: { title?: string, message?: string, onConfirm?: (action?: string) => void, onCancel?: () => void, buttons?: { text: string, action: string, className?: string }[] }) {
-  const modal = document.getElementById('confirm-modal');
-  const backdrop = document.getElementById('confirm-modal-backdrop');
-  const titleEl = document.getElementById('confirm-modal-title');
-  const msgEl = document.getElementById('confirm-modal-message');
+  const modal = LegacyAdapter.DOM.getElement<HTMLElement>('confirm-modal');
+  const backdrop = LegacyAdapter.DOM.getElement<HTMLElement>('confirm-modal-backdrop');
+  const titleEl = LegacyAdapter.DOM.getElement<HTMLElement>('confirm-modal-title');
+  const msgEl = LegacyAdapter.DOM.getElement<HTMLElement>('confirm-modal-message');
   const footer = modal?.querySelector('.modal-footer');
   if (!modal || !titleEl || !msgEl || !footer) return;
   modal.classList.remove('hidden');
   modal.style.display = 'block';
   if (backdrop) backdrop.classList.remove('hidden');
-  titleEl.textContent = title;
-  msgEl.textContent = message;
+  LegacyAdapter.DOM.setText('confirm-modal-title', title);
+  LegacyAdapter.DOM.setText('confirm-modal-message', message);
   // Очищаємо футер
   footer.innerHTML = '';
   if (buttons && buttons.length) {
@@ -1294,11 +1295,11 @@ export function createLayerControl(layerObj: any) {
   return layerCard;
 }
 
-export const layerControlsDiv = document.getElementById('layer-controls');
-export const addLayerBtn = document.getElementById('add-layer');
-export const exportAllBtn = document.getElementById('export-all');
-export const importAllBtn = document.getElementById('import-all');
-export const importAllInput = document.getElementById('import-all-input');
+export const layerControlsDiv = LegacyAdapter.DOM.getElement<HTMLElement>('layer-controls');
+export const addLayerBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('add-layer');
+export const exportAllBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('export-all');
+export const importAllBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('import-all');
+export const importAllInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('import-all-input');
 export let isDraggingObject = false;
 
 // Function to get currently selected layer
@@ -1331,7 +1332,7 @@ import { updateDrawControlVisibility } from './draw-control.js';
 // (window as any).renderObjectsList = renderObjectsList; // більше не потрібно
 
 // --- Додаю оновлення списку об'єктів після збереження змін у модалці ---
-const saveObjectBtn = document.getElementById('save-object');
+const saveObjectBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('save-object');
 if (saveObjectBtn) {
   saveObjectBtn.addEventListener('click', () => {
     // Оновлюємо картку активного шару після збереження змін
@@ -1352,8 +1353,8 @@ if (saveObjectBtn) {
 }
 
 // Панель шарів: приховування/показ
-const layersPanelDrawer = document.getElementById('layers-panel-drawer');
-const layersPanelToggle = document.getElementById('layers-panel-toggle');
+const layersPanelDrawer = LegacyAdapter.DOM.getElement<HTMLElement>('layers-panel-drawer');
+const layersPanelToggle = LegacyAdapter.DOM.getElement<HTMLElement>('layers-panel-toggle');
 if (layersPanelDrawer && layersPanelToggle) {
   layersPanelToggle.addEventListener('click', () => {
     const isClosed = layersPanelDrawer.classList.toggle('closed');
@@ -1409,6 +1410,6 @@ if (typeof window !== 'undefined' && typeof L !== 'undefined') {
       }
     });
   });
-  const mapEl = document.getElementById('map');
+  const mapEl = LegacyAdapter.DOM.getElement<HTMLElement>('map');
   if (mapEl) markerObserver.observe(mapEl, { childList: true, subtree: true });
 }
