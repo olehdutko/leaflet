@@ -65,7 +65,7 @@ export class StorageService {
     return {
       id: layer.id,
       tileType: layer.tileType,
-      opacity: layer.tileLayer.options.opacity,
+      opacity: layer.tileLayer?.options?.opacity ?? 1,
       showLabels: this.getShowLabelsFromLayer(layer),
       geojson: this.extractGeoJSON(layer),
       title: layer.title || undefined,
@@ -88,7 +88,7 @@ export class StorageService {
    */
   private static getShowLabelsFromLayer(layer: LayerObj): boolean {
     const tileLayer = layer.tileLayer as any;
-    if (tileLayer._url && tileLayer._url.includes('nolabels')) {
+    if (tileLayer?._url && tileLayer._url.includes('nolabels')) {
       return false;
     }
     return true;
@@ -100,11 +100,13 @@ export class StorageService {
   private static extractGeoJSON(layer: LayerObj): any {
     const features: any[] = [];
     
-    layer.featureGroup.eachLayer((layerObj: any) => {
-      if (layerObj.feature) {
-        features.push(layerObj.feature);
-      }
-    });
+    if (layer.featureGroup?.eachLayer) {
+      layer.featureGroup.eachLayer((layerObj: any) => {
+        if (layerObj.feature) {
+          features.push(layerObj.feature);
+        }
+      });
+    }
     
     return {
       type: 'FeatureCollection',
@@ -116,7 +118,7 @@ export class StorageService {
    * Витяг overlay даних з шару
    */
   private static extractOverlays(layer: LayerObj): any[] {
-    const imageData = layer.featureGroup.images || layer.featureGroup.overlays;
+    const imageData = layer.featureGroup?.images || layer.featureGroup?.overlays;
     if (imageData && Array.isArray(imageData)) {
       return imageData.map((img: any) => ({
         url: img.url,

@@ -213,7 +213,7 @@ const tileLayerOptions = {
 };
 
 // Видаляю створення карти та attributionControl з main.ts
-// const map = L.map('map', {
+
 //   center: center,
 //   zoom: 13,
 //   // layers: [baseMap] // прибрано
@@ -232,7 +232,7 @@ import { materialIcons, filterMaterialIcons } from './material-icons.js';
 import { getLayerIcon, createTooltip, getObjectType, getObjectProperties, getColoredMarkerIcon } from './utils.js';
 
 // --- глобальний прапорець для drag & drop тултіпів ---
-// let isDraggingObject = false; // видалено, бо імпортується з ui.ts
+
 
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
@@ -328,141 +328,9 @@ export function closeEditModal() {
   state.currentEditingObject.value = null;
 }
 
-// Функція для збереження змін
-// function saveObjectChanges() {
-//   if (!state.currentEditingObject.value) return;
 
-//   const type = getObjectType(state.currentEditingObject.value as L.Layer);
-//   const properties: any = {
-//     name: LegacyAdapter.DOM.getInputValue('object-name'),
-//     description: LegacyAdapter.DOM.getInputValue('object-description')
-//   };
 
-//   if (type === 'marker') {
-//     const markerColor = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
-//     if (markerColor) properties.color = markerColor.value;
-//     const markerIcon = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-icon');
-//     if (markerIcon) properties.icon = markerIcon.value;
-//     // --- координати ---
-//     const latInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-lat');
-//     const lngInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-lng');
-//     if (latInput && lngInput && state.currentEditingObject.value && (state.currentEditingObject.value as any).setLatLng) {
-//       const lat = parseFloat((latInput as HTMLInputElement).value);
-//       const lng = parseFloat((lngInput as HTMLInputElement).value);
-//       if (!isNaN(lat) && !isNaN(lng)) {
-//         const old = (state.currentEditingObject.value as any).getLatLng();
-//         if (lat !== old.lat || lng !== old.lng) {
-//           (state.currentEditingObject.value as any).setLatLng([lat, lng]);
-//         }
-//       }
-//     }
-//   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-//     const fillColor = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
-//     if (fillColor) properties.fillColor = fillColor.value;
-//     // Для полігонів колір рамки та прозорість можна додати за потреби
-//     properties.color = fillColor ? fillColor.value : undefined;
-//     const objectOpacity = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-opacity');
-//     if (objectOpacity) properties.fillOpacity = parseFloat(objectOpacity.value);
-//     properties.opacity = 1;
-//   } else if (type === 'polyline') {
-//     const objectColor = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
-//     if (objectColor) properties.color = objectColor.value;
-//     const lineWidth = LegacyAdapter.DOM.getElement<HTMLInputElement>('line-width');
-//     if (lineWidth) properties.weight = parseInt(lineWidth.value);
-//     const lineStyle = LegacyAdapter.DOM.getElement<HTMLInputElement>('line-style');
-//     if (lineStyle) properties.style = lineStyle.value;
-//     // opacity не зчитуємо для polyline
-//   } else if (type === 'image') {
-//     const objectOpacity = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-opacity');
-//     if (objectOpacity) properties.opacity = parseFloat(objectOpacity.value);
-//   }
 
-//   // зображення
-//   const imagePreview = LegacyAdapter.DOM.getElement<HTMLImageElement>('object-image-preview');
-//   if (imagePreview && imagePreview.src && !imagePreview.classList.contains('hidden')) {
-//     properties.image = imagePreview.src;
-//   }
-
-//   applyObjectProperties(state.currentEditingObject.value as L.Layer, properties);
-//   // --- Додаємо копіювання у feature.properties ---
-//   if ((state.currentEditingObject.value as any).feature && (state.currentEditingObject.value as any).properties) {
-//     (state.currentEditingObject.value as any).feature.properties = { ...(state.currentEditingObject.value as any).properties };
-//   }
-//   saveLayersToStorage();
-//   // Оновлюємо пошук об'єктів після зміни об'єкта
-//   updateObjectSearchLayers(customLayers);
-//   closeEditModal();
-// }
-
-// Ініціалізація модального вікна
-// function initEditModal() {
-//   // Обробники подій для кнопок
-//   LegacyAdapter.DOM.addEventListener<HTMLElement>('modal-close', 'click', closeEditModal);
-//   LegacyAdapter.DOM.addEventListener<HTMLElement>('cancel-edit', 'click', closeEditModal);
-//   LegacyAdapter.DOM.addEventListener<HTMLElement>('save-object', 'click', saveObjectChanges);
-
-//   // --- Додаю підтвердження для видалення об'єкта ---
-//   const deleteButton = LegacyAdapter.DOM.getElement<HTMLElement>('delete-object');
-//   if (deleteButton) {
-//     deleteButton.onclick = function () {
-//       if (!state.currentEditingObject.value) return;
-//   const type = getObjectType(state.currentEditingObject.value as L.Layer);
-//     let typeName = 'обʼєкт';
-//     if (type === 'marker') typeName = 'маркер';
-//     else if (type === 'polygon') typeName = 'полігон';
-//     else if (type === 'polyline') typeName = 'полілінію';
-//     else if (type === 'rectangle') typeName = 'прямокутник';
-//     else if (type === 'circle') typeName = 'коло';
-//     const properties = getObjectProperties(state.currentEditingObject.value as L.Layer);
-//     const objectName = properties.name ? `"${properties.name}"` : typeName;
-//     closeEditModal();
-//     showConfirmDialog({
-//       title: `Видалення об'єкта: ${objectName}`,
-//       message: `Ви дійсно хочете видалити об'єкт ${objectName}?`,
-//       onConfirm: function (action?: string) {
-//         if (!state.currentEditingObject.value) return;
-//         const layerObj = customLayers.find(l => l.featureGroup && l.featureGroup.hasLayer(state.currentEditingObject.value as unknown as L.Layer));
-//         if (layerObj && layerObj.featureGroup) {
-//           layerObj.featureGroup.removeLayer(state.currentEditingObject.value as L.Layer);
-//         }
-//         map.removeLayer(state.currentEditingObject.value as L.Layer);
-//         saveLayersToStorage();
-//         // Оновлюємо пошук об'єктів після видалення об'єкта
-//         updateObjectSearchLayers(customLayers);
-//       },
-//       buttons: [
-//         { text: 'Видалити', action: 'delete', className: 'btn-danger' },
-//         { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
-//       ]
-//     });
-//   }
-//   };
-
-//   // Обробники для range слайдерів
-//   (document.getElementById('line-width') as HTMLInputElement).addEventListener('input', function () {
-//     (document.getElementById('line-width-value') as HTMLElement).textContent = (this as HTMLInputElement).value;
-//   });
-
-//   (document.getElementById('object-opacity') as HTMLInputElement).addEventListener('input', function () {
-//     (document.getElementById('opacity-value') as HTMLElement).textContent = Math.round(Number((this as HTMLInputElement).value) * 100) + '%';
-//   });
-
-//   // Закриття по кліку поза модальним вікном
-//   (document.getElementById('edit-object-modal') as HTMLElement).addEventListener('click', function (e) {
-//     if (e.target === this) {
-//       closeEditModal();
-//     }
-//   });
-
-//   // Закриття по Escape
-//   document.addEventListener('keydown', function (e) {
-//     if (e.key === 'Escape' && (document.getElementById('edit-object-modal') as HTMLElement).classList.contains('hidden') === false) {
-//       closeEditModal();
-//     }
-//   });
-// }
-
-// Функція addDoubleClickToLayer перенесена в ui.ts
 
 // Імпорт модуля ініціалізації пошуку
 import { initializeSearch, updateObjectSearchLayers, destroySearch } from './search-init.js';
@@ -483,18 +351,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Ініціалізуємо залежності сервісів
-    appManager.initializeServiceDependencies(
-      map,
-      customLayers,
-      saveLayersToStorage,
-      createLayerControl,
-      getNextLayerId,
-      layerControlsDiv
-    );
+    if (layerControlsDiv) {
+      appManager.initializeServiceDependencies(
+        map,
+        customLayers,
+        saveLayersToStorage,
+        createLayerControl,
+        getNextLayerId,
+        layerControlsDiv
+      );
+    }
 
     // Ініціалізуємо додаткові функції
     waitForMaterialIconsAndInitAutocomplete();
-    // initEditModal(); // Видалено, бо ініціалізація перенесена в ModalService
     
     // Ініціалізуємо нову систему пошуку
     initializeSearch(customLayers);
@@ -569,11 +438,7 @@ const observeOverlayOpacity = () => {
 };
 observeOverlayOpacity();
 
-// Ініціалізація видалена - все відбувається в DOMContentLoaded
-// loadLayersFromStorage(); // ВИДАЛЕНО - подвійний виклик спричиняв дублікати!
-// waitForMaterialIconsAndInitAutocomplete();
-// initEditModal();
-// centerGeoSearchBar();
+
 
 // Імпортуємо draw control функції
 import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
@@ -615,8 +480,60 @@ if (importAllBtn && importAllInput) {
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext === 'kmz' || ext === 'kml') {
-      // Імпорт KMZ/KML через leaflet-omnivore
-      // handleKmzFile(file); // Видалено, бо імпорт перенесено в KmzService
+      // Імпорт KMZ/KML через KmzService
+      const appManager = AppManager.getInstance();
+      if (appManager.hasService('kmz')) {
+        const kmzService = appManager.getService<any>('kmz');
+        kmzService.handleKmzFile(file, {
+          onLayerExists: async (title: string, existingIndex: number) => {
+            return new Promise((resolve) => {
+              showConfirmDialog({
+                title: `Шар "${title}" вже існує`,
+                message: `Шар з назвою "${title}" вже існує. Що зробити?`,
+                onConfirm: (action?: string) => {
+                  if (action === 'duplicate') {
+                    // Дублювати з новою назвою
+                    let copyTitle = title + ' (копія)';
+                    let n = 2;
+                    while (customLayers.some(l => l.title === copyTitle)) {
+                      copyTitle = title + ` (копія ${n++})`;
+                    }
+                    resolve(copyTitle);
+                  } else if (action === 'overwrite') {
+                    // Перезаписати: видалити старий і додати новий
+                    const oldLayer = customLayers[existingIndex];
+                    if (oldLayer && oldLayer.featureGroup) {
+                      map.removeLayer(oldLayer.featureGroup);
+                    }
+                    customLayers.splice(existingIndex, 1);
+                    if (layerControlsDiv) {
+                      layerControlsDiv.innerHTML = '';
+                      customLayers.forEach(layer => createLayerControl(layer));
+                    }
+                    resolve(title);
+                  } else {
+                    // cancel — нічого не робити
+                    resolve('');
+                  }
+                },
+                buttons: [
+                  { text: 'Дублювати', action: 'duplicate', className: 'btn-primary' },
+                  { text: 'Перезаписати', action: 'overwrite', className: 'btn-danger' },
+                  { text: 'Скасувати', action: 'cancel', className: 'btn-secondary' }
+                ]
+              });
+            });
+          },
+          onSuccess: (layerConfig: any) => {
+            // Оновлюємо пошук об'єктів після додавання KMZ шару
+            updateObjectSearchLayers(customLayers);
+            console.log('KMZ файл успішно імпортовано:', layerConfig.title);
+          },
+          onError: (error: Error) => {
+            alert('Помилка при імпорті KMZ файлу: ' + error.message);
+          }
+        });
+      }
       return;
     }
     const reader = new FileReader();

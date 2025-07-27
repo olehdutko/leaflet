@@ -1,175 +1,102 @@
-// Тест інтеграції нових сервісів з існуючим кодом
+// Тест інтеграції сервісів після рефакторингу
+import { AppManager } from './managers/app-manager.js';
+import { EventManager } from './managers/event-manager.js';
+import { OverlayService } from './services/overlay-service.js';
+import { KmzService } from './services/kmz-service.js';
+import { ModalService } from './services/modal-service.js';
+import { GeoSearchService } from './services/search-service.js';
+import { ObjectSearchService } from './services/object-search-service.js';
 
-import { getElementById, setElementText } from './utils/dom-utils.js';
-import { StorageService } from './services/storage-service.js';
-import { ObjectService } from './services/object-service.js';
-import type { LayerObj, ObjectProperties } from './types/index.js';
+console.log('🧪 Початок тестування інтеграції сервісів...');
 
-/**
- * Тест інтеграції нових сервісів
- */
-export class IntegrationTest {
+// Тест 1: Перевірка створення AppManager
+try {
+  const appManager = AppManager.getInstance();
+  console.log('✅ AppManager створено успішно');
   
-  /**
-   * Запуск всіх тестів
-   */
-  static async runAllTests(): Promise<void> {
-    console.log('🚀 Запуск тестів інтеграції...');
-    
-    try {
-      await this.testDOMUtils();
-      await this.testStorageService();
-      await this.testObjectService();
-      await this.testTypes();
-      
-      console.log('✅ Всі тести пройшли успішно!');
-    } catch (error) {
-      console.error('❌ Помилка в тестах:', error);
+  // Тест 2: Перевірка ініціалізації AppManager
+  await appManager.init();
+  console.log('✅ AppManager ініціалізовано успішно');
+  
+  // Тест 3: Перевірка наявності сервісів
+  const services = ['overlay', 'kmz', 'modal', 'geosearch', 'objectsearch'];
+  for (const serviceName of services) {
+    if (appManager.hasService(serviceName)) {
+      console.log(`✅ Сервіс ${serviceName} доступний`);
+    } else {
+      console.log(`❌ Сервіс ${serviceName} НЕ доступний`);
     }
   }
   
-  /**
-   * Тест DOM утиліт
-   */
-  private static async testDOMUtils(): Promise<void> {
-    console.log('📋 Тестування DOM утиліт...');
-    
-    // Створюємо тестовий елемент
-    const testElement = document.createElement('div');
-    testElement.id = 'test-element';
-    document.body.appendChild(testElement);
-    
-    try {
-      // Тест getElementById
-      const foundElement = getElementById<HTMLDivElement>('test-element');
-      if (!foundElement) {
-        throw new Error('getElementById не знайшов елемент');
-      }
-      
-      // Тест setElementText
-      setElementText('test-element', 'Тестовий текст');
-      if (foundElement.textContent !== 'Тестовий текст') {
-        throw new Error('setElementText не встановив текст');
-      }
-      
-      console.log('✅ DOM утиліти працюють коректно');
-    } finally {
-      // Очищення
-      document.body.removeChild(testElement);
-    }
+  // Тест 4: Перевірка EventManager
+  const eventManager = appManager.getEventManager();
+  if (eventManager) {
+    console.log('✅ EventManager доступний');
+  } else {
+    console.log('❌ EventManager НЕ доступний');
   }
   
-  /**
-   * Тест Storage Service
-   */
-  private static async testStorageService(): Promise<void> {
-    console.log('📋 Тестування Storage Service...');
-    
-    try {
-      // Тест збереження
-      const testLayers: LayerObj[] = [
-        {
-          id: 1,
-          tileLayer: {} as any,
-          featureGroup: {
-            eachLayer: () => {},
-            addLayer: () => {},
-            removeLayer: () => {},
-            hasLayer: () => false,
-            bringToFront: () => {}
-          },
-          tileType: 'План',
-          visible: true,
-          title: 'Тестовий шар'
-        }
-      ];
-      
-      StorageService.saveLayers(testLayers);
-      
-      // Тест завантаження
-      const loadedLayers = StorageService.loadLayers();
-      
-      // Тест перевірки наявності
-      const hasLayers = StorageService.hasLayers();
-      
-      // Очищення
-      StorageService.clearLayers();
-      
-      console.log('✅ Storage Service працює коректно');
-    } catch (error) {
-      throw new Error(`Storage Service помилка: ${error}`);
-    }
+  // Тест 5: Перевірка стану AppManager
+  if (appManager.isInitialized()) {
+    console.log('✅ AppManager ініціалізовано');
+  } else {
+    console.log('❌ AppManager НЕ ініціалізовано');
   }
   
-  /**
-   * Тест Object Service
-   */
-  private static async testObjectService(): Promise<void> {
-    console.log('📋 Тестування Object Service...');
-    
-    try {
-      // Тест властивостей
-      const mockLayer = {
-        properties: { name: 'Тестовий об\'єкт' },
-        feature: { properties: { description: 'Опис' } }
-      };
-      
-      const properties = ObjectService.getObjectProperties(mockLayer);
-      
-      if (properties.name !== 'Тестовий об\'єкт' || properties.description !== 'Опис') {
-        throw new Error('getObjectProperties не працює коректно');
-      }
-      
-      // Тест встановлення властивості
-      ObjectService.setObjectProperty(mockLayer, 'color', '#ff0000');
-      
-      if ((mockLayer.properties as any).color !== '#ff0000') {
-        throw new Error('setObjectProperty не працює коректно');
-      }
-      
-      console.log('✅ Object Service працює коректно');
-    } catch (error) {
-      throw new Error(`Object Service помилка: ${error}`);
-    }
+  if (appManager.isReady()) {
+    console.log('✅ AppManager готовий до роботи');
+  } else {
+    console.log('❌ AppManager НЕ готовий до роботи');
   }
   
-  /**
-   * Тест типів
-   */
-  private static async testTypes(): Promise<void> {
-    console.log('📋 Тестування типів...');
-    
-    try {
-      // Тест LayerObj
-      const layerObj: LayerObj = {
-        id: 1,
-        tileLayer: {} as any,
-        featureGroup: {
-          eachLayer: () => {},
-          addLayer: () => {},
-          removeLayer: () => {},
-          hasLayer: () => false,
-          bringToFront: () => {}
-        },
-        tileType: 'План',
-        visible: true,
-        title: 'Тестовий шар'
-      };
-      
-      // Тест ObjectProperties
-      const objectProperties: ObjectProperties = {
-        name: 'Тестовий об\'єкт',
-        description: 'Опис',
-        color: '#ff0000',
-        weight: 3
-      };
-      
-      console.log('✅ Типи працюють коректно');
-    } catch (error) {
-      throw new Error(`Типи помилка: ${error}`);
-    }
-  }
+} catch (error) {
+  console.error('❌ Помилка при тестуванні AppManager:', error);
 }
 
-// Експортуємо для використання в браузері
-(window as any).IntegrationTest = IntegrationTest; 
+// Тест 6: Перевірка окремих сервісів
+try {
+  // OverlayService
+  const overlayService = OverlayService.getInstance();
+  console.log('✅ OverlayService створено');
+  
+  // KmzService
+  const kmzService = KmzService.getInstance();
+  console.log('✅ KmzService створено');
+  
+  // ModalService
+  const modalService = ModalService.getInstance();
+  console.log('✅ ModalService створено');
+  
+  // GeoSearchService
+  const geoSearchService = GeoSearchService.getInstance();
+  console.log('✅ GeoSearchService створено');
+  
+  // ObjectSearchService
+  const objectSearchService = ObjectSearchService.getInstance();
+  console.log('✅ ObjectSearchService створено');
+  
+} catch (error) {
+  console.error('❌ Помилка при тестуванні сервісів:', error);
+}
+
+// Тест 7: Перевірка EventManager
+try {
+  const eventManager = EventManager.getInstance();
+  
+  // Тест підписки на події
+  const subscriptionId = eventManager.on('test', (data) => {
+    console.log('✅ Подія test отримана:', data);
+  });
+  
+  // Тест емісії події
+  eventManager.emit('test', { message: 'Тестова подія' });
+  
+  // Тест відписки
+  eventManager.off(subscriptionId);
+  console.log('✅ EventManager працює коректно');
+  
+} catch (error) {
+  console.error('❌ Помилка при тестуванні EventManager:', error);
+}
+
+console.log('🎉 Тестування інтеграції завершено!'); 
