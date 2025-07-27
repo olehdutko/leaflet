@@ -17,7 +17,7 @@ async function initializeApp(): Promise<void> {
     logger.info('Початок ініціалізації додатку');
 
     // Створення менеджерів
-    const appManager = new AppManager();
+    const appManager = AppManager.getInstance();
     const mapManager = new MapManager();
     const overlayManager = new OverlayManager();
     const kmzManager = new KmzManager();

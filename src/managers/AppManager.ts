@@ -2,12 +2,31 @@ import { BaseService } from '../base/BaseService.js';
 import { Logger } from '../utils/Logger.js';
 
 export class AppManager extends BaseService {
+  private static instance: AppManager | undefined;
   private services: Map<string, BaseService> = new Map();
   private initializationOrder: string[] = [];
+  private performanceMetrics: Map<string, { startTime: number; endTime?: number; duration?: number }> = new Map();
 
-  constructor() {
+  private constructor() {
     super('AppManager');
     this.logger = new Logger('AppManager');
+  }
+
+  /**
+   * Отримує єдиний екземпляр AppManager (Singleton pattern)
+   */
+  static getInstance(): AppManager {
+    if (!AppManager.instance) {
+      AppManager.instance = new AppManager();
+    }
+    return AppManager.instance;
+  }
+
+  /**
+   * Скидає інстанс (для тестування)
+   */
+  static resetInstance(): void {
+    AppManager.instance = undefined;
   }
 
   /**
@@ -113,8 +132,10 @@ export class AppManager extends BaseService {
       }
 
       try {
+        this.startPerformanceMeasurement(serviceName);
         await service.init();
-        this.logger.info(`Service ${serviceName} initialized successfully`);
+        const duration = this.endPerformanceMeasurement(serviceName);
+        this.logger.info(`Service ${serviceName} initialized successfully in ${duration.toFixed(2)}ms`);
       } catch (error) {
         this.logger.error(`Failed to initialize service ${serviceName}`, error);
         throw error;
@@ -238,6 +259,56 @@ export class AppManager extends BaseService {
   }
 
   /**
+   * Починає вимірювання продуктивності для сервісу
+   */
+  startPerformanceMeasurement(serviceName: string): void {
+    this.performanceMetrics.set(serviceName, { startTime: performance.now() });
+  }
+
+  /**
+   * Завершує вимірювання продуктивності для сервісу
+   */
+  endPerformanceMeasurement(serviceName: string): number {
+    const metric = this.performanceMetrics.get(serviceName);
+    if (!metric) {
+      this.logger.warn(`No performance measurement found for service: ${serviceName}`);
+      return 0;
+    }
+
+    metric.endTime = performance.now();
+    metric.duration = metric.endTime - metric.startTime;
+    
+    this.logger.info(`Performance measurement for ${serviceName}: ${metric.duration.toFixed(2)}ms`);
+    return metric.duration;
+  }
+
+  /**
+   * Отримує метрики продуктивності
+   */
+  getPerformanceMetrics(): Record<string, { duration: number; startTime: number; endTime: number }> {
+    const metrics: Record<string, { duration: number; startTime: number; endTime: number }> = {};
+    
+    this.performanceMetrics.forEach((metric, serviceName) => {
+      if (metric.duration !== undefined && metric.endTime !== undefined) {
+        metrics[serviceName] = {
+          duration: metric.duration,
+          startTime: metric.startTime,
+          endTime: metric.endTime
+        };
+      }
+    });
+
+    return metrics;
+  }
+
+  /**
+   * Очищує метрики продуктивності
+   */
+  clearPerformanceMetrics(): void {
+    this.performanceMetrics.clear();
+  }
+
+  /**
    * Ініціалізація AppManager
    */
   protected onInit(): void {
@@ -253,4 +324,4 @@ export class AppManager extends BaseService {
 }
 
 // Експортуємо єдиний екземпляр
-export const appManager = new AppManager(); 
+export const appManager = AppManager.getInstance(); 

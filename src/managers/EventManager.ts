@@ -6,6 +6,10 @@ export class EventManager extends BaseService {
   private handlers: Map<string, EventHandler[]> = new Map();
   private globalHandlers: Map<string, Function[]> = new Map();
   private elementHandlers: Map<HTMLElement, Map<string, Function[]>> = new Map();
+  private debounceTimers: Map<string, number> = new Map();
+  private throttleTimers: Map<string, number> = new Map();
+  private debounceDelays: Map<string, number> = new Map();
+  private throttleDelays: Map<string, number> = new Map();
 
   constructor() {
     super('EventManager');
@@ -304,12 +308,108 @@ export class EventManager extends BaseService {
     this.addHandler(event, limitedHandler, element);
   }
 
+  /**
+   * Додає обробник з дебаунсингом
+   */
+  addDebouncedHandler(
+    event: string,
+    handler: Function,
+    delay: number = 300,
+    element?: HTMLElement
+  ): void {
+    const key = `${event}_${element?.id || 'global'}`;
+    this.debounceDelays.set(key, delay);
+
+    const debouncedHandler = (...args: any[]) => {
+      const timerKey = key;
+      
+      if (this.debounceTimers.has(timerKey)) {
+        clearTimeout(this.debounceTimers.get(timerKey)!);
+      }
+
+      const timer = setTimeout(() => {
+        handler(...args);
+        this.debounceTimers.delete(timerKey);
+      }, delay);
+
+      this.debounceTimers.set(timerKey, timer);
+    };
+
+    this.addHandler(event, debouncedHandler, element);
+  }
+
+  /**
+   * Додає обробник з throttling
+   */
+  addThrottledHandler(
+    event: string,
+    handler: Function,
+    delay: number = 100,
+    element?: HTMLElement
+  ): void {
+    const key = `${event}_${element?.id || 'global'}`;
+    this.throttleDelays.set(key, delay);
+
+    const throttledHandler = (...args: any[]) => {
+      const timerKey = key;
+      
+      if (this.throttleTimers.has(timerKey)) {
+        return; // Ігноруємо виклик, якщо throttle активний
+      }
+
+      handler(...args);
+
+      const timer = setTimeout(() => {
+        this.throttleTimers.delete(timerKey);
+      }, delay);
+
+      this.throttleTimers.set(timerKey, timer);
+    };
+
+    this.addHandler(event, throttledHandler, element);
+  }
+
+  /**
+   * Очищує всі дебаунс таймери
+   */
+  clearDebounceTimers(): void {
+    this.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.debounceTimers.clear();
+  }
+
+  /**
+   * Очищує всі throttle таймери
+   */
+  clearThrottleTimers(): void {
+    this.throttleTimers.forEach(timer => clearTimeout(timer));
+    this.throttleTimers.clear();
+  }
+
+  /**
+   * Отримує статистику дебаунс та throttle
+   */
+  getDebounceThrottleStats(): {
+    activeDebounceTimers: number;
+    activeThrottleTimers: number;
+    debounceDelays: Record<string, number>;
+    throttleDelays: Record<string, number>;
+  } {
+    return {
+      activeDebounceTimers: this.debounceTimers.size,
+      activeThrottleTimers: this.throttleTimers.size,
+      debounceDelays: Object.fromEntries(this.debounceDelays),
+      throttleDelays: Object.fromEntries(this.throttleDelays)
+    };
+  }
+
   protected onInit(): void {
     this.logger.info('EventManager initialized');
   }
 
   protected onDestroy(): void {
     this.clearAllHandlers();
+    this.clearDebounceTimers();
+    this.clearThrottleTimers();
     this.logger.info('EventManager destroyed');
   }
 } 

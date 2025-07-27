@@ -8,6 +8,9 @@ export class StateManager<T> extends BaseService {
   private saveTimeout: number | null = null;
   private autoSave: boolean = true;
   private saveInterval: number = 100;
+  private undoStack: T[] = [];
+  private redoStack: T[] = [];
+  private maxHistorySize: number = 50;
 
   constructor(initialState: T, serviceName: string = 'StateManager') {
     super(serviceName);
@@ -25,6 +28,9 @@ export class StateManager<T> extends BaseService {
    * Встановлює новий стан
    */
   setState(updates: Partial<T>): void {
+    // Зберігаємо поточний стан в історію перед зміною
+    this.saveToHistory();
+    
     this.state = { ...this.state, ...updates };
     this.notifySubscribers();
     this.scheduleSave();
@@ -230,6 +236,119 @@ export class StateManager<T> extends BaseService {
    */
   restoreFromSnapshot(snapshot: T): void {
     this.setState(snapshot);
+  }
+
+  /**
+   * Зберігає поточний стан в історію
+   */
+  private saveToHistory(): void {
+    // Зберігаємо поточний стан в undo стек
+    this.undoStack.push({ ...this.state });
+    
+    // Обмежуємо розмір історії
+    if (this.undoStack.length > this.maxHistorySize) {
+      this.undoStack.shift();
+    }
+    
+    // Очищуємо redo стек при новій зміні
+    this.redoStack = [];
+  }
+
+  /**
+   * Відміняє останню зміну (Undo)
+   */
+  undo(): boolean {
+    if (this.undoStack.length === 0) {
+      this.logger.warn('No undo history available');
+      return false;
+    }
+
+    // Зберігаємо поточний стан в redo стек
+    this.redoStack.push({ ...this.state });
+    
+    // Відновлюємо попередній стан
+    const previousState = this.undoStack.pop()!;
+    this.state = previousState;
+    
+    this.notifySubscribers();
+    this.scheduleSave();
+    
+    this.logger.info('Undo performed successfully');
+    return true;
+  }
+
+  /**
+   * Повторює відмінену зміну (Redo)
+   */
+  redo(): boolean {
+    if (this.redoStack.length === 0) {
+      this.logger.warn('No redo history available');
+      return false;
+    }
+
+    // Зберігаємо поточний стан в undo стек
+    this.undoStack.push({ ...this.state });
+    
+    // Відновлюємо наступний стан
+    const nextState = this.redoStack.pop()!;
+    this.state = nextState;
+    
+    this.notifySubscribers();
+    this.scheduleSave();
+    
+    this.logger.info('Redo performed successfully');
+    return true;
+  }
+
+  /**
+   * Перевіряє чи можна виконати undo
+   */
+  canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+
+  /**
+   * Перевіряє чи можна виконати redo
+   */
+  canRedo(): boolean {
+    return this.redoStack.length > 0;
+  }
+
+  /**
+   * Отримує розмір історії undo
+   */
+  getUndoStackSize(): number {
+    return this.undoStack.length;
+  }
+
+  /**
+   * Отримує розмір історії redo
+   */
+  getRedoStackSize(): number {
+    return this.redoStack.length;
+  }
+
+  /**
+   * Встановлює максимальний розмір історії
+   */
+  setMaxHistorySize(size: number): void {
+    this.maxHistorySize = size;
+    
+    // Обрізаємо існуючу історію якщо потрібно
+    while (this.undoStack.length > this.maxHistorySize) {
+      this.undoStack.shift();
+    }
+    
+    this.logger.info(`Max history size set to ${size}`);
+  }
+
+  /**
+   * Очищує всю історію
+   */
+  clearHistory(): void {
+    this.undoStack = [];
+    this.redoStack = [];
+    this.logger.info('History cleared');
   }
 
   /**
