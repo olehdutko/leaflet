@@ -1,254 +1,188 @@
-// Новий main.ts з ініціалізацією нової архітектури
+import { AppManager } from './managers/AppManager';
+import { OverlayManager } from './services/OverlayManager';
+import { KmzManager } from './services/KmzManager';
+import { GeoSearchManager } from './services/GeoSearchManager';
+import { ModalManager } from './services/ModalManager';
+import { MapManager } from './services/MapManager';
+import { Logger } from './utils/Logger';
 
-import { appManager } from './managers/AppManager.js';
-import { StateManager } from './managers/StateManager.js';
-import { EventManager } from './managers/EventManager.js';
-import { StorageService } from './services/StorageService.js';
-import { Logger } from './utils/Logger.js';
-import { LogLevel } from './enums/index.js';
+// Глобальний логер
+const logger = new Logger('Main');
 
-// Інтерфейс для стану додатку
-interface AppState {
-  layers: any[];
-  activeLayer: any | null;
-  currentEditingObject: any | null;
-  layerId: number;
-  isDraggingObject: boolean;
-  settings: {
-    theme: 'light' | 'dark';
-    language: 'uk' | 'en';
-    autoSave: boolean;
-    saveInterval: number;
-  };
-}
+// Експорт версії
+export const OVERLAY_FIX_VERSION = 'v3.4';
 
-// Глобальний логер для додатку
-const appLogger = new Logger('Main');
-appLogger.setMinLevel(LogLevel.INFO);
+// Глобальні функції для зворотної сумісності
+(window as any).OVERLAY_FIX_VERSION = OVERLAY_FIX_VERSION;
 
 /**
- * Ініціалізація додатку
+ * Головна функція ініціалізації додатку
  */
-async function initializeApp(): Promise<void> {
+export async function initializeApplication(): Promise<void> {
   try {
-    appLogger.info('🚀 Початок ініціалізації додатку...');
+    logger.info('Ініціалізація додатку...');
 
-    // Створюємо початковий стан
-    const initialState: AppState = {
-      layers: [],
-      activeLayer: null,
-      currentEditingObject: null,
-      layerId: 1,
-      isDraggingObject: false,
-      settings: {
-        theme: 'light',
-        language: 'uk',
-        autoSave: true,
-        saveInterval: 1000
-      }
-    };
+    // Створити AppManager
+    const appManager = new AppManager();
+    
+    // Зареєструвати сервіси
+    appManager.registerService('mapManager', new MapManager());
+    appManager.registerService('overlayManager', new OverlayManager());
+    appManager.registerService('kmzManager', new KmzManager());
+    appManager.registerService('geoSearchManager', new GeoSearchManager());
+    appManager.registerService('modalManager', new ModalManager());
 
-    // Створюємо сервіси
-    const storageService = new StorageService();
-    const eventManager = new EventManager();
-    const stateManager = new StateManager<AppState>(initialState, 'AppState');
-
-    // Реєструємо сервіси в AppManager
-    appManager.registerService('storage', storageService, 0);
-    appManager.registerService('events', eventManager, 1);
-    appManager.registerService('state', stateManager, 2);
-
-    // Ініціалізуємо всі сервіси
+    // Ініціалізувати сервіси
     await appManager.init();
 
-    // Завантажуємо збережені дані
-    await loadSavedData();
+    // Отримати сервіси
+    const mapManager = appManager.getService('mapManager') as MapManager;
+    const overlayManager = appManager.getService('overlayManager') as OverlayManager;
+    const kmzManager = appManager.getService('kmzManager') as KmzManager;
+    const geoSearchManager = appManager.getService('geoSearchManager') as GeoSearchManager;
+    const modalManager = appManager.getService('modalManager') as ModalManager;
 
-    // Налаштовуємо обробники подій
+    // Ініціалізувати карту
+    mapManager.initializeMap();
+
+    // Ініціалізувати overlay менеджер
+    overlayManager.initialize();
+
+    // Ініціалізувати геопошук
+    geoSearchManager.initialize();
+
+    // Ініціалізувати модальні вікна
+    modalManager.initEditModal();
+
+    // Завантажити шари
+    const loadSuccess = mapManager.loadLayersFromStorage();
+    if (!loadSuccess) {
+      // Створити початковий шар
+      mapManager.addLayer({
+        id: 'default-layer',
+        title: 'Основний шар',
+        type: 'default',
+        opacity: 1,
+        visible: true
+      });
+    }
+
+    // Налаштувати глобальні функції
+    setupGlobalFunctions(mapManager, overlayManager, kmzManager, modalManager);
+
+    // Налаштувати обробники подій
     setupEventHandlers();
 
-    // Оновлюємо UI
-    updateUI();
-
-    appLogger.info('✅ Додаток успішно ініціалізований');
+    logger.info('Додаток успішно ініціалізований');
 
   } catch (error) {
-    appLogger.error('❌ Помилка ініціалізації додатку', error);
-    throw error;
+    logger.error('Помилка ініціалізації додатку:', error);
   }
 }
 
 /**
- * Завантаження збережених даних
+ * Налаштування глобальних функцій
  */
-async function loadSavedData(): Promise<void> {
-  try {
-    const storageService = appManager.getService<StorageService>('storage');
-    const stateManager = appManager.getService<StateManager<AppState>>('state');
+function setupGlobalFunctions(
+  mapManager: MapManager,
+  overlayManager: OverlayManager,
+  kmzManager: KmzManager,
+  modalManager: ModalManager
+): void {
+  // Функція для оновлення title
+  (window as any).updatePageTitle = (baseTitle: string = 'Мапа Львова на Leaflet') => {
+    mapManager.updatePageTitle(baseTitle);
+  };
 
-    // Завантажуємо налаштування
-    const settings = await storageService.loadSettings();
-    if (settings) {
-      stateManager.updateField('settings', settings);
+  // Функція для закриття модального вікна редагування
+  (window as any).closeEditModal = () => {
+    modalManager.closeEditModal();
+  };
+
+  // Функція для збереження шарів
+  (window as any).saveLayersToStorage = () => {
+    mapManager.saveLayersToStorage();
+  };
+
+  // Функція для обробки KMZ файлів
+  (window as any).handleKmzFile = async (file: File) => {
+    await kmzManager.handleKmzFile(file);
+  };
+
+  // Функція для центрування панелі пошуку
+  (window as any).centerGeoSearchBar = () => {
+    const geoSearchManager = (window as any).appManager?.getService('geoSearchManager');
+    if (geoSearchManager) {
+      geoSearchManager.centerSearchBar();
     }
-
-    // Завантажуємо шари
-    const layers = await storageService.loadArray('layers');
-    if (layers && layers.length > 0) {
-      stateManager.updateField('layers', layers);
-    }
-
-    appLogger.info('📦 Збережені дані завантажені');
-
-  } catch (error) {
-    appLogger.error('❌ Помилка завантаження даних', error);
-  }
+  };
 }
 
 /**
  * Налаштування обробників подій
  */
 function setupEventHandlers(): void {
-  const eventManager = appManager.getService<EventManager>('events');
-  const stateManager = appManager.getService<StateManager<AppState>>('state');
-
-  // Обробник зміни стану
-  stateManager.subscribe('ui', (state) => {
-    appLogger.debug('State changed', state);
-    updateUI();
-  });
-
-  // Обробник збереження
-  stateManager.registerSaveCallback('main', async () => {
-    const storageService = appManager.getService<StorageService>('storage');
-    const currentState = stateManager.getState();
-    
-    await storageService.saveSettings(currentState.settings);
-    await storageService.saveArray('layers', currentState.layers);
-  });
-
-  // Глобальні обробники подій
-  eventManager.addHandler('app:layer-added', (layer: any) => {
-    appLogger.info('Layer added', layer);
-  });
-
-  eventManager.addHandler('app:layer-removed', (layerId: number) => {
-    appLogger.info('Layer removed', { layerId });
-  });
-
-  eventManager.addHandler('app:object-selected', (object: any) => {
-    appLogger.info('Object selected', object);
-  });
-
-  appLogger.info('🎯 Обробники подій налаштовані');
-}
-
-/**
- * Оновлення UI
- */
-function updateUI(): void {
-  try {
-    const stateManager = appManager.getService<StateManager<AppState>>('state');
-    const state = stateManager.getState();
-
-    // Оновлюємо заголовок сторінки
-    updatePageTitle();
-
-    // Оновлюємо тему
-    updateTheme(state.settings.theme);
-
-    // Оновлюємо мову
-    updateLanguage(state.settings.language);
-
-    appLogger.debug('UI updated');
-
-  } catch (error) {
-    appLogger.error('❌ Помилка оновлення UI', error);
-  }
-}
-
-/**
- * Оновлення заголовка сторінки
- */
-function updatePageTitle(): void {
-  const stateManager = appManager.getService<StateManager<AppState>>('state');
-  const state = stateManager.getState();
-  const layerCount = state.layers.length;
-  
-  document.title = `Мапа Львова на Leaflet (${layerCount} шарів)`;
-}
-
-/**
- * Оновлення теми
- */
-function updateTheme(theme: 'light' | 'dark'): void {
-  document.body.className = document.body.className.replace(/theme-\w+/g, '');
-  document.body.classList.add(`theme-${theme}`);
-}
-
-/**
- * Оновлення мови
- */
-function updateLanguage(language: 'uk' | 'en'): void {
-  document.documentElement.lang = language;
-}
-
-/**
- * Очищення ресурсів при закритті
- */
-function cleanup(): void {
-  try {
-    appLogger.info('🧹 Очищення ресурсів...');
-    appManager.destroy();
-    appLogger.info('✅ Ресурси очищені');
-  } catch (error) {
-    appLogger.error('❌ Помилка очищення ресурсів', error);
-  }
-}
-
-/**
- * Обробка помилок
- */
-function handleError(error: Error): void {
-  appLogger.error('❌ Необроблена помилка', error);
-  
-  // Показуємо користувачу повідомлення про помилку
-  const errorMessage = document.createElement('div');
-  errorMessage.className = 'error-message';
-  errorMessage.textContent = 'Сталася помилка. Перезавантажте сторінку.';
-  document.body.appendChild(errorMessage);
-  
-  // Видаляємо повідомлення через 5 секунд
-  setTimeout(() => {
-    if (errorMessage.parentNode) {
-      errorMessage.parentNode.removeChild(errorMessage);
+  // Обробник зміни розміру вікна
+  window.addEventListener('resize', () => {
+    const geoSearchManager = (window as any).appManager?.getService('geoSearchManager');
+    if (geoSearchManager) {
+      geoSearchManager.centerSearchBar();
     }
-  }, 5000);
+  });
+
+  // Обробник завантаження DOM
+  document.addEventListener('DOMContentLoaded', () => {
+    // Оновити title сторінки
+    (window as any).updatePageTitle();
+
+    // Центрувати панель пошуку
+    (window as any).centerGeoSearchBar();
+  });
 }
 
-// Глобальні обробники подій
-window.addEventListener('error', (event) => {
-  handleError(event.error);
-});
+/**
+ * Функція для додавання шару (для зворотної сумісності)
+ */
+export function addLayer(): void {
+  try {
+    const mapManager = (window as any).appManager?.getService('mapManager');
+    if (mapManager) {
+      mapManager.addLayer({
+        id: `layer-${Date.now()}`,
+        title: `Шар ${Date.now()}`,
+        type: 'custom',
+        opacity: 1,
+        visible: true
+      });
+    }
+  } catch (error) {
+    logger.error('Помилка додавання шару:', error);
+  }
+}
 
-window.addEventListener('unhandledrejection', (event) => {
-  handleError(new Error(event.reason));
-});
+/**
+ * Функція для завантаження шарів (для зворотної сумісності)
+ */
+export function loadLayersFromStorage(): boolean {
+  try {
+    const mapManager = (window as any).appManager?.getService('mapManager');
+    if (mapManager) {
+      return mapManager.loadLayersFromStorage();
+    }
+    return false;
+  } catch (error) {
+    logger.error('Помилка завантаження шарів:', error);
+    return false;
+  }
+}
 
-window.addEventListener('beforeunload', () => {
-  cleanup();
-});
+// Експорт для глобального використання
+(window as any).addLayer = addLayer;
+(window as any).loadLayersFromStorage = loadLayersFromStorage;
 
-// Експортуємо функції для використання
-export {
-  initializeApp,
-  cleanup,
-  handleError
-};
-
-// Автоматична ініціалізація при завантаженні сторінки
+// Автоматична ініціалізація при завантаженні
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
+  document.addEventListener('DOMContentLoaded', initializeApplication);
 } else {
-  initializeApp();
+  initializeApplication();
 } 

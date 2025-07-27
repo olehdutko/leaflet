@@ -345,16 +345,13 @@ const tileLayerOptions = {
 // ... existing code ...
 // --- Користувацькі шари ---
 import { customLayers, getNextLayerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer } from './layers.js';
-import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput } from './ui.js';
+import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput, showConfirmDialog, createLayerControl } from './ui.js';
 import { state } from './state.js';
 import { filterMaterialIcons } from './material-icons.js';
-import { showConfirmDialog } from './ui.js';
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
 // ... existing code ...
 import { getObjectType, getObjectProperties } from './utils.js';
-// --- оновлена функція createLayerControl ---
-import { createLayerControl } from './ui.js';
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
     let input = document.getElementById('marker-icon');

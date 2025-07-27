@@ -403,10 +403,9 @@ const tileLayerOptions = {
 // --- Користувацькі шари ---
 import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer, updateActiveLayerUI } from './layers.js';
 
-import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput } from './ui.js';
+import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput, showConfirmDialog, createLayerControl } from './ui.js';
 import { stateManager, state } from './state.js';
 import { materialIcons, filterMaterialIcons } from './material-icons.js';
-import { showConfirmDialog } from './ui.js';
 
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
@@ -414,9 +413,6 @@ import { showConfirmDialog } from './ui.js';
 // ... existing code ...
 
 import { getLayerIcon, createTooltip, getObjectType, getObjectProperties } from './utils.js';
-
-// --- оновлена функція createLayerControl ---
-import { createLayerControl } from './ui.js';
 
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {

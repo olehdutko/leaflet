@@ -11,6 +11,11 @@ export { EventManager } from './managers/EventManager.js';
 
 // Сервіси
 export { StorageService } from './services/StorageService.js';
+export { OverlayManager } from './services/OverlayManager.js';
+export { KmzManager } from './services/KmzManager.js';
+export { GeoSearchManager } from './services/GeoSearchManager.js';
+export { ModalManager } from './services/ModalManager.js';
+export { MapManager } from './services/MapManager.js';
 
 // Компоненти
 export { ModalComponent } from './components/ModalComponent.js';
