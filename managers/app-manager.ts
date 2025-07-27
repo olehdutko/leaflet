@@ -227,8 +227,8 @@ export class AppManager {
     map: any,
     customLayers: any[],
     saveLayersToStorage: () => void,
-    createLayerControl: (layer: any) => HTMLElement,
-    getNextLayerId: () => string,
+    createLayerControl: (layer: any) => HTMLElement | undefined,
+    getNextLayerId: () => number,
     layerControlsDiv: HTMLElement
   ): void {
     // Ініціалізуємо OverlayService

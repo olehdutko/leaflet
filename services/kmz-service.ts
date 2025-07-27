@@ -20,8 +20,8 @@ export class KmzService {
   private map: any;
   private customLayers: any[] = [];
   private saveLayersToStorage: (() => void) | null = null;
-  private createLayerControl: ((layer: any) => HTMLElement) | null = null;
-  private getNextLayerId: (() => string) | null = null;
+  private createLayerControl: ((layer: any) => HTMLElement | undefined) | null = null;
+  private getNextLayerId: (() => number) | null = null;
   private layerControlsDiv: HTMLElement | null = null;
 
   private constructor() {}
@@ -37,8 +37,8 @@ export class KmzService {
     map: any,
     customLayers: any[],
     saveLayersToStorage: () => void,
-    createLayerControl: (layer: any) => HTMLElement,
-    getNextLayerId: () => string,
+    createLayerControl: (layer: any) => HTMLElement | undefined,
+    getNextLayerId: () => number,
     layerControlsDiv: HTMLElement
   ): void {
     this.map = map;
@@ -221,7 +221,9 @@ export class KmzService {
     this.customLayers.push(layerObj);
     
     const control = this.createLayerControl(layerObj);
-    this.layerControlsDiv.appendChild(control);
+    if (control && this.layerControlsDiv) {
+      this.layerControlsDiv.appendChild(control);
+    }
     
     this.saveLayersToStorage?.();
 
@@ -244,7 +246,7 @@ export class KmzService {
     this.createLayerControl = createLayerControl;
   }
 
-  updateGetNextLayerIdFunction(getNextLayerId: () => string): void {
+  updateGetNextLayerIdFunction(getNextLayerId: () => number): void {
     this.getNextLayerId = getNextLayerId;
   }
 
