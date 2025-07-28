@@ -3,9 +3,9 @@ import { GeoSearchUI } from './ui/geo-search-ui.js';
 import { ObjectSearchUI } from './ui/object-search-ui.js';
 import { GeoSearchService } from './services/search-service.js';
 import { ObjectSearchService } from './services/object-search-service.js';
+import { map } from './map-init.js';
 
 declare const L: any; // Leaflet global
-declare const map: any; // Map instance
 
 let geoSearchUI: GeoSearchUI | null = null;
 let objectSearchUI: ObjectSearchUI | null = null;
@@ -65,14 +65,26 @@ function initializeObjectSearch(customLayers: any[]): void {
 }
 
 function handleGeoSearchResult(result: any): void {
-  if (!map || !result.lat || !result.lon) return;
+  // Отримуємо карту з глобальної області або з імпорту
+  const mapInstance = (window as any).map || map;
+  
+  if (!mapInstance || !result.lat || !result.lon) {
+    console.error('Карта не доступна або відсутні координати:', { map: !!mapInstance, lat: result.lat, lon: result.lon });
+    return;
+  }
+
+  // Перевіряємо, чи є метод setView
+  if (typeof mapInstance.setView !== 'function') {
+    console.error('Метод setView не доступний на об\'єкті карти');
+    return;
+  }
 
   // Переміщуємо карту до результату
-  map.setView([parseFloat(result.lat), parseFloat(result.lon)], 16, { animate: true });
+  mapInstance.setView([parseFloat(result.lat), parseFloat(result.lon)], 16, { animate: true });
 
   // Видаляємо попередній маркер пошуку
   if (searchMarker) {
-    map.removeLayer(searchMarker);
+    mapInstance.removeLayer(searchMarker);
     searchMarker = null;
   }
 
@@ -86,7 +98,7 @@ function handleGeoSearchResult(result: any): void {
       shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
       shadowSize: [41, 41]
     })
-  }).addTo(map);
+  }).addTo(mapInstance);
 
   // Додаємо обробник подвійного кліку та тултіпів
   import('./ui.js').then(({ addDoubleClickToLayer }) => {
@@ -130,7 +142,10 @@ export function destroySearch(): void {
     objectSearchUI = null;
   }
   if (searchMarker) {
-    map?.removeLayer(searchMarker);
+    const mapInstance = (window as any).map || map;
+    if (mapInstance && typeof mapInstance.removeLayer === 'function') {
+      mapInstance.removeLayer(searchMarker);
+    }
     searchMarker = null;
   }
 }

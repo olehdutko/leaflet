@@ -360,6 +360,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         getNextLayerId,
         layerControlsDiv
       );
+      
+      // Оновлюємо функцію збереження в сервісах
+      appManager.updateSaveFunction(saveLayersToStorage);
     }
 
     // Ініціалізуємо додаткові функції
@@ -502,7 +505,7 @@ if (importAllBtn && importAllInput) {
                   } else if (action === 'overwrite') {
                     // Перезаписати: видалити старий і додати новий
                     const oldLayer = customLayers[existingIndex];
-                    if (oldLayer && oldLayer.featureGroup) {
+                    if (oldLayer && oldLayer.featureGroup && map) {
                       map.removeLayer(oldLayer.featureGroup);
                     }
                     customLayers.splice(existingIndex, 1);
@@ -562,7 +565,7 @@ if (importAllBtn && importAllInput) {
                 } else if (action === 'overwrite') {
                   // Перезаписати: видалити старий і додати новий
                   const oldLayer = customLayers[existsIdx];
-                  if (oldLayer && oldLayer.featureGroup) {
+                  if (oldLayer && oldLayer.featureGroup && map) {
                     map.removeLayer(oldLayer.featureGroup);
                   }
                   customLayers.splice(existsIdx, 1);

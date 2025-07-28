@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Тестовий шар з метаданими</name>
+    <description>Приклад KML файлу з іменами та описами об'єктів</description>
+    
+    <!-- Глобальні стилі -->
+    <Style id="red-marker">
+      <IconStyle>
+        <color>ff0000ff</color>
+        <scale>1.0</scale>
+      </IconStyle>
+    </Style>
+    
+    <Style id="blue-line">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>3</width>
+      </LineStyle>
+    </Style>
+    
+    <Style id="green-polygon">
+      <PolyStyle>
+        <color>ff00ff00</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    
+    <!-- Маркер з іменем та описом -->
+    <Placemark>
+      <name>Центр Львова</name>
+      <description>Історичний центр міста Львів з багатьма пам'ятками архітектури</description>
+      <styleUrl>#red-marker</styleUrl>
+      <Point>
+        <coordinates>24.0297,49.8397,0</coordinates>
+      </Point>
+    </Placemark>
+    
+    <!-- Полілінія з іменем та описом -->
+    <Placemark>
+      <name>Маршрут прогулянки</name>
+      <description>Рекомендований маршрут для прогулянки по історичному центру</description>
+      <styleUrl>#blue-line</styleUrl>
+      <LineString>
+        <coordinates>
+          24.0297,49.8397,0
+          24.0317,49.8417,0
+          24.0337,49.8437,0
+          24.0357,49.8457,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+    
+    <!-- Полігон з іменем та описом -->
+    <Placemark>
+      <name>Площа Ринок</name>
+      <description>Центральна площа Львова з ратушею та історичними будинками</description>
+      <styleUrl>#green-polygon</styleUrl>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              24.0297,49.8397,0
+              24.0317,49.8397,0
+              24.0317,49.8417,0
+              24.0297,49.8417,0
+              24.0297,49.8397,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+    
+    <!-- Маркер без стилю (використовує дефолтний) -->
+    <Placemark>
+      <name>Театр опери</name>
+      <description>Львівський національний академічний театр опери та балету імені Соломії Крушельницької</description>
+      <Point>
+        <coordinates>24.0277,49.8377,0</coordinates>
+      </Point>
+    </Placemark>
+    
+  </Document>
+</kml> 

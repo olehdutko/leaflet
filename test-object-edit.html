@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест оновлення списку об'єктів</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div id="layers-panel-drawer" class="layers-panel-drawer">
+        <div id="layers-panel-toggle" class="layers-panel-toggle">
+            <span class="material-icons">chevron_left</span>
+        </div>
+        <div id="layer-controls" class="layer-controls"></div>
+        <button id="add-layer" class="btn-primary">Додати шар</button>
+        <button id="export-all" class="btn-secondary">Експорт</button>
+        <button id="import-all" class="btn-secondary">Імпорт</button>
+        <input type="file" id="import-all-input" accept=".json,.kml,.kmz" style="display:none;">
+    </div>
+
+    <!-- Модальне вікно редагування об'єкта -->
+    <div id="edit-object-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Редагування об'єкта</h3>
+                <button id="modal-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="object-name">Назва</label>
+                    <input type="text" id="object-name" placeholder="Назва">
+                </div>
+                <div class="form-group">
+                    <label for="object-description">Опис</label>
+                    <textarea id="object-description" placeholder="Опис" rows="3"></textarea>
+                </div>
+                <div class="form-group" id="color-picker-group">
+                    <label>Колір</label>
+                    <div class="color-palette" id="color-palette">
+                        <div class="color-swatch" data-color="#ff4500" style="background-color:#ff4500;"></div>
+                        <div class="color-swatch" data-color="#ff8c00" style="background-color:#ff8c00;"></div>
+                        <div class="color-swatch" data-color="#ffd700" style="background-color:#ffd700;"></div>
+                        <div class="color-swatch" data-color="#32cd32" style="background-color:#32cd32;"></div>
+                        <div class="color-swatch" data-color="#00bfff" style="background-color:#00bfff;"></div>
+                        <div class="color-swatch" data-color="#9370db" style="background-color:#9370db;"></div>
+                        <div class="color-swatch" data-color="#ff69b4" style="background-color:#ff69b4;"></div>
+                        <div class="color-swatch" data-color="#a0522d" style="background-color:#a0522d;"></div>
+                        <div class="color-swatch" data-color="#696969" style="background-color:#696969;"></div>
+                        <div class="color-swatch" data-color="#000000" style="background-color:#000000;"></div>
+                    </div>
+                    <input type="color" id="object-color" value="#1976d2">
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-flex">
+                <button id="save-object" class="btn-primary">Оновити</button>
+                <button id="delete-object" class="btn-danger">Видалити</button>
+                <button id="cancel-edit" class="btn-secondary">Закрити</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="index.ts"></script>
+    <script src="test-object-edit.js"></script>
+</body>
+</html> 

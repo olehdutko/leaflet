@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Простий тест KMZ імпорту</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .test-info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .file-input {
+            margin: 10px 0;
+        }
+        .results {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Простий тест KMZ імпорту</h1>
+    
+    <div class="test-info">
+        <h3>Інструкції:</h3>
+        <ol>
+            <li>Виберіть KMZ файл для імпорту</li>
+            <li>Перевірте, чи імпортуються імена та описи об'єктів</li>
+            <li>Подивіться на результати в консолі браузера</li>
+        </ol>
+    </div>
+
+    <div class="file-input">
+        <input type="file" id="kmz-file" accept=".kmz" />
+        <button onclick="importKmz()">Імпортувати KMZ</button>
+        <button onclick="clearLocalStorage()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Очистити localStorage</button>
+        <button onclick="checkLocalStorage()" style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Перевірити localStorage</button>
+        <button onclick="analyzeCurrentKml()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Аналізувати KML</button>
+    </div>
+
+    <div id="map"></div>
+    <div id="results" class="results"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script type="module" src="test-kmz-simple.js"></script>
+</body>
+</html> 

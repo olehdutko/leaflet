@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест діагностики KMZ властивостей</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+</head>
+<body>
+    <div id="map"></div>
+    
+    <!-- UI елементи для пошуку -->
+    <div id="search-container" class="search-container">
+        <div id="geo-search-container" class="search-section">
+            <input type="text" id="geo-search-input" placeholder="Пошук місць..." class="search-input">
+            <div id="geo-search-results" class="search-results"></div>
+        </div>
+        
+        <div id="object-search-container" class="search-section">
+            <input type="text" id="object-search-input" placeholder="Пошук об'єктів..." class="search-input">
+            <div id="object-search-results" class="search-results"></div>
+        </div>
+    </div>
+    
+    <div id="layers-panel-drawer" class="layers-panel-drawer">
+        <div id="layers-panel-toggle" class="layers-panel-toggle">
+            <span class="material-icons">chevron_left</span>
+        </div>
+        <div id="layer-controls" class="layer-controls"></div>
+        <button id="add-layer" class="btn-primary">Додати шар</button>
+        <button id="export-all" class="btn-secondary">Експорт</button>
+        <button id="import-all" class="btn-secondary">Імпорт</button>
+        <input type="file" id="import-all-input" accept=".json,.kml,.kmz" style="display:none;">
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script>
+      window.L = window.L || {};
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script type="module" src="index.ts"></script>
+    <script src="test-kmz-debug.js"></script>
+</body>
+</html> 

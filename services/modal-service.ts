@@ -1,10 +1,7 @@
 // Сервіс для роботи з модальними вікнами
 declare const L: any; // Leaflet global
 import { LegacyAdapter } from '../adapters/legacy-adapter.js';
-
-export interface ModalState {
-  currentEditingObject: any | null;
-}
+import { state } from '../state.js';
 
 export interface ObjectProperties {
   name: string;
@@ -19,9 +16,6 @@ export interface ObjectProperties {
 
 export class ModalService {
   private static instance: ModalService;
-  private state: ModalState = {
-    currentEditingObject: null
-  };
 
   private constructor() {}
 
@@ -99,16 +93,20 @@ export class ModalService {
   }
 
   showEditModal(object: any): void {
-    this.state.currentEditingObject = object;
+    console.log('ModalService: showEditModal викликано з об\'єктом:', object);
+    state.currentEditingObject.value = object;
+    console.log('ModalService: currentEditingObject встановлено:', state.currentEditingObject.value);
     
     // Імпортуємо функцію показу модального вікна
     import('../ui.js').then(({ showEditModal }) => {
       showEditModal(object);
+    }).catch(error => {
+      console.error('ModalService: Помилка при імпорті ui.js:', error);
     });
   }
 
   closeEditModal(): void {
-    this.state.currentEditingObject = null;
+    state.currentEditingObject.value = null;
     
     const modalElement = document.getElementById('edit-object-modal') as HTMLElement;
     if (modalElement) {
@@ -117,33 +115,55 @@ export class ModalService {
   }
 
   private saveObjectChanges(): void {
-    if (!this.state.currentEditingObject) return;
+    console.log('ModalService: saveObjectChanges викликано');
+    
+    if (!state.currentEditingObject.value) {
+      console.error('ModalService: currentEditingObject не встановлено');
+      return;
+    }
+
+    console.log('ModalService: Отримуємо властивості з форми...');
+    const properties = this.getObjectPropertiesFromForm();
+    console.log('ModalService: Властивості з форми:', properties);
 
     // Імпортуємо функцію застосування властивостей
     import('../objects.js').then(({ applyObjectProperties }) => {
-      const properties = this.getObjectPropertiesFromForm();
-      applyObjectProperties(this.state.currentEditingObject, properties);
+      console.log('ModalService: Застосовуємо властивості до об\'єкта...');
+      applyObjectProperties(state.currentEditingObject.value, properties);
       
       // Додаємо копіювання у feature.properties
-      if ((this.state.currentEditingObject as any).feature && (this.state.currentEditingObject as any).properties) {
-        (this.state.currentEditingObject as any).feature.properties = { 
-          ...(this.state.currentEditingObject as any).properties 
+      if ((state.currentEditingObject.value as any).feature && (state.currentEditingObject.value as any).properties) {
+        (state.currentEditingObject.value as any).feature.properties = { 
+          ...(state.currentEditingObject.value as any).properties 
         };
+        console.log('ModalService: Оновлено feature.properties');
       }
 
       // Зберігаємо зміни
+      console.log('ModalService: Перевіряємо наявність saveLayersToStorage...');
       if ((window as any).saveLayersToStorage) {
+        console.log('ModalService: Викликаємо saveLayersToStorage...');
         (window as any).saveLayersToStorage();
+        console.log('ModalService: saveLayersToStorage викликано');
+      } else {
+        console.error('ModalService: saveLayersToStorage не знайдено в window');
       }
 
+      // Оновлюємо UI після збереження змін
+      console.log('ModalService: Викликаємо updateUIAfterSave...');
+      this.updateUIAfterSave();
+      console.log('ModalService: updateUIAfterSave завершено');
+
       this.closeEditModal();
+    }).catch(error => {
+      console.error('ModalService: Помилка при імпорті objects.js:', error);
     });
   }
 
   private handleDeleteObject(): void {
-    if (!this.state.currentEditingObject) return;
+    if (!state.currentEditingObject.value) return;
 
-    const type = this.getObjectType(this.state.currentEditingObject);
+    const type = this.getObjectType(state.currentEditingObject.value);
     let typeName = 'обʼєкт';
     
     if (type === 'marker') typeName = 'маркер';
@@ -152,7 +172,7 @@ export class ModalService {
     else if (type === 'rectangle') typeName = 'прямокутник';
     else if (type === 'circle') typeName = 'коло';
 
-    const properties = this.getObjectProperties(this.state.currentEditingObject);
+    const properties = this.getObjectProperties(state.currentEditingObject.value);
     const objectName = properties.name ? `"${properties.name}"` : typeName;
 
     this.closeEditModal();
@@ -174,21 +194,21 @@ export class ModalService {
   }
 
   private performObjectDeletion(): void {
-    if (!this.state.currentEditingObject) return;
+    if (!state.currentEditingObject.value) return;
 
     const customLayers = (window as any).customLayers || [];
     const map = (window as any).map;
 
     const layerObj = customLayers.find((l: any) => 
-      l.featureGroup && l.featureGroup.hasLayer(this.state.currentEditingObject)
+      l.featureGroup && l.featureGroup.hasLayer(state.currentEditingObject.value)
     );
 
     if (layerObj && layerObj.featureGroup) {
-      layerObj.featureGroup.removeLayer(this.state.currentEditingObject);
+      layerObj.featureGroup.removeLayer(state.currentEditingObject.value);
     }
 
     if (map) {
-      map.removeLayer(this.state.currentEditingObject);
+      map.removeLayer(state.currentEditingObject.value);
     }
 
     if ((window as any).saveLayersToStorage) {
@@ -197,6 +217,8 @@ export class ModalService {
   }
 
   private getObjectPropertiesFromForm(): ObjectProperties {
+    console.log('ModalService: getObjectPropertiesFromForm викликано');
+    
     const nameInput = document.getElementById('object-name') as HTMLInputElement;
     const descInput = document.getElementById('object-description') as HTMLTextAreaElement;
     const colorInput = document.getElementById('object-color') as HTMLInputElement;
@@ -206,7 +228,18 @@ export class ModalService {
     const fillOpacityInput = document.getElementById('fill-opacity') as HTMLInputElement;
     const styleSelect = document.getElementById('line-style') as HTMLSelectElement;
 
-    return {
+    console.log('ModalService: Знайдені елементи форми:', {
+      nameInput: !!nameInput,
+      descInput: !!descInput,
+      colorInput: !!colorInput,
+      weightInput: !!weightInput,
+      opacityInput: !!opacityInput,
+      fillColorInput: !!fillColorInput,
+      fillOpacityInput: !!fillOpacityInput,
+      styleSelect: !!styleSelect
+    });
+
+    const properties = {
       name: nameInput?.value || '',
       description: descInput?.value || '',
       color: colorInput?.value,
@@ -216,6 +249,9 @@ export class ModalService {
       fillOpacity: fillOpacityInput ? parseFloat(fillOpacityInput.value) : undefined,
       style: styleSelect?.value
     };
+
+    console.log('ModalService: Властивості з форми:', properties);
+    return properties;
   }
 
   private getObjectType(layer: any): string {
@@ -249,6 +285,70 @@ export class ModalService {
   }
 
   getCurrentEditingObject(): any | null {
-    return this.state.currentEditingObject;
+    return state.currentEditingObject.value;
+  }
+
+  private updateUIAfterSave(): void {
+    console.log('ModalService: updateUIAfterSave викликано');
+    
+    // Оновлюємо список об'єктів для шару, до якого належить об'єкт, що редагується
+    const customLayers = (window as any).customLayers || [];
+    
+    console.log('ModalService: customLayers:', customLayers.length);
+    console.log('ModalService: currentEditingObject:', state.currentEditingObject.value);
+    
+    if (state.currentEditingObject.value) {
+      // Знаходимо шар, до якого належить об'єкт, що редагується
+      let layerObj = null;
+      
+      // Спробуємо знайти за hasLayer
+      layerObj = customLayers.find((l: any) => 
+        l.featureGroup && l.featureGroup.hasLayer(state.currentEditingObject.value)
+      );
+      
+      // Якщо не знайдено, спробуємо знайти за _leaflet_id
+      if (!layerObj) {
+        const objectId = (state.currentEditingObject.value as any)._leaflet_id;
+        if (objectId) {
+          layerObj = customLayers.find((l: any) => {
+            if (!l.featureGroup) return false;
+            let found = false;
+            l.featureGroup.eachLayer((layer: any) => {
+              if (layer._leaflet_id === objectId) {
+                found = true;
+              }
+            });
+            return found;
+          });
+        }
+      }
+      
+      console.log('ModalService: Знайдений layerObj для об\'єкта:', layerObj);
+      
+      if (layerObj && (window as any).updateObjectsListForLayer) {
+        console.log('ModalService: Викликаємо updateObjectsListForLayer...');
+        (window as any).updateObjectsListForLayer(layerObj);
+        console.log('ModalService: updateObjectsListForLayer викликано');
+      } else {
+        console.warn('ModalService: updateObjectsListForLayer не знайдено або layerObj не знайдено');
+        // Якщо не знайшли конкретний шар, оновлюємо всі шари
+        if ((window as any).updateObjectsListForAllLayers) {
+          console.log('ModalService: Викликаємо updateObjectsListForAllLayers...');
+          (window as any).updateObjectsListForAllLayers();
+          console.log('ModalService: updateObjectsListForAllLayers викликано');
+        }
+      }
+    } else {
+      console.warn('ModalService: currentEditingObject не встановлено');
+    }
+
+    // Оновлюємо активний шар UI
+    if ((window as any).updateActiveLayerUI) {
+      console.log('ModalService: Викликаємо updateActiveLayerUI...');
+      (window as any).updateActiveLayerUI();
+      console.log('ModalService: updateActiveLayerUI викликано');
+    } else {
+      console.warn('ModalService: updateActiveLayerUI не знайдено');
+    }
   }
 } 

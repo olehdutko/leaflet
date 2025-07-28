@@ -12,8 +12,23 @@ import { LegacyAdapter } from './adapters/legacy-adapter.js';
 export const layerIdToRenderObjectsList = new Map();
 
 export function updateObjectsListForLayer(layerObj: any) {
+  console.log('ui.ts: updateObjectsListForLayer викликано для шару:', layerObj.id);
+  console.log('ui.ts: layerIdToRenderObjectsList розмір:', layerIdToRenderObjectsList.size);
+  console.log('ui.ts: Доступні ключі в layerIdToRenderObjectsList:', Array.from(layerIdToRenderObjectsList.keys()));
+  
   const fn = layerIdToRenderObjectsList.get(layerObj.id);
-  if (fn) fn();
+  console.log('ui.ts: Знайдена функція для оновлення:', !!fn);
+  if (fn) {
+    console.log('ui.ts: Викликаємо функцію оновлення...');
+    try {
+      fn();
+      console.log('ui.ts: Функція оновлення викликана успішно');
+    } catch (error) {
+      console.error('ui.ts: Помилка при виклику функції оновлення:', error);
+    }
+  } else {
+    console.warn('ui.ts: Функція оновлення не знайдена для шару:', layerObj.id);
+  }
 }
 
 export function showEditModal(layer: any) {
@@ -1026,6 +1041,9 @@ export function createLayerControl(layerObj: any) {
   const objectsListWrap = document.createElement('div');
   objectsListWrap.className = 'layer-objects-list';
   function renderObjectsList() {
+    console.log('ui.ts: renderObjectsList викликано для шару:', layerObj.id);
+    console.log('ui.ts: Кількість об\'єктів у featureGroup:', layerObj.featureGroup.getLayers().length);
+    
     objectsListWrap.innerHTML = '';
     const objectItems: HTMLElement[] = [];
     layerObj.featureGroup.eachLayer((layer: any) => {
@@ -1247,9 +1265,12 @@ export function createLayerControl(layerObj: any) {
       objectsListWrap.appendChild(item);
     });
   }
+  
+  console.log('ui.ts: renderObjectsList завершено для шару:', layerObj.id);
 
   // Register the renderObjectsList for this layer
   layerIdToRenderObjectsList.set(layerObj.id, renderObjectsList);
+  console.log('ui.ts: renderObjectsList зареєстровано для шару:', layerObj.id);
 
   renderObjectsList();
 
@@ -1331,26 +1352,8 @@ import { updateDrawControlVisibility } from './draw-control.js';
 // Робимо renderObjectsList глобально доступною
 // (window as any).renderObjectsList = renderObjectsList; // більше не потрібно
 
-// --- Додаю оновлення списку об'єктів після збереження змін у модалці ---
-const saveObjectBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('save-object');
-if (saveObjectBtn) {
-  saveObjectBtn.addEventListener('click', () => {
-    // Оновлюємо картку активного шару після збереження змін
-    import('./layers.js').then(({ customLayers, activeLayer }) => {
-      const layerObj = customLayers.find((l: any) => l.featureGroup === activeLayer);
-      if (layerObj) {
-        // Знаходимо стару картку і замінюємо її новою
-        const oldCard = document.querySelector('.layer-card.active');
-        if (oldCard && oldCard.parentNode) {
-          const newCard = createLayerControl(layerObj);
-          if (newCard && oldCard.parentNode) {
-            oldCard.parentNode.replaceChild(newCard, oldCard);
-          }
-        }
-      }
-    });
-  });
-}
+// Обробник кнопки "Оновити" тепер обробляється в ModalService
+// Цей код видалено, щоб уникнути конфліктів з ModalService
 
 // Панель шарів: приховування/показ
 const layersPanelDrawer = LegacyAdapter.DOM.getElement<HTMLElement>('layers-panel-drawer');
@@ -1374,8 +1377,19 @@ import('./layers.js').then(({ saveLayersToStorage, customLayers }) => {
   (window as any).customLayers = customLayers;
 });
 
+// Експортуємо карту в глобальну область для зворотної сумісності
+(window as any).map = map;
+
 // Експортуємо showConfirmDialog для використання в requestOverlayDelete
 (window as any).showConfirmDialog = showConfirmDialog;
+
+// Експортуємо updateObjectsListForLayer для використання в ModalService
+(window as any).updateObjectsListForLayer = updateObjectsListForLayer;
+
+// Експортуємо updateActiveLayerUI для використання в ModalService
+import('./layers.js').then(({ updateActiveLayerUI }) => {
+  (window as any).updateActiveLayerUI = updateActiveLayerUI;
+});
 
 // Функція для оновлення UI всіх шарів після видалення overlay
 function updateObjectsListForAllLayers() {
@@ -1391,6 +1405,9 @@ function updateObjectsListForAllLayers() {
 
 // Експортуємо updateObjectsListForAllLayers для використання в requestOverlayDelete
 (window as any).updateObjectsListForAllLayers = updateObjectsListForAllLayers;
+
+// Експортуємо layerIdToRenderObjectsList для тестування
+(window as any).layerIdToRenderObjectsList = layerIdToRenderObjectsList;
 
 // --- Глобальний MutationObserver для маркерів ---
 if (typeof window !== 'undefined' && typeof L !== 'undefined') {

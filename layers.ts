@@ -65,31 +65,75 @@ import { LegacyAdapter } from './adapters/legacy-adapter.js';
 
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage(): void {
+  console.log('layers.ts: saveLayersToStorage викликано');
+  console.log('layers.ts: Кількість шарів:', customLayers.length);
+  
   customLayers.forEach(l => {
     l.featureGroup.eachLayer((layer: any) => {
       const type = getObjectType(layer);
       if (!layer.feature) return;
       if (!layer.feature.properties) layer.feature.properties = {};
-      if (layer.feature && layer.properties) {
+      
+      console.log('layers.ts: Обробляємо об\'єкт:', {
+        type: type,
+        hasFeature: !!layer.feature,
+        hasLayerProperties: !!layer.properties,
+        featureProperties: layer.feature.properties,
+        layerProperties: layer.properties
+      });
+      
+      // Перевіряємо чи об'єкт має вже встановлені властивості (наприклад, з KMZ)
+      const hasExistingProperties = layer.feature.properties && 
+        (layer.feature.properties.name || layer.feature.properties.description || 
+         layer.feature.properties.color || layer.feature.properties.weight);
+      
+      console.log('layers.ts: hasExistingProperties:', hasExistingProperties);
+      
+      // Якщо властивості вже встановлені (наприклад, з KMZ), не перезаписуємо їх
+      if (!hasExistingProperties && layer.properties) {
+        console.log('layers.ts: Копіюємо властивості з layer.properties до layer.feature.properties');
         Object.assign(layer.feature.properties, layer.properties);
       }
-      Object.assign(layer.feature.properties, layer.properties || {});
+      
+      // Додаємо дефолтні властивості тільки якщо вони відсутні
       if (type === 'marker') {
-        layer.feature.properties.color = layer.properties?.color || '#1976d2';
+        if (!layer.feature.properties.color) {
+          layer.feature.properties.color = layer.properties?.color || '#1976d2';
+        }
+        if (!layer.feature.properties.icon) {
+          layer.feature.properties.icon = layer.properties?.icon || 'place';
+        }
       } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
-        layer.feature.properties.fillColor = layer.options?.fillColor || '#1976d2';
-        layer.feature.properties.color = layer.options?.color || '#1976d2';
-        layer.feature.properties.fillOpacity = layer.options?.fillOpacity || 0.2;
-        layer.feature.properties.opacity = layer.options?.opacity || 1;
+        if (!layer.feature.properties.fillColor) {
+          layer.feature.properties.fillColor = layer.options?.fillColor || '#1976d2';
+        }
+        if (!layer.feature.properties.color) {
+          layer.feature.properties.color = layer.options?.color || '#1976d2';
+        }
+        if (!layer.feature.properties.fillOpacity) {
+          layer.feature.properties.fillOpacity = layer.options?.fillOpacity || 0.2;
+        }
+        if (!layer.feature.properties.opacity) {
+          layer.feature.properties.opacity = layer.options?.opacity || 1;
+        }
       } else if (type === 'polyline') {
-        layer.feature.properties.color = layer.options?.color || '#1976d2';
-        layer.feature.properties.weight = layer.options?.weight || 3;
-        layer.feature.properties.opacity = layer.options?.opacity || 1;
-        let dash = layer.options && layer.options.dashArray !== undefined && layer.options.dashArray !== null ? String(layer.options.dashArray) : '';
-        if (dash === '10, 10') layer.feature.properties.style = 'dashed';
-        else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
-        else layer.feature.properties.style = 'solid';
+        if (!layer.feature.properties.color) {
+          layer.feature.properties.color = layer.options?.color || '#1976d2';
+        }
+        if (!layer.feature.properties.weight) {
+          layer.feature.properties.weight = layer.options?.weight || 3;
+        }
+        if (!layer.feature.properties.opacity) {
+          layer.feature.properties.opacity = layer.options?.opacity || 1;
+        }
+        if (!layer.feature.properties.style) {
+          let dash = layer.options && layer.options.dashArray !== undefined && layer.options.dashArray !== null ? String(layer.options.dashArray) : '';
+          if (dash === '10, 10') layer.feature.properties.style = 'dashed';
+          else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
+          else layer.feature.properties.style = 'solid';
+        }
       }
+      
       if (layer.properties && layer.properties.image) {
         // видалено: layer.feature.properties.image = layer.properties.image;
       }
@@ -110,21 +154,44 @@ export function saveLayersToStorage(): void {
     }
     // Створюємо GeoJSON вручну, щоб зберегти наші feature об'єкти
     const features: any[] = [];
+    let featureCount = 0;
+    let fallbackCount = 0;
+    
     l.featureGroup.eachLayer((layer: any) => {
       if (layer.feature) {
         // Використовуємо наш створений feature об'єкт
         features.push(layer.feature);
+        featureCount++;
+        console.log('layers.ts: Зберігаємо feature об\'єкт:', {
+          type: layer.feature.geometry?.type,
+          name: layer.feature.properties?.name,
+          hasName: !!layer.feature.properties?.name
+        });
       } else {
         // Fallback до стандартного toGeoJSON для об'єктів без feature
         try {
           const layerGeoJSON = layer.toGeoJSON();
           if (layerGeoJSON) {
             features.push(layerGeoJSON);
+            fallbackCount++;
+            console.log('layers.ts: Зберігаємо fallback GeoJSON:', {
+              type: layerGeoJSON.geometry?.type,
+              name: layerGeoJSON.properties?.name,
+              hasName: !!layerGeoJSON.properties?.name
+            });
           }
         } catch (error) {
           // Мовчазно обробляємо помилки toGeoJSON
         }
       }
+    });
+    
+    console.log('layers.ts: Підсумок збереження для шару:', {
+      layerId: l.id,
+      layerTitle: l.title,
+      featureCount,
+      fallbackCount,
+      totalFeatures: features.length
     });
     
     const geojson = {
@@ -148,7 +215,11 @@ export function saveLayersToStorage(): void {
   });
   // Перевіряємо, що дані не порожні перед збереженням
   if (layersData.length > 0) {
+    console.log('layers.ts: Зберігаємо дані в localStorage:', layersData.length, 'шарів');
     localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
+    console.log('layers.ts: Дані збережено в localStorage');
+  } else {
+    console.warn('layers.ts: Немає даних для збереження');
   }
 }
 
@@ -251,6 +322,14 @@ export function loadLayersFromStorage(): boolean {
       customLayers.push(layerObj);
       createLayerControl(layerObj);
       featureGroup.bringToFront();
+    });
+    
+    // Оновлюємо AppManager про завантажені шари
+    import('./managers/app-manager.js').then(({ AppManager }) => {
+      const appManager = AppManager.getInstance();
+      if (appManager.isInitialized()) {
+        appManager.updateLayers(customLayers);
+      }
     });
     const firstVisible = customLayers.find(l => l.visible);
     if (firstVisible) {
@@ -366,6 +445,14 @@ export function addLayer(): void {
   featureGroup.bringToFront();
   saveLayersToStorage();
 
+  // Оновлюємо AppManager про зміни в шарах
+  import('./managers/app-manager.js').then(({ AppManager }) => {
+    const appManager = AppManager.getInstance();
+    if (appManager.isInitialized()) {
+      appManager.updateLayers(customLayers);
+    }
+  });
+
   // Оновлюємо видимість draw control
   import('./draw-control.js').then(({ updateDrawControlVisibility }) => {
     updateDrawControlVisibility();
@@ -374,6 +461,8 @@ export function addLayer(): void {
 
 export function setActiveLayer(featureGroup: any): void {
   activeLayer = featureGroup;
+  (window as any).activeLayer = activeLayer; // Експортуємо в window для ModalService
+  
   if (state.currentEditingObject) {
     state.currentEditingObject.value = activeLayer;
   }
@@ -387,6 +476,10 @@ export function setActiveLayer(featureGroup: any): void {
 }
 
 export function updateActiveLayerUI(): void {
+  console.log('layers.ts: updateActiveLayerUI викликано');
+  console.log('layers.ts: activeLayer:', activeLayer);
+  console.log('layers.ts: layerControlsDiv:', !!layerControlsDiv);
+  
   if (layerControlsDiv) {
     document.querySelectorAll('.layer-card').forEach((card: any) => {
       const id = +card.dataset.layerId;
@@ -698,6 +791,15 @@ export function restoreOverlaysForFeatureGroup(featureGroup: any) {
   featureGroup._restoringOverlays = false;
 }
 
-// Експортуємо customLayers та saveLayersToStorage в глобальну область для requestOverlayDelete
-(window as any).customLayers = customLayers;
-(window as any).saveLayersToStorage = saveLayersToStorage;
+  // Експортуємо customLayers та saveLayersToStorage в глобальну область для requestOverlayDelete
+  (window as any).customLayers = customLayers;
+  (window as any).saveLayersToStorage = saveLayersToStorage;
+  
+  // Оновлюємо AppManager про зміни в шарах
+  import('./managers/app-manager.js').then(({ AppManager }) => {
+    const appManager = AppManager.getInstance();
+    if (appManager.isInitialized()) {
+      appManager.updateLayers(customLayers);
+    }
+  });
+(window as any).activeLayer = activeLayer; // Експортуємо activeLayer для ModalService

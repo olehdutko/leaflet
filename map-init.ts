@@ -22,9 +22,21 @@ export const tileLayerOptions = {
   }
 };
 
-export const map = L.map('map', {
-  center: center,
-  zoom: 13,
-});
+// Перевіряємо наявність елемента map перед створенням карти
+let map: any = null;
 
-map.attributionControl.addAttribution('<a href="mailto:oleh.dutko@gmail.com">oleh.dutko@gmail.com</a>');
+if (typeof L !== 'undefined' && document.getElementById('map')) {
+  map = L.map('map', {
+    center: center,
+    zoom: 13,
+  });
+
+  map.attributionControl.addAttribution('<a href="mailto:oleh.dutko@gmail.com">oleh.dutko@gmail.com</a>');
+
+  // Експортуємо карту в глобальну область для зворотної сумісності
+  (window as any).map = map;
+} else {
+  console.warn('map-init.ts: Leaflet не завантажено або елемент map не знайдено');
+}
+
+export { map };
