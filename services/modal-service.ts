@@ -12,6 +12,7 @@ export interface ObjectProperties {
   fillColor?: string;
   fillOpacity?: number;
   style?: string;
+  icon?: string;
 }
 
 export class ModalService {
@@ -94,6 +95,12 @@ export class ModalService {
 
   showEditModal(object: any): void {
     console.log('ModalService: showEditModal викликано з об\'єктом:', object);
+    
+    if (!object) {
+      console.error('ModalService: showEditModal отримав null або undefined об\'єкт');
+      return;
+    }
+    
     state.currentEditingObject.value = object;
     console.log('ModalService: currentEditingObject встановлено:', state.currentEditingObject.value);
     
@@ -129,7 +136,16 @@ export class ModalService {
     // Імпортуємо функцію застосування властивостей
     import('../objects.js').then(({ applyObjectProperties }) => {
       console.log('ModalService: Застосовуємо властивості до об\'єкта...');
+      console.log('ModalService: Об\'єкт до застосування:', state.currentEditingObject.value);
+      console.log('ModalService: Властивості для застосування:', properties);
+      
+      if (!state.currentEditingObject.value) {
+        console.error('ModalService: currentEditingObject.value є null або undefined');
+        return;
+      }
+      
       applyObjectProperties(state.currentEditingObject.value, properties);
+      console.log('ModalService: Властивості застосовано. Об\'єкт після застосування:', state.currentEditingObject.value);
       
       // Додаємо копіювання у feature.properties
       if ((state.currentEditingObject.value as any).feature && (state.currentEditingObject.value as any).properties) {
@@ -137,6 +153,7 @@ export class ModalService {
           ...(state.currentEditingObject.value as any).properties 
         };
         console.log('ModalService: Оновлено feature.properties');
+        console.log('ModalService: feature.properties після копіювання:', (state.currentEditingObject.value as any).feature.properties);
       }
 
       // Зберігаємо зміни
@@ -227,6 +244,7 @@ export class ModalService {
     const fillColorInput = document.getElementById('fill-color') as HTMLInputElement;
     const fillOpacityInput = document.getElementById('fill-opacity') as HTMLInputElement;
     const styleSelect = document.getElementById('line-style') as HTMLSelectElement;
+    const iconInput = document.getElementById('marker-icon') as HTMLInputElement;
 
     console.log('ModalService: Знайдені елементи форми:', {
       nameInput: !!nameInput,
@@ -236,7 +254,8 @@ export class ModalService {
       opacityInput: !!opacityInput,
       fillColorInput: !!fillColorInput,
       fillOpacityInput: !!fillOpacityInput,
-      styleSelect: !!styleSelect
+      styleSelect: !!styleSelect,
+      iconInput: !!iconInput
     });
 
     const properties = {
@@ -247,7 +266,8 @@ export class ModalService {
       opacity: opacityInput ? parseFloat(opacityInput.value) : undefined,
       fillColor: fillColorInput?.value,
       fillOpacity: fillOpacityInput ? parseFloat(fillOpacityInput.value) : undefined,
-      style: styleSelect?.value
+      style: styleSelect?.value,
+      icon: iconInput?.value
     };
 
     console.log('ModalService: Властивості з форми:', properties);
@@ -280,7 +300,8 @@ export class ModalService {
       opacity: properties.opacity,
       fillColor: properties.fillColor,
       fillOpacity: properties.fillOpacity,
-      style: properties.style
+      style: properties.style,
+      icon: properties.icon
     };
   }
 

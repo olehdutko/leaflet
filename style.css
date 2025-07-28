@@ -2331,3 +2331,65 @@ body.blurred > *:not(#confirm-modal) {
 .layer-card-icon-btn.blue i {
   color: #1976d2 !important;
 } 
+
+/* Fix for autocomplete display */
+#marker-icon-autocomplete:not(:empty) {
+  display: block !important;
+}
+
+.autocomplete-list:not(:empty) {
+  display: block !important;
+} 
+
+/* Additional autocomplete improvements */
+#marker-icon-autocomplete {
+  border-radius: 0 0 8px 8px;
+  border: 1px solid #1976d2;
+  border-top: none;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+}
+
+#marker-icon-autocomplete .autocomplete-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f4fa;
+  transition: background-color 0.15s ease;
+}
+
+#marker-icon-autocomplete .autocomplete-item:last-child {
+  border-bottom: none;
+  border-radius: 0 0 8px 8px;
+}
+
+#marker-icon-autocomplete .autocomplete-item:hover,
+#marker-icon-autocomplete .autocomplete-item.active {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+#marker-icon-autocomplete .autocomplete-item .material-icons {
+  margin-right: 8px;
+  font-size: 20px;
+  color: #1976d2;
+}
+
+/* Dark theme support for autocomplete */
+.theme-dark #marker-icon-autocomplete {
+  background: #333;
+  border-color: #1976d2;
+}
+
+.theme-dark #marker-icon-autocomplete .autocomplete-item {
+  border-bottom-color: #555;
+  color: #fff;
+}
+
+.theme-dark #marker-icon-autocomplete .autocomplete-item:hover,
+.theme-dark #marker-icon-autocomplete .autocomplete-item.active {
+  background: #424242;
+  color: #90caf9;
+}
+
+.theme-dark #marker-icon-autocomplete .autocomplete-item .material-icons {
+  color: #90caf9;
+} 

@@ -198,10 +198,10 @@ const tileLayerOptions = {
 import { customLayers, getNextLayerId, saveLayersToStorage, loadLayersFromStorage, addLayer } from './layers.js';
 import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput, showConfirmDialog, createLayerControl } from './ui.js';
 import { state } from './state.js';
-import { filterMaterialIcons } from './material-icons.js';
+import { materialIcons, filterMaterialIcons, loadMaterialIcons } from './material-icons.js';
 // --- глобальний прапорець для drag & drop тултіпів ---
 // --- Автокомпліт для інпуту іконки маркера ---
-function setupMarkerIconAutocomplete() {
+export function setupMarkerIconAutocomplete() {
     let input = LegacyAdapter.DOM.getElement('marker-icon');
     const list = LegacyAdapter.DOM.getElement('marker-icon-autocomplete');
     const preview = LegacyAdapter.DOM.getElement('marker-icon-preview');
@@ -216,6 +216,21 @@ function setupMarkerIconAutocomplete() {
         const val = input.value.trim().toLowerCase();
         LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
         LegacyAdapter.DOM.setText('marker-icon-preview', input.value);
+        // Перевіряємо, чи завантажені Material Icons
+        if (materialIcons.length === 0) {
+            // Якщо не завантажені, завантажуємо їх
+            loadMaterialIcons().then(() => {
+                showAutocompleteResults(val, list);
+            }).catch(() => {
+                // Якщо завантаження не вдалося, показуємо базові іконки
+                showAutocompleteResults(val, list);
+            });
+        }
+        else {
+            showAutocompleteResults(val, list);
+        }
+    });
+    function showAutocompleteResults(val, list) {
         const matches = filterMaterialIcons(val);
         currentFocus = -1;
         matches.forEach((name) => {
@@ -234,7 +249,7 @@ function setupMarkerIconAutocomplete() {
             };
             list.appendChild(item);
         });
-    });
+    }
     input.onkeydown = function (e) {
         const items = list.querySelectorAll('.autocomplete-item');
         if (e.key === 'ArrowDown') {
@@ -257,11 +272,22 @@ function setupMarkerIconAutocomplete() {
                 e.preventDefault();
             }
         }
-    };
-    input.onfocus = input.oninput;
-    document.addEventListener('click', function (e) {
-        if (e.target !== input)
+        else if (e.key === 'Escape') {
             LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+            e.preventDefault();
+        }
+    };
+    input.onfocus = function () {
+        // Показуємо автокомпліт при фокусі, якщо є текст
+        if (input.value.trim()) {
+            input.dispatchEvent(new Event('input'));
+        }
+    };
+    document.addEventListener('click', function (e) {
+        const target = e.target;
+        if (target !== input && !list.contains(target)) {
+            LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+        }
     });
 }
 // --- Додаю глобальний флаг для готовності іконок ---
@@ -277,7 +303,13 @@ function waitForMaterialIconsAndInitAutocomplete() {
         setupMarkerIconAutocomplete();
     }
     else {
-        setTimeout(waitForMaterialIconsAndInitAutocomplete, 100);
+        // Завантажуємо іконки, якщо вони ще не завантажені
+        loadMaterialIcons().then(() => {
+            setupMarkerIconAutocomplete();
+        }).catch(() => {
+            // Якщо завантаження не вдалося, спробуємо ще раз через 100мс
+            setTimeout(waitForMaterialIconsAndInitAutocomplete, 100);
+        });
     }
 }
 // Використовуємо getColoredMarkerIcon з utils.ts замість дублікату
@@ -312,6 +344,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         // Ініціалізуємо додаткові функції
         waitForMaterialIconsAndInitAutocomplete();
+        // Експортуємо функцію в глобальну область для використання в ui.ts
+        window.setupMarkerIconAutocomplete = setupMarkerIconAutocomplete;
         // Ініціалізуємо нову систему пошуку
         initializeSearch(customLayers);
         console.log('Додаток успішно ініціалізовано з AppManager');

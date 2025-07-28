@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест автокомпліту іконок</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+</head>
+<body>
+    <div style="padding: 50px;">
+        <h2>Тест автокомпліту іконок маркера</h2>
+        
+        <div class="form-group">
+            <label for="marker-icon">Назва іконки (Material Icons):</label>
+            <div class="marker-icon-input-wrap">
+                <input type="text" id="marker-icon" placeholder="Введіть назву іконки..." />
+                <span id="marker-icon-preview" class="material-icons">place</span>
+            </div>
+            <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <p><strong>Інструкції:</strong></p>
+            <ul>
+                <li>Клікніть на поле введення</li>
+                <li>Почніть вводити назву іконки (наприклад, "home", "star", "person")</li>
+                <li>Повинен з'явитися список автокомпліту з іконками</li>
+                <li>Клікніть на іконку або використайте клавіші стрілок + Enter</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { setupMarkerIconAutocomplete } from './main.js';
+        
+        // Ініціалізуємо автокомпліт після завантаження сторінки
+        document.addEventListener('DOMContentLoaded', () => {
+            setupMarkerIconAutocomplete();
+            console.log('Автокомпліт ініціалізовано');
+        });
+    </script>
+</body>
+</html> 

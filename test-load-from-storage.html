@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест завантаження з localStorage</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+</head>
+<body>
+    <div id="map" style="height: 400px;"></div>
+    
+    <div style="padding: 20px;">
+        <h2>Тест завантаження з localStorage</h2>
+        <p><strong>Інструкції:</strong></p>
+        <ol>
+            <li>Створіть маркер на карті (кнопка маркера в правому верхньому куті)</li>
+            <li>Подвійний клік на маркері для відкриття вікна редагування</li>
+            <li>Змініть іконку на "home"</li>
+            <li>Натисніть "Оновити"</li>
+            <li>Перевірте консоль для логів збереження</li>
+            <li>Оновіть сторінку (F5)</li>
+            <li>Перевірте консоль для логів завантаження</li>
+            <li>Перевірте, чи збереглася іконка "home"</li>
+        </ol>
+        
+        <div style="margin-top: 20px;">
+            <button id="load-from-storage" style="padding: 10px; margin: 5px;">Завантажити з localStorage</button>
+            <button id="check-localstorage" style="padding: 10px; margin: 5px;">Перевірити localStorage</button>
+            <button id="clear-localstorage" style="padding: 10px; margin: 5px; background-color: #ff4444; color: white;">Очистити localStorage</button>
+        </div>
+        
+        <div id="test-results" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <h3>Результати тесту:</h3>
+            <div id="results-content"></div>
+        </div>
+    </div>
+
+    <!-- Модальне вікно для редагування об'єктів -->
+    <div id="edit-object-modal" class="modal hidden">
+        <div class="modal-content modal-content-narrow">
+            <div class="modal-header">
+                <h3 id="modal-title">Редактор об'єкта</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="object-name">Назва</label>
+                    <input type="text" id="object-name" placeholder="Назва">
+                </div>
+                <div class="form-group">
+                    <label for="object-description">Опис (можна використовувати HTML)</label>
+                    <textarea id="object-description" placeholder="Опис" rows="3"></textarea>
+                </div>
+                <div class="form-group" id="color-picker-group">
+                    <label>Колір</label>
+                    <div class="color-palette" id="color-palette">
+                        <div class="color-swatch" data-color="#ff4500" style="background-color:#ff4500;"></div>
+                        <div class="color-swatch" data-color="#ff8c00" style="background-color:#ff8c00;"></div>
+                        <div class="color-swatch" data-color="#ffd700" style="background-color:#ffd700;"></div>
+                        <div class="color-swatch" data-color="#90ee90" style="background-color:#90ee90;"></div>
+                        <div class="color-swatch" data-color="#87ceeb" style="background-color:#87ceeb;"></div>
+                        <div class="color-swatch" data-color="#1976d2" style="background-color:#1976d2;"></div>
+                        <div class="color-swatch" data-color="#ff69b4" style="background-color:#ff69b4;"></div>
+                        <div class="color-swatch" data-color="#000000" style="background-color:#000000;"></div>
+                    </div>
+                    <input type="color" id="object-color" class="color-picker-input" value="#1976d2">
+                </div>
+                <div class="form-group" id="marker-icon-group">
+                    <label for="marker-icon">Назва іконки (Material Icons):</label>
+                    <div class="marker-icon-input-wrap">
+                        <input type="text" id="marker-icon" placeholder="Введіть назву іконки..." />
+                        <span id="marker-icon-preview" class="material-icons">place</span>
+                    </div>
+                    <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-flex">
+                <button id="save-object" class="btn-primary">Оновити</button>
+                <button id="delete-object" class="btn-danger">Видалити</button>
+                <button id="cancel-edit" class="btn-secondary">Закрити</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script>
+        window.L = window.L || {};
+    </script>
+    <script type="module">
+        import { map } from './map-init.js';
+        import { setupMarkerIconAutocomplete } from './main.js';
+        import { ModalService } from './services/modal-service.js';
+        import { customLayers, addLayer, saveLayersToStorage, loadLayersFromStorage } from './layers.js';
+        import { initDrawControl } from './draw-control.js';
+        
+        // Ініціалізуємо карту
+        const center = [49.8397, 24.0297];
+        map.setView(center, 13);
+        
+        // Додаємо базовий шар
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        // Ініціалізуємо draw control
+        initDrawControl();
+        
+        // Ініціалізуємо ModalService
+        const modalService = ModalService.getInstance();
+        modalService.init();
+        
+        // Ініціалізуємо автокомпліт
+        setupMarkerIconAutocomplete();
+        
+        // Додаємо тестовий шар
+        addLayer();
+        
+        // Додаємо обробник для draw:created
+        map.on('draw:created', function (e) {
+            const layer = e.layer;
+            const type = e.layerType;
+            
+            if (type === 'marker') {
+                // Додаємо маркер до активного шару
+                if (customLayers.length > 0) {
+                    const activeLayer = customLayers[customLayers.length - 1];
+                    if (activeLayer.featureGroup) {
+                        activeLayer.featureGroup.addLayer(layer);
+                        
+                        // Додаємо подвійний клік для редагування
+                        layer.on('dblclick', function() {
+                            modalService.showEditModal(layer);
+                        });
+                        
+                        // Зберігаємо зміни
+                        saveLayersToStorage();
+                        
+                        console.log('Маркер додано до шару:', activeLayer.title);
+                        addTestResult('Маркер успішно створено');
+                    }
+                }
+            }
+        });
+        
+        // Обробники кнопок
+        document.getElementById('load-from-storage').addEventListener('click', function() {
+            console.log('Завантажуємо з localStorage...');
+            const success = loadLayersFromStorage();
+            if (success) {
+                addTestResult('Дані успішно завантажено з localStorage');
+            } else {
+                addTestResult('Немає даних в localStorage або помилка завантаження');
+            }
+        });
+        
+        document.getElementById('check-localstorage').addEventListener('click', function() {
+            const data = localStorage.getItem('lefleat_layers');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    console.log('localStorage дані:', parsed);
+                    addTestResult('localStorage містить дані: ' + JSON.stringify(parsed, null, 2));
+                } catch (e) {
+                    addTestResult('Помилка парсингу localStorage: ' + e.message);
+                }
+            } else {
+                addTestResult('localStorage порожній');
+            }
+        });
+        
+        document.getElementById('clear-localstorage').addEventListener('click', function() {
+            localStorage.removeItem('lefleat_layers');
+            addTestResult('localStorage очищено');
+        });
+        
+        function addTestResult(message) {
+            const resultsContent = document.getElementById('results-content');
+            const resultDiv = document.createElement('div');
+            resultDiv.style.marginBottom = '10px';
+            resultDiv.style.padding = '5px';
+            resultDiv.style.backgroundColor = '#e8f5e8';
+            resultDiv.style.borderRadius = '3px';
+            resultDiv.textContent = `✅ ${message}`;
+            resultsContent.appendChild(resultDiv);
+        }
+        
+        console.log('Тест завантаження з localStorage ініціалізовано');
+    </script>
+</body>
+</html> 

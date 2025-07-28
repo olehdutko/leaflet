@@ -82,16 +82,9 @@ export function saveLayersToStorage(): void {
         layerProperties: layer.properties
       });
       
-      // Перевіряємо чи об'єкт має вже встановлені властивості (наприклад, з KMZ)
-      const hasExistingProperties = layer.feature.properties && 
-        (layer.feature.properties.name || layer.feature.properties.description || 
-         layer.feature.properties.color || layer.feature.properties.weight);
-      
-      console.log('layers.ts: hasExistingProperties:', hasExistingProperties);
-      
-      // Якщо властивості вже встановлені (наприклад, з KMZ), не перезаписуємо їх
-      if (!hasExistingProperties && layer.properties) {
-        console.log('layers.ts: Копіюємо властивості з layer.properties до layer.feature.properties');
+      // Завжди оновлюємо властивості з layer.properties, якщо вони є
+      if (layer.properties) {
+        console.log('layers.ts: Оновлюємо властивості з layer.properties до layer.feature.properties');
         Object.assign(layer.feature.properties, layer.properties);
       }
       
@@ -103,6 +96,12 @@ export function saveLayersToStorage(): void {
         if (!layer.feature.properties.icon) {
           layer.feature.properties.icon = layer.properties?.icon || 'place';
         }
+        console.log('layers.ts: Властивості маркера після обробки:', {
+          color: layer.feature.properties.color,
+          icon: layer.feature.properties.icon,
+          name: layer.feature.properties.name,
+          properties: layer.feature.properties
+        });
       } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
         if (!layer.feature.properties.fillColor) {
           layer.feature.properties.fillColor = layer.options?.fillColor || '#1976d2';
@@ -160,12 +159,14 @@ export function saveLayersToStorage(): void {
     l.featureGroup.eachLayer((layer: any) => {
       if (layer.feature) {
         // Використовуємо наш створений feature об'єкт
+        console.log('layers.ts: Перед збереженням у features, properties:', layer.feature.properties);
         features.push(layer.feature);
         featureCount++;
         console.log('layers.ts: Зберігаємо feature об\'єкт:', {
           type: layer.feature.geometry?.type,
           name: layer.feature.properties?.name,
-          hasName: !!layer.feature.properties?.name
+          hasName: !!layer.feature.properties?.name,
+          icon: layer.feature.properties?.icon
         });
       } else {
         // Fallback до стандартного toGeoJSON для об'єктів без feature
@@ -216,6 +217,18 @@ export function saveLayersToStorage(): void {
   // Перевіряємо, що дані не порожні перед збереженням
   if (layersData.length > 0) {
     console.log('layers.ts: Зберігаємо дані в localStorage:', layersData.length, 'шарів');
+    
+    // Додаткове логування для перевірки збереження іконок
+    layersData.forEach((layerData, index) => {
+      if (layerData.geojson && layerData.geojson.features) {
+        layerData.geojson.features.forEach((feature: any, featureIndex: number) => {
+          if (feature.properties && feature.properties.icon) {
+            console.log(`layers.ts: Зберігаємо іконку в шарі ${index}, об'єкт ${featureIndex}:`, feature.properties.icon);
+          }
+        });
+      }
+    });
+    
     localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
     console.log('layers.ts: Дані збережено в localStorage');
   } else {
@@ -253,6 +266,13 @@ export function loadLayersFromStorage(): boolean {
           pointToLayer: function (feature: any, latlng: any) {
             const color = feature.properties?.color || '#1976d2'; // Дефолтний колір
             const iconName = feature.properties?.icon || 'place';
+            
+            console.log('layers.ts: Завантажуємо маркер з іконкою:', {
+              iconName: iconName,
+              color: color,
+              name: feature.properties?.name,
+              allProperties: feature.properties
+            });
 
             return L.marker(latlng, {
               icon: getColoredMarkerIcon(color, iconName)
@@ -272,6 +292,9 @@ export function loadLayersFromStorage(): boolean {
             addDoubleClickToLayer(layer);
             if (feature.properties) {
               layer.properties = { ...feature.properties };
+              
+              console.log('layers.ts: onEachFeature - feature.properties:', feature.properties);
+              console.log('layers.ts: onEachFeature - layer.properties після копіювання:', layer.properties);
 
               // Виправляємо undefined значення для назви та опису
               if (!layer.properties.name || layer.properties.name === 'undefined') {
@@ -285,6 +308,7 @@ export function loadLayersFromStorage(): boolean {
                 layer.properties.description = '';
               }
 
+              console.log('layers.ts: onEachFeature - викликаємо applyObjectProperties з:', layer.properties);
               applyObjectProperties(layer, layer.properties);
               if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
                 let dashArray = null;

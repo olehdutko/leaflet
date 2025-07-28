@@ -2,26 +2,41 @@ declare const L: any;
 import { getObjectType, setObjectProperty, applyObjectStyle } from './utils.js';
 
 export function applyObjectProperties(layer: any, properties: any) {
+  console.log('applyObjectProperties: Викликано з layer:', layer);
+  console.log('applyObjectProperties: properties:', properties);
+  
+  if (!layer) {
+    console.error('applyObjectProperties: layer є null або undefined');
+    return;
+  }
+  
   const type = getObjectType(layer);
+  console.log('applyObjectProperties: тип об\'єкта:', type);
   
   // Встановлюємо базові властивості
   setObjectProperty(layer, 'name', properties.name);
   setObjectProperty(layer, 'description', properties.description);
   
   if (type === 'marker') {
+    console.log('applyObjectProperties: properties.icon =', properties.icon, 'тип:', typeof properties.icon);
     const iconName = properties.icon || 'place';
     const color = properties.color || '#1976d2';
+    console.log('applyObjectProperties: встановлюємо іконку маркера:', iconName, 'колір:', color);
 
-    layer.setIcon(L.divIcon({
+    const icon = L.divIcon({
       className: 'custom-marker-icon',
-      html: `<div style="background:${color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="material-icons" style="color:#fff;font-size:20px;transform:rotate(45deg);">${iconName}</i></div>`,
+      html: `<div style="background:${color};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="material-icons" style="color:#fff;font-size:20px;">${iconName}</i></div>`,
       iconSize: [28, 28],
       iconAnchor: [14, 28]
-    }));
+    });
+    
+    console.log('applyObjectProperties: встановлюємо іконку:', icon);
+    layer.setIcon(icon);
     
     setObjectProperty(layer, 'color', color);
     setObjectProperty(layer, 'icon', iconName);
     layer.options.color = color;
+    console.log('applyObjectProperties: іконка маркера встановлена. layer.properties:', layer.properties);
     
   } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
     const color = properties.color || '#1976d2';

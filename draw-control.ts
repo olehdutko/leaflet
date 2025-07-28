@@ -114,6 +114,34 @@ export function initDrawControl() {
         if (!layer.feature.properties) layer.feature.properties = {};
         layer.feature.properties.description = description;
       }
+    } else if (type === 'marker' && layer.getLatLng) {
+      // Обробка для маркера
+      const latlng = layer.getLatLng();
+      
+      // Створюємо feature для маркера
+      if (!layer.feature) {
+        layer.feature = {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [latlng.lng, latlng.lat]
+          },
+          properties: {
+            name: `${objectType} ${timeStr}`,
+            description: description,
+            color: '#1976d2',
+            icon: 'place'
+          }
+        };
+        console.log('draw-control.ts: Створено feature для маркера:', layer.feature);
+      }
+      
+      if (!layer.properties) layer.properties = {};
+      layer.properties.description = description;
+      if (layer.feature && typeof layer.feature === 'object') {
+        if (!layer.feature.properties) layer.feature.properties = {};
+        layer.feature.properties.description = description;
+      }
     } else if (type === 'polygon' && layer.getLatLngs) {
       // Обробка для полігону
       const latlngs = layer.getLatLngs();
@@ -319,6 +347,7 @@ export function initDrawControl() {
     // Копіюємо властивості в feature.properties для всіх типів
     if (layer.feature && layer.feature.properties) {
       Object.assign(layer.feature.properties, layer.properties);
+      console.log('draw-control.ts: Скопійовано властивості в feature.properties:', layer.feature.properties);
     }
 
     // Додаємо до активного шару

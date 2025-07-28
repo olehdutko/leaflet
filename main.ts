@@ -228,14 +228,14 @@ import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, sa
 
 import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput, showConfirmDialog, createLayerControl } from './ui.js';
 import { stateManager, state } from './state.js';
-import { materialIcons, filterMaterialIcons } from './material-icons.js';
+import { materialIcons, filterMaterialIcons, loadMaterialIcons } from './material-icons.js';
 import { getLayerIcon, createTooltip, getObjectType, getObjectProperties, getColoredMarkerIcon } from './utils.js';
 
 // --- глобальний прапорець для drag & drop тултіпів ---
 
 
 // --- Автокомпліт для інпуту іконки маркера ---
-function setupMarkerIconAutocomplete() {
+export function setupMarkerIconAutocomplete() {
   let input = LegacyAdapter.DOM.getElement<HTMLInputElement>('marker-icon');
   const list = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-autocomplete');
   const preview = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-preview');
@@ -252,6 +252,22 @@ function setupMarkerIconAutocomplete() {
     const val = input.value.trim().toLowerCase();
     LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
     LegacyAdapter.DOM.setText('marker-icon-preview', input.value);
+    
+    // Перевіряємо, чи завантажені Material Icons
+    if (materialIcons.length === 0) {
+      // Якщо не завантажені, завантажуємо їх
+      loadMaterialIcons().then(() => {
+        showAutocompleteResults(val, list);
+      }).catch(() => {
+        // Якщо завантаження не вдалося, показуємо базові іконки
+        showAutocompleteResults(val, list);
+      });
+    } else {
+      showAutocompleteResults(val, list);
+    }
+  });
+  
+  function showAutocompleteResults(val: string, list: HTMLElement) {
     const matches = filterMaterialIcons(val);
     currentFocus = -1;
     matches.forEach((name: string) => {
@@ -270,7 +286,7 @@ function setupMarkerIconAutocomplete() {
       };
       list.appendChild(item);
     });
-  });
+  }
 
   input.onkeydown = function (e) {
     const items = list.querySelectorAll('.autocomplete-item');
@@ -289,11 +305,22 @@ function setupMarkerIconAutocomplete() {
         (items[currentFocus] as HTMLElement).click();
         e.preventDefault();
       }
+    } else if (e.key === 'Escape') {
+      LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+      e.preventDefault();
     }
   };
-  input.onfocus = input.oninput;
+  input.onfocus = function() {
+    // Показуємо автокомпліт при фокусі, якщо є текст
+    if (input.value.trim()) {
+      input.dispatchEvent(new Event('input'));
+    }
+  };
   document.addEventListener('click', function (e) {
-    if (e.target !== input) LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+    const target = e.target as HTMLElement;
+    if (target !== input && !list.contains(target)) {
+      LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+    }
   });
 }
 
@@ -311,7 +338,13 @@ function waitForMaterialIconsAndInitAutocomplete() {
   if ((window as any).materialIconsReady) {
     setupMarkerIconAutocomplete();
   } else {
-    setTimeout(waitForMaterialIconsAndInitAutocomplete, 100);
+    // Завантажуємо іконки, якщо вони ще не завантажені
+    loadMaterialIcons().then(() => {
+      setupMarkerIconAutocomplete();
+    }).catch(() => {
+      // Якщо завантаження не вдалося, спробуємо ще раз через 100мс
+      setTimeout(waitForMaterialIconsAndInitAutocomplete, 100);
+    });
   }
 }
 
@@ -367,6 +400,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Ініціалізуємо додаткові функції
     waitForMaterialIconsAndInitAutocomplete();
+    
+    // Експортуємо функцію в глобальну область для використання в ui.ts
+    (window as any).setupMarkerIconAutocomplete = setupMarkerIconAutocomplete;
     
     // Ініціалізуємо нову систему пошуку
     initializeSearch(customLayers);

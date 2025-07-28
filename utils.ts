@@ -42,12 +42,19 @@ export function createTooltip(element: any, text: string) {
 }
 
 export function getObjectType(layer: any): string {
+  console.log('getObjectType: перевіряємо layer:', layer);
+  console.log('getObjectType: layer.constructor:', layer?.constructor?.name);
+  console.log('getObjectType: L.Marker:', L.Marker);
+  console.log('getObjectType: layer instanceof L.Marker:', layer instanceof L.Marker);
+  
   if (layer instanceof L.Marker && !(layer instanceof L.CircleMarker)) return 'marker';
   if (layer instanceof L.CircleMarker) return 'circle';
   if (layer instanceof L.Polygon && !(layer instanceof L.Rectangle)) return 'polygon';
   if (layer instanceof L.Rectangle) return 'rectangle';
   if (layer instanceof L.Polyline) return 'polyline';
   if (layer instanceof L.ImageOverlay) return 'image';
+  
+  console.log('getObjectType: повертаємо unknown для layer:', layer);
   return 'unknown';
 }
 
@@ -56,6 +63,7 @@ export function getObjectProperties(layer: any): any {
 }
 
 export function getColoredMarkerIcon(color: string = "#1976d2", iconName: string = "place"): any {
+  console.log('getColoredMarkerIcon: створюємо іконку з параметрами:', { color, iconName });
   return L.divIcon({
     className: 'custom-marker-icon',
     html: `<div style="background:${color};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="material-icons" style="color:#fff;font-size:20px;">${iconName}</i></div>`,
@@ -66,6 +74,10 @@ export function getColoredMarkerIcon(color: string = "#1976d2", iconName: string
 
 // Додаємо утиліти для роботи з властивостями об'єктів
 export function setObjectProperty(layer: any, key: string, value: any): void {
+  if (!layer) {
+    console.error('setObjectProperty: layer є null або undefined');
+    return;
+  }
   if (!layer.properties) layer.properties = {};
   layer.properties[key] = value;
 }

@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { closeEditModal } from './main.js';
+import { closeEditModal, setupMarkerIconAutocomplete } from './main.js';
 import { map } from './map-init.js';
 import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './utils.js';
 import { saveLayersToStorage } from './layers.js';
@@ -72,6 +72,8 @@ export function showEditModal(layer) {
             markerIconInput.oninput = function () {
                 LegacyAdapter.DOM.setText('marker-icon-preview', markerIconInput.value);
             };
+            // Ініціалізуємо автокомпліт для іконок маркера
+            setupMarkerIconAutocomplete();
         }
         // Показати/заповнити координати
         const coordsGroup = document.querySelector('.marker-coords-group');
