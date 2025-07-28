@@ -258,8 +258,7 @@ body {
 }
 
 .layer-card {
-  background-color: #7c72721f;
-  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 12px;
@@ -268,9 +267,11 @@ body {
 }
 
 .layer-card.active {
-  background-color: #7c727204;
-  border-color: #f10b22;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background-color: #e5e7eb;
+  border-color: #000000;
+  
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  /* box-shadow: rgba(0, 0, 0, 0.25) 0px 25px 50px -12px; */
 }
 
 
@@ -2392,4 +2393,26 @@ body.blurred > *:not(#confirm-modal) {
 
 .theme-dark #marker-icon-autocomplete .autocomplete-item .material-icons {
   color: #90caf9;
+} 
+
+/* Стилі для кастомних маркерів */
+.custom-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-marker-icon > div {
+  border-radius: 50% 50% 50% 0 !important;
+  transform: rotate(-45deg) !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.custom-marker-icon .material-icons {
+  transform: rotate(45deg) !important;
+  color: #fff !important;
+  font-size: 20px !important;
 } 

@@ -1055,16 +1055,20 @@ export function createLayerControl(layerObj: any) {
       const item = document.createElement('div');
       item.className = 'layer-object-item';
       item.title = props.name || type;
+      
+      // Отримуємо колір об'єкта
+      const objectColor = props.color || '#1976d2';
+      
       item.innerHTML =
         `<span class="material-icons layer-object-drag-icon">drag_indicator</span>` +
         (
-          type === 'marker' ? `<span class="material-icons">${props.icon || 'place'}</span>` :
-            type === 'polygon' ? '<i class="fa fa-draw-polygon"></i>' :
-              type === 'polyline' ? '<i class="fa fa-share-alt"></i>' :
-                type === 'circle' ? '<i class="fa fa-circle"></i>' :
-                  type === 'rectangle' ? '<i class="fa fa-square"></i>' :
-                    type === 'image' ? '<i class="fa fa-image"></i>' :
-                      '<i class="fa fa-question"></i>'
+          type === 'marker' ? `<span class="material-icons" style="color: ${objectColor};">${props.icon || 'place'}</span>` :
+            type === 'polygon' ? `<i class="fa fa-draw-polygon" style="color: ${objectColor};"></i>` :
+              type === 'polyline' ? `<i class="fa fa-share-alt" style="color: ${objectColor};"></i>` :
+                type === 'circle' ? `<i class="fa fa-circle" style="color: ${objectColor};"></i>` :
+                  type === 'rectangle' ? `<i class="fa fa-square" style="color: ${objectColor};"></i>` :
+                    type === 'image' ? `<i class="fa fa-image" style="color: ${objectColor};"></i>` :
+                      `<i class="fa fa-question" style="color: ${objectColor};"></i>`
         ) +
         ` <span class="layer-object-name">${props.name || '[без назви]'}</span>`;
       item.dataset.objectId = layer._leaflet_id;

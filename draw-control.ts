@@ -360,6 +360,14 @@ export function initDrawControl() {
 
       // Оновлюємо UI
       updateActiveLayerUI();
+      
+      // Оновлюємо список об'єктів для активного шару
+      const customLayers = (window as any).customLayers || [];
+      const layerObj = customLayers.find((l: any) => l.featureGroup === activeLayer);
+      if (layerObj && (window as any).updateObjectsListForLayer) {
+        console.log('draw-control.ts: Оновлюємо список об\'єктів для шару:', layerObj.id);
+        (window as any).updateObjectsListForLayer(layerObj);
+      }
     }
   });
 
@@ -367,6 +375,14 @@ export function initDrawControl() {
     // Зберігаємо зміни в активному шарі
     if (activeLayer) {
       saveLayersToStorage();
+      
+      // Оновлюємо список об'єктів для активного шару
+      const customLayers = (window as any).customLayers || [];
+      const layerObj = customLayers.find((l: any) => l.featureGroup === activeLayer);
+      if (layerObj && (window as any).updateObjectsListForLayer) {
+        console.log('draw-control.ts: Оновлюємо список об\'єктів після редагування для шару:', layerObj.id);
+        (window as any).updateObjectsListForLayer(layerObj);
+      }
     }
   });
 
@@ -374,6 +390,14 @@ export function initDrawControl() {
     // Зберігаємо зміни в активному шарі
     if (activeLayer) {
       saveLayersToStorage();
+      
+      // Оновлюємо список об'єктів для активного шару
+      const customLayers = (window as any).customLayers || [];
+      const layerObj = customLayers.find((l: any) => l.featureGroup === activeLayer);
+      if (layerObj && (window as any).updateObjectsListForLayer) {
+        console.log('draw-control.ts: Оновлюємо список об\'єктів після видалення для шару:', layerObj.id);
+        (window as any).updateObjectsListForLayer(layerObj);
+      }
     }
   });
 }
