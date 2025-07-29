@@ -1045,7 +1045,7 @@ export function createLayerControl(layerObj: any) {
   objectsListWrap.className = 'layer-objects-list';
   function renderObjectsList() {
     console.log('ui.ts: renderObjectsList викликано для шару:', layerObj.id);
-    console.log('ui.ts: Кількість об\'єктів у featureGroup:', layerObj.featureGroup.getLayers().length);
+    console.log('ui.ts: Кількість об\'єктів у featureGroup:', layerObj.featureGroup ? layerObj.featureGroup.getLayers().length : 0);
     
     objectsListWrap.innerHTML = '';
     const objectItems: HTMLElement[] = [];
@@ -1323,11 +1323,33 @@ export function createLayerControl(layerObj: any) {
   return layerCard;
 }
 
-export const layerControlsDiv = LegacyAdapter.DOM.getElement<HTMLElement>('layer-controls');
-export const addLayerBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('add-layer');
-export const exportAllBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('export-all');
-export const importAllBtn = LegacyAdapter.DOM.getElement<HTMLButtonElement>('import-all');
-export const importAllInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('import-all-input');
+// Функції для отримання DOM елементів з перевіркою існування
+export function getLayerControlsDiv(): HTMLElement | null {
+  return LegacyAdapter.DOM.getElement<HTMLElement>('layer-controls');
+}
+
+export function getAddLayerBtn(): HTMLButtonElement | null {
+  return LegacyAdapter.DOM.getElement<HTMLButtonElement>('add-layer');
+}
+
+export function getExportAllBtn(): HTMLButtonElement | null {
+  return LegacyAdapter.DOM.getElement<HTMLButtonElement>('export-all');
+}
+
+export function getImportAllBtn(): HTMLButtonElement | null {
+  return LegacyAdapter.DOM.getElement<HTMLButtonElement>('import-all');
+}
+
+export function getImportAllInput(): HTMLInputElement | null {
+  return LegacyAdapter.DOM.getElement<HTMLInputElement>('import-all-input');
+}
+
+// Для зворотної сумісності експортуємо також як змінні
+export const layerControlsDiv = getLayerControlsDiv();
+export const addLayerBtn = getAddLayerBtn();
+export const exportAllBtn = getExportAllBtn();
+export const importAllBtn = getImportAllBtn();
+export const importAllInput = getImportAllInput();
 export let isDraggingObject = false;
 
 // Function to get currently selected layer

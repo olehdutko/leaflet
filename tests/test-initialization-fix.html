@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виправлення ініціалізації - Lefleat</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #1976d2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .map-container {
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Тест виправлення ініціалізації</h1>
+        </div>
+        
+        <div class="content">
+            <div class="status success">
+                <strong>Тест ініціалізації:</strong> Перевіряємо, чи виправлені помилки ініціалізації
+            </div>
+            
+            <div class="map-container">
+                <div id="map" style="width: 100%; height: 100%;"></div>
+            </div>
+            
+            <!-- Необхідні DOM елементи для тестування -->
+            <div id="layer-controls" style="display: none;"></div>
+            <button id="add-layer" style="display: none;">Додати шар</button>
+            <button id="export-all" style="display: none;">Експорт</button>
+            <button id="import-all" style="display: none;">Імпорт</button>
+            <input id="import-all-input" type="file" accept=".json,.kmz,.kml" style="display: none;">
+            
+            <div class="console" id="console">
+                Запуск тесту ініціалізації... 🚀
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Основні модулі проекту -->
+    <script type="module">
+        // Перехоплюємо console.log для відображення в UI
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleElement = document.getElementById('console');
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        // Перевіряємо на Leaflet об'єкти
+                        if (arg && arg._leaflet_id !== undefined) {
+                            return `[Leaflet object id: ${arg._leaflet_id}]`;
+                        }
+                        // Перевіряємо на featureGroup
+                        if (arg && typeof arg.getLayers === 'function') {
+                            return `[FeatureGroup with ${arg.getLayers().length} layers]`;
+                        }
+                        // Спробуємо серіалізувати
+                        return JSON.stringify(arg, null, 2);
+                    } catch (error) {
+                        return '[Object with circular references]';
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            consoleElement.textContent += '\n' + message;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        // Перевіряємо на Leaflet об'єкти
+                        if (arg && arg._leaflet_id !== undefined) {
+                            return `[Leaflet object id: ${arg._leaflet_id}]`;
+                        }
+                        // Перевіряємо на featureGroup
+                        if (arg && typeof arg.getLayers === 'function') {
+                            return `[FeatureGroup with ${arg.getLayers().length} layers]`;
+                        }
+                        // Спробуємо серіалізувати
+                        return JSON.stringify(arg, null, 2);
+                    } catch (error) {
+                        return '[Object with circular references]';
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            consoleElement.textContent += '\n❌ ' + message;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        };
+        
+        console.log('✅ Тест ініціалізації запущено!');
+        console.log('🗺️ Перевіряємо ініціалізацію карти та модулів...');
+        
+        // Імпортуємо основні модулі для тестування
+        try {
+            import('../main.js').then(() => {
+                console.log('✅ main.js успішно імпортовано');
+            }).catch(error => {
+                console.error('❌ Помилка імпорту main.js:', error);
+            });
+            
+            import('../layers.js').then(() => {
+                console.log('✅ layers.js успішно імпортовано');
+            }).catch(error => {
+                console.error('❌ Помилка імпорту layers.js:', error);
+            });
+            
+            import('../ui.js').then(() => {
+                console.log('✅ ui.js успішно імпортовано');
+            }).catch(error => {
+                console.error('❌ Помилка імпорту ui.js:', error);
+            });
+            
+        } catch (error) {
+            console.error('❌ Помилка при імпорті модулів:', error);
+        }
+        
+        // Перевіряємо DOM елементи
+        setTimeout(() => {
+            console.log('\n🔍 Перевіряємо DOM елементи:');
+            
+            const layerControls = document.getElementById('layer-controls');
+            const addLayerBtn = document.getElementById('add-layer');
+            const exportAllBtn = document.getElementById('export-all');
+            const importAllBtn = document.getElementById('import-all');
+            const importAllInput = document.getElementById('import-all-input');
+            
+            console.log('layer-controls:', layerControls ? '✅ знайдено' : '❌ не знайдено');
+            console.log('add-layer:', addLayerBtn ? '✅ знайдено' : '❌ не знайдено');
+            console.log('export-all:', exportAllBtn ? '✅ знайдено' : '❌ не знайдено');
+            console.log('import-all:', importAllBtn ? '✅ знайдено' : '❌ не знайдено');
+            console.log('import-all-input:', importAllInput ? '✅ знайдено' : '❌ не знайдено');
+            
+            console.log('\n🎉 Тест завершено! Перевірте консоль браузера для деталей.');
+        }, 2000);
+    </script>
+</body>
+</html> 

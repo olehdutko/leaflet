@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виправлення JSON Parse</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .fail { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Тест виправлення JSON Parse помилки</h1>
+    <button onclick="runTest()">Запустити тест</button>
+    <div id="results"></div>
+
+    <script type="module">
+        // Імпортуємо тестові функції
+        import { runAllStandaloneTests } from './standalone-tests.js';
+
+        window.runTest = function() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>Результати тестування:</h2>';
+            
+            // Перехоплюємо console.log для відображення результатів
+            const originalLog = console.log;
+            const originalError = console.error;
+            const originalWarn = console.warn;
+            
+            const logs = [];
+            console.log = function(...args) {
+                logs.push({ type: 'log', args });
+                originalLog.apply(console, args);
+            };
+            
+            console.error = function(...args) {
+                logs.push({ type: 'error', args });
+                originalError.apply(console, args);
+            };
+            
+            console.warn = function(...args) {
+                logs.push({ type: 'warn', args });
+                originalWarn.apply(console, args);
+            };
+            
+            try {
+                // Запускаємо тести
+                runAllStandaloneTests();
+                
+                // Перевіряємо чи були помилки
+                const errors = logs.filter(log => log.type === 'error');
+                const warnings = logs.filter(log => log.type === 'warn');
+                
+                if (errors.length === 0) {
+                    resultsDiv.innerHTML += '<div class="test-result pass">✅ Тест пройшов успішно! JSON Parse помилка виправлена.</div>';
+                } else {
+                    resultsDiv.innerHTML += '<div class="test-result fail">❌ Знайдено помилки:</div>';
+                    errors.forEach(error => {
+                        resultsDiv.innerHTML += `<div class="test-result fail">${error.args.join(' ')}</div>`;
+                    });
+                }
+                
+                if (warnings.length > 0) {
+                    resultsDiv.innerHTML += '<div class="test-result pass">⚠️ Попередження (очікувані):</div>';
+                    warnings.forEach(warning => {
+                        resultsDiv.innerHTML += `<div class="test-result pass">${warning.args.join(' ')}</div>`;
+                    });
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="test-result fail">❌ Критична помилка: ${error.message}</div>`;
+            } finally {
+                // Відновлюємо оригінальні функції
+                console.log = originalLog;
+                console.error = originalError;
+                console.warn = originalWarn;
+            }
+        };
+    </script>
+</body>
+</html> 

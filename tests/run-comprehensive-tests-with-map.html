@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Комплексні тести з картою - Lefleat</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #1976d2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            display: flex;
+            height: 600px;
+        }
+        .map-container {
+            flex: 1;
+            min-height: 400px;
+            border-right: 1px solid #eee;
+        }
+        .controls {
+            width: 400px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+            margin: 5px;
+            width: 100%;
+        }
+        .btn-primary {
+            background: #1976d2;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1565c0;
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #f57c00;
+        }
+        .console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #1976d2;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Комплексні тести з картою - Lefleat</h1>
+            <p>Повне тестування функціональності з інтерактивною картою</p>
+        </div>
+        
+        <div class="content">
+            <div class="map-container">
+                <div id="map" style="width: 100%; height: 100%;"></div>
+                
+                <!-- Необхідні DOM елементи для тестування -->
+                <div id="layer-controls" style="display: none;"></div>
+                <button id="add-layer" style="display: none;">Додати шар</button>
+                <button id="export-all" style="display: none;">Експорт</button>
+                <button id="import-all" style="display: none;">Імпорт</button>
+                <input id="import-all-input" type="file" accept=".json,.kmz,.kml" style="display: none;">
+            </div>
+            
+            <div class="controls">
+                <div class="status info">
+                    <strong>Інструкції:</strong>
+                    <ul>
+                        <li>Карта ініціалізована для повного тестування</li>
+                        <li>Використовуйте кнопки для запуску різних груп тестів</li>
+                        <li>Результати відображатимуться в консолі</li>
+                        <li>Тести можуть взаємодіяти з картою</li>
+                    </ul>
+                </div>
+                
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="runAllTests()">🚀 Запустити всі тести</button>
+                <button class="btn btn-secondary" onclick="runTestGroup('layers')">📊 Тести шарів</button>
+                <button class="btn btn-secondary" onclick="runTestGroup('objects')">🎯 Тести об'єктів</button>
+                <button class="btn btn-secondary" onclick="runTestGroup('storage')">💾 Тести localStorage</button>
+                <button class="btn btn-secondary" onclick="runTestGroup('modal')">🪟 Тести модальних вікон</button>
+                <button class="btn btn-secondary" onclick="runTestGroup('integration')">🔗 Інтеграційні тести</button>
+                <button class="btn btn-warning" onclick="clearConsole()">🧹 Очистити консоль</button>
+                
+                <div class="console" id="console">
+                    Готовий до тестування з картою! 🚀
+                    
+                    Натисніть кнопку "Запустити всі тести" або виберіть окрему групу тестів.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet для тестування -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Draw для тестування -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Основні модулі проекту -->
+    <script type="module">
+        // Імпортуємо комплексні тести
+        import { runAllTests, runTestGroup } from './comprehensive-tests.js';
+        
+        // Робимо функції глобально доступними
+        window.runAllTests = runAllTests;
+        window.runTestGroup = runTestGroup;
+        
+        // Функція очищення консолі
+        window.clearConsole = function() {
+            document.getElementById('console').textContent = 'Консоль очищено! 🧹\n\nГотовий до тестування з картою! 🚀';
+        };
+        
+        // Функція оновлення прогрес-бару
+        window.updateProgress = function(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        };
+        
+        // Перехоплюємо console.log для відображення в UI
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleElement = document.getElementById('console');
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        // Перевіряємо на Leaflet об'єкти
+                        if (arg && arg._leaflet_id !== undefined) {
+                            return `[Leaflet object id: ${arg._leaflet_id}]`;
+                        }
+                        // Перевіряємо на featureGroup
+                        if (arg && typeof arg.getLayers === 'function') {
+                            return `[FeatureGroup with ${arg.getLayers().length} layers]`;
+                        }
+                        // Спробуємо серіалізувати
+                        return JSON.stringify(arg, null, 2);
+                    } catch (error) {
+                        return '[Object with circular references]';
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            consoleElement.textContent += '\n' + message;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        // Перевіряємо на Leaflet об'єкти
+                        if (arg && arg._leaflet_id !== undefined) {
+                            return `[Leaflet object id: ${arg._leaflet_id}]`;
+                        }
+                        // Перевіряємо на featureGroup
+                        if (arg && typeof arg.getLayers === 'function') {
+                            return `[FeatureGroup with ${arg.getLayers().length} layers]`;
+                        }
+                        // Спробуємо серіалізувати
+                        return JSON.stringify(arg, null, 2);
+                    } catch (error) {
+                        return '[Object with circular references]';
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            consoleElement.textContent += '\n❌ ' + message;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        };
+        
+        console.log('✅ Комплексні тести з картою завантажено!');
+        console.log('🗺️ Карта ініціалізована для повного тестування.');
+    </script>
+</body>
+</html> 

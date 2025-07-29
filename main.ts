@@ -226,7 +226,7 @@ const tileLayerOptions = {
 // --- Користувацькі шари ---
 import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer, updateActiveLayerUI } from './layers.js';
 
-import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput, showConfirmDialog, createLayerControl } from './ui.js';
+import { getLayerControlsDiv, getAddLayerBtn, getExportAllBtn, getImportAllBtn, getImportAllInput, showConfirmDialog, createLayerControl } from './ui.js';
 import { stateManager, state } from './state.js';
 import { materialIcons, filterMaterialIcons, loadMaterialIcons } from './material-icons.js';
 import { getLayerIcon, createTooltip, getObjectType, getObjectProperties, getColoredMarkerIcon } from './utils.js';
@@ -370,6 +370,9 @@ import { initializeSearch, updateObjectSearchLayers, destroySearch } from './sea
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    // Додаємо невелику затримку для забезпечення повного завантаження модулів
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Оновлюємо title сторінки з версією
     updatePageTitle();
 
@@ -380,10 +383,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Завантажуємо шари
     const loadSuccess = loadLayersFromStorage();
     if (!loadSuccess) {
-      addLayer();
+      // Додаємо затримку для ініціалізації змінних
+      setTimeout(() => {
+        addLayer();
+      }, 100);
     }
 
     // Ініціалізуємо залежності сервісів
+    const layerControlsDiv = getLayerControlsDiv();
     if (layerControlsDiv) {
       appManager.initializeServiceDependencies(
         map,
@@ -396,6 +403,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       // Оновлюємо функцію збереження в сервісах
       appManager.updateSaveFunction(saveLayersToStorage);
+    } else {
+      console.warn('layerControlsDiv не знайдено, пропускаємо ініціалізацію сервісів');
     }
 
     // Ініціалізуємо додаткові функції
@@ -484,13 +493,21 @@ import { initDrawControl, updateDrawControlVisibility } from './draw-control.js'
 
 // Ініціалізуємо draw control
 initDrawControl();
-updateDrawControlVisibility();
+
+// Додаємо затримку для ініціалізації змінних
+setTimeout(() => {
+  updateDrawControlVisibility();
+}, 100);
 
 // Додаємо обробники подій для кнопок
+const addLayerBtn = getAddLayerBtn();
 if (addLayerBtn) {
   addLayerBtn.addEventListener('click', addLayer);
+} else {
+  console.warn('addLayerBtn не знайдено');
 }
 
+const exportAllBtn = getExportAllBtn();
 if (exportAllBtn) {
   exportAllBtn.addEventListener('click', () => {
     const data = localStorage.getItem('lefleat_layers');
@@ -507,15 +524,19 @@ if (exportAllBtn) {
       URL.revokeObjectURL(url);
     }, 100);
   });
+} else {
+  console.warn('exportAllBtn не знайдено');
 }
 
+const importAllBtn = getImportAllBtn();
+const importAllInput = getImportAllInput();
 if (importAllBtn && importAllInput) {
   importAllBtn.addEventListener('click', () => {
     (importAllInput as HTMLInputElement).value = '';
     (importAllInput as HTMLInputElement).click();
-  });
+    });
   (importAllInput as HTMLInputElement).addEventListener('change', (e: any) => {
-    const file = e.target.files[0];
+      const file = e.target.files[0];
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext === 'kmz' || ext === 'kml') {
@@ -545,6 +566,7 @@ if (importAllBtn && importAllInput) {
                       map.removeLayer(oldLayer.featureGroup);
                     }
                     customLayers.splice(existingIndex, 1);
+                    const layerControlsDiv = getLayerControlsDiv();
                     if (layerControlsDiv) {
                       layerControlsDiv.innerHTML = '';
                       customLayers.forEach(layer => createLayerControl(layer));
@@ -603,12 +625,13 @@ if (importAllBtn && importAllInput) {
                   const oldLayer = customLayers[existsIdx];
                   if (oldLayer && oldLayer.featureGroup && map) {
                     map.removeLayer(oldLayer.featureGroup);
-                  }
-                  customLayers.splice(existsIdx, 1);
-                  if (layerControlsDiv) {
-                    layerControlsDiv.innerHTML = '';
-                    customLayers.forEach(layer => createLayerControl(layer));
-                  }
+                                      }
+                    customLayers.splice(existsIdx, 1);
+                    const layerControlsDiv = getLayerControlsDiv();
+                    if (layerControlsDiv) {
+                      layerControlsDiv.innerHTML = '';
+                      customLayers.forEach(layer => createLayerControl(layer));
+                    }
                   actuallyImportLayer(obj);
                 } // cancel — нічого не робити
               },
@@ -624,7 +647,17 @@ if (importAllBtn && importAllInput) {
         }
         function actuallyImportLayer(obj: any) {
           // Додаємо шар у localStorage
-          let arr = JSON.parse(localStorage.getItem('lefleat_layers') || '[]');
+          let arr: any[] = [];
+          try {
+            const storedData = localStorage.getItem('lefleat_layers');
+            if (storedData) {
+              arr = JSON.parse(storedData);
+            }
+          } catch (error) {
+            console.warn('Invalid JSON in localStorage, starting with empty array:', error);
+            arr = [];
+          }
+          
           if (!Array.isArray(arr)) arr = [arr];
           arr.push(obj);
           localStorage.setItem('lefleat_layers', JSON.stringify(arr));
@@ -638,6 +671,8 @@ if (importAllBtn && importAllInput) {
     };
     reader.readAsText(file);
   });
+} else {
+  console.warn('importAllBtn або importAllInput не знайдено');
 }
 
 // === Додаю інструмент вимірювання відстані ===
@@ -775,7 +810,14 @@ interface Window {
       try {
         // Зберігаємо стан ПЕРЕД збереженням для порівняння
         const beforeState = localStorage.getItem('lefleat_layers');
-        const beforeCount = beforeState ? JSON.parse(beforeState).length : 0;
+        let beforeCount = 0;
+        try {
+          if (beforeState) {
+            beforeCount = JSON.parse(beforeState).length;
+          }
+        } catch (error) {
+          console.warn('Invalid JSON in beforeState:', error);
+        }
 
         // Виконуємо збереження
         (window as any).saveLayersToStorage?.();
@@ -783,24 +825,35 @@ interface Window {
         // Перевіряємо результат
         setTimeout(() => {
           const afterState = localStorage.getItem('lefleat_layers');
-          const afterCount = afterState ? JSON.parse(afterState).length : 0;
+          let afterCount = 0;
+          try {
+            if (afterState) {
+              afterCount = JSON.parse(afterState).length;
+            }
+          } catch (error) {
+            console.warn('Invalid JSON in afterState:', error);
+          }
 
           debugLog(`Збереження завершено: ${beforeCount} → ${afterCount} шарів`);
 
           // Для пріоритетних збережень перевіряємо наявність corners
           if (priority && afterState) {
-            const data = JSON.parse(afterState);
-            let foundCorners = false;
+            try {
+              const data = JSON.parse(afterState);
+              let foundCorners = false;
 
-            data.forEach((layer: any) => {
-              if (layer.overlays && layer.overlays.length > 0) {
-                layer.overlays.forEach((ov: any) => {
-                  if (ov.corners && ov.corners.length > 0) {
-                    foundCorners = true;
-                  }
-                });
-              }
-            });
+              data.forEach((layer: any) => {
+                if (layer.overlays && layer.overlays.length > 0) {
+                  layer.overlays.forEach((ov: any) => {
+                    if (ov.corners && ov.corners.length > 0) {
+                      foundCorners = true;
+                    }
+                  });
+                }
+              });
+            } catch (error) {
+              console.warn('Invalid JSON in priority check:', error);
+            }
           }
         }, 25);
 

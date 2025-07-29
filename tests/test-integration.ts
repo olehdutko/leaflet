@@ -1,11 +1,11 @@
 // Тест інтеграції сервісів після рефакторингу
-import { AppManager } from './managers/app-manager.js';
-import { EventManager } from './managers/event-manager.js';
-import { OverlayService } from './services/overlay-service.js';
-import { KmzService } from './services/kmz-service.js';
-import { ModalService } from './services/modal-service.js';
-import { GeoSearchService } from './services/search-service.js';
-import { ObjectSearchService } from './services/object-search-service.js';
+import { AppManager } from '../managers/app-manager.js';
+import { EventManager } from '../managers/event-manager.js';
+import { OverlayService } from '../services/overlay-service.js';
+import { KmzService } from '../services/kmz-service.js';
+import { ModalService } from '../services/modal-service.js';
+import { GeoSearchService } from '../services/search-service.js';
+import { ObjectSearchService } from '../services/object-search-service.js';
 
 console.log('🧪 Початок тестування інтеграції сервісів...');
 

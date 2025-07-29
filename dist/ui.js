@@ -1025,7 +1025,7 @@ export function createLayerControl(layerObj) {
     objectsListWrap.className = 'layer-objects-list';
     function renderObjectsList() {
         console.log('ui.ts: renderObjectsList викликано для шару:', layerObj.id);
-        console.log('ui.ts: Кількість об\'єктів у featureGroup:', layerObj.featureGroup.getLayers().length);
+        console.log('ui.ts: Кількість об\'єктів у featureGroup:', layerObj.featureGroup ? layerObj.featureGroup.getLayers().length : 0);
         objectsListWrap.innerHTML = '';
         const objectItems = [];
         layerObj.featureGroup.eachLayer((layer) => {
@@ -1297,11 +1297,28 @@ export function createLayerControl(layerObj) {
     layerControlsDiv.appendChild(layerCard);
     return layerCard;
 }
-export const layerControlsDiv = LegacyAdapter.DOM.getElement('layer-controls');
-export const addLayerBtn = LegacyAdapter.DOM.getElement('add-layer');
-export const exportAllBtn = LegacyAdapter.DOM.getElement('export-all');
-export const importAllBtn = LegacyAdapter.DOM.getElement('import-all');
-export const importAllInput = LegacyAdapter.DOM.getElement('import-all-input');
+// Функції для отримання DOM елементів з перевіркою існування
+export function getLayerControlsDiv() {
+    return LegacyAdapter.DOM.getElement('layer-controls');
+}
+export function getAddLayerBtn() {
+    return LegacyAdapter.DOM.getElement('add-layer');
+}
+export function getExportAllBtn() {
+    return LegacyAdapter.DOM.getElement('export-all');
+}
+export function getImportAllBtn() {
+    return LegacyAdapter.DOM.getElement('import-all');
+}
+export function getImportAllInput() {
+    return LegacyAdapter.DOM.getElement('import-all-input');
+}
+// Для зворотної сумісності експортуємо також як змінні
+export const layerControlsDiv = getLayerControlsDiv();
+export const addLayerBtn = getAddLayerBtn();
+export const exportAllBtn = getExportAllBtn();
+export const importAllBtn = getImportAllBtn();
+export const importAllInput = getImportAllInput();
 export let isDraggingObject = false;
 // Function to get currently selected layer
 export function getSelectedLayer() {

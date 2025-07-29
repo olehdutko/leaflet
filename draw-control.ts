@@ -417,31 +417,41 @@ export function setDrawButtonsEnabled(enabled: boolean) {
 }
 
 export function updateDrawControlVisibility() {
-  // Завжди показуємо draw control, якщо є активний шар
-  const hasActiveLayer = !!(activeLayer && typeof L.FeatureGroup !== 'undefined' && activeLayer instanceof L.FeatureGroup);
-  if (hasActiveLayer) {
-    if (!drawControl) {
-      initDrawControl();
+  // Імпортуємо безпечний геттер
+  import('./layers.js').then(({ getActiveLayer }) => {
+    const currentActiveLayer = getActiveLayer();
+    
+    // Завжди показуємо draw control, якщо є активний шар
+    const hasActiveLayer = !!(currentActiveLayer && typeof L.FeatureGroup !== 'undefined' && currentActiveLayer instanceof L.FeatureGroup);
+    if (hasActiveLayer) {
+      if (!drawControl) {
+        initDrawControl();
+      }
+      const drawSection = document.querySelector('.leaflet-draw');
+      if (drawSection) {
+        (drawSection as HTMLElement).style.display = 'block';
+      }
+      setDrawButtonsEnabled(true);
+    } else {
+      const drawSection = document.querySelector('.leaflet-draw');
+      if (drawSection) {
+        (drawSection as HTMLElement).style.display = 'none';
+      }
+      setDrawButtonsEnabled(false);
     }
-    const drawSection = document.querySelector('.leaflet-draw');
-    if (drawSection) {
-      (drawSection as HTMLElement).style.display = 'block';
-    }
-    setDrawButtonsEnabled(true);
-  } else {
-    const drawSection = document.querySelector('.leaflet-draw');
-    if (drawSection) {
-      (drawSection as HTMLElement).style.display = 'none';
-    }
-    setDrawButtonsEnabled(false);
-  }
+  });
 }
 
 export function updateDrawControlForActiveLayer() {
-  // виправлена перевірка: activeLayer має бути FeatureGroup
-  if (drawControl && activeLayer && typeof L.FeatureGroup !== 'undefined' && activeLayer instanceof L.FeatureGroup) {
-    // Оновлюємо feature group для редагування на активний шар
-    drawControl.options.edit.featureGroup = activeLayer;
-    setDrawButtonsEnabled(true);
-  }
+  // Імпортуємо безпечний геттер
+  import('./layers.js').then(({ getActiveLayer }) => {
+    const currentActiveLayer = getActiveLayer();
+    
+    // виправлена перевірка: activeLayer має бути FeatureGroup
+    if (drawControl && currentActiveLayer && typeof L.FeatureGroup !== 'undefined' && currentActiveLayer instanceof L.FeatureGroup) {
+      // Оновлюємо feature group для редагування на активний шар
+      drawControl.options.edit.featureGroup = currentActiveLayer;
+      setDrawButtonsEnabled(true);
+    }
+  });
 } 

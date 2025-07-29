@@ -30,10 +30,84 @@ export interface LayerObj {
   // images?: ImageOverlayData[]; // Removed as per edit hint
 }
 
-export let customLayers: LayerObj[] = [];
-export let activeLayer: any = null;
-export let layerId = 1;
-export function getNextLayerId() { return layerId++; }
+// Ініціалізуємо змінні з перевіркою
+let _customLayers: LayerObj[] = [];
+let _activeLayer: any = null;
+let _layerId: number = 1;
+
+export let customLayers: LayerObj[] = _customLayers;
+export let activeLayer: any = _activeLayer;
+export let layerId: number = _layerId;
+
+// Безпечна функція для логування об'єктів без циклічних посилань
+function safeLog(obj: any, label: string = 'Object'): void {
+  try {
+    if (obj === null || obj === undefined) {
+      console.log(`${label}:`, obj);
+      return;
+    }
+    
+    // Для Leaflet об'єктів виводимо тільки основні властивості
+    if (obj._leaflet_id !== undefined) {
+      console.log(`${label}: Leaflet object (id: ${obj._leaflet_id})`);
+      return;
+    }
+    
+    // Для featureGroup виводимо тільки кількість шарів
+    if (obj.getLayers && typeof obj.getLayers === 'function') {
+      console.log(`${label}: FeatureGroup (layers: ${obj.getLayers().length})`);
+      return;
+    }
+    
+    // Для звичайних об'єктів виводимо JSON
+    console.log(`${label}:`, JSON.stringify(obj, null, 2));
+  } catch (error) {
+    console.log(`${label}: [Object with circular references]`);
+  }
+}
+
+// Функції для безпечного доступу до змінних
+export function getCustomLayers(): LayerObj[] {
+  if (typeof _customLayers === 'undefined') {
+    _customLayers = [];
+  }
+  return _customLayers;
+}
+
+export function getActiveLayer(): any {
+  if (typeof _activeLayer === 'undefined') {
+    _activeLayer = null;
+  }
+  return _activeLayer;
+}
+
+export function getLayerId(): number {
+  if (typeof _layerId === 'undefined' || _layerId === null) {
+    _layerId = 1;
+  }
+  return _layerId;
+}
+
+// Функції для встановлення значень
+export function setCustomLayers(layers: LayerObj[]): void {
+  _customLayers = layers;
+  customLayers = _customLayers;
+}
+
+export function setActiveLayerValue(layer: any): void {
+  _activeLayer = layer;
+  activeLayer = _activeLayer;
+}
+
+export function setLayerId(id: number): void {
+  _layerId = id;
+  layerId = _layerId;
+}
+export function getNextLayerId() { 
+  const currentId = getLayerId();
+  setLayerId(currentId + 1);
+  return currentId; 
+}
 
 /**
  * Створює TileLayer для заданого типу підкладки
@@ -65,10 +139,11 @@ import { LegacyAdapter } from './adapters/legacy-adapter.js';
 
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage(): void {
+  const currentCustomLayers = getCustomLayers();
   console.log('layers.ts: saveLayersToStorage викликано');
-  console.log('layers.ts: Кількість шарів:', customLayers.length);
+  console.log('layers.ts: Кількість шарів:', currentCustomLayers.length);
   
-  customLayers.forEach(l => {
+  currentCustomLayers.forEach(l => {
     l.featureGroup.eachLayer((layer: any) => {
       const type = getObjectType(layer);
       if (!layer.feature) return;
@@ -78,8 +153,8 @@ export function saveLayersToStorage(): void {
         type: type,
         hasFeature: !!layer.feature,
         hasLayerProperties: !!layer.properties,
-        featureProperties: layer.feature.properties,
-        layerProperties: layer.properties
+        featureProperties: layer.feature.properties ? Object.keys(layer.feature.properties) : [],
+        layerProperties: layer.properties ? Object.keys(layer.properties) : []
       });
       
       // Завжди оновлюємо властивості з layer.properties, якщо вони є
@@ -100,7 +175,7 @@ export function saveLayersToStorage(): void {
           color: layer.feature.properties.color,
           icon: layer.feature.properties.icon,
           name: layer.feature.properties.name,
-          properties: layer.feature.properties
+          propertiesKeys: Object.keys(layer.feature.properties)
         });
       } else if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
         if (!layer.feature.properties.fillColor) {
@@ -244,11 +319,12 @@ export function loadLayersFromStorage(): boolean {
   try {
     let arr = JSON.parse(data);
     if (!Array.isArray(arr)) arr = [arr];
-    customLayers.forEach(l => {
+    const currentCustomLayers = getCustomLayers();
+    currentCustomLayers.forEach(l => {
       map.removeLayer(l.tileLayer);
       map.removeLayer(l.featureGroup);
     });
-    customLayers = [];
+    setCustomLayers([]);
     if (layerControlsDiv) {
       LegacyAdapter.DOM.clearElementContent('layer-controls');
     }
@@ -452,6 +528,10 @@ export function loadLayersFromStorage(): boolean {
 }
 
 export function addLayer(): void {
+  // Використовуємо безпечні геттери
+  const currentLayerId = getLayerId();
+  const currentCustomLayers = getCustomLayers();
+  
   const tileType = "План";
   const tileLayer = createTileLayer(tileType, 1);
   const featureGroup = new L.FeatureGroup();
@@ -461,10 +541,11 @@ export function addLayer(): void {
   const now = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');
   const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-  const layerObj = { id: layerId, tileLayer, featureGroup, tileType, visible: true, title: `Шар ${timeStr}` };
-  customLayers.push(layerObj);
+  const layerObj = { id: currentLayerId, tileLayer, featureGroup, tileType, visible: true, title: `Шар ${timeStr}` };
+  currentCustomLayers.push(layerObj);
+  setCustomLayers(currentCustomLayers);
   createLayerControl(layerObj);
-  layerId++;
+  setLayerId(currentLayerId + 1);
   setActiveLayer(featureGroup);
   featureGroup.bringToFront();
   saveLayersToStorage();
@@ -484,11 +565,12 @@ export function addLayer(): void {
 }
 
 export function setActiveLayer(featureGroup: any): void {
-  activeLayer = featureGroup;
-  (window as any).activeLayer = activeLayer; // Експортуємо в window для ModalService
+  // Використовуємо безпечний сеттер
+  setActiveLayerValue(featureGroup);
+  (window as any).activeLayer = featureGroup; // Експортуємо в window для ModalService
   
   if (state.currentEditingObject) {
-    state.currentEditingObject.value = activeLayer;
+    state.currentEditingObject.value = featureGroup;
   }
   updateActiveLayerUI();
 
@@ -500,22 +582,26 @@ export function setActiveLayer(featureGroup: any): void {
 }
 
 export function updateActiveLayerUI(): void {
+  // Використовуємо безпечні геттери
+  const currentActiveLayer = getActiveLayer();
+  const currentCustomLayers = getCustomLayers();
+  
   console.log('layers.ts: updateActiveLayerUI викликано');
-  console.log('layers.ts: activeLayer:', activeLayer);
+  console.log('layers.ts: activeLayer:', currentActiveLayer ? 'знайдено' : 'не знайдено');
   console.log('layers.ts: layerControlsDiv:', !!layerControlsDiv);
   
   if (layerControlsDiv) {
     document.querySelectorAll('.layer-card').forEach((card: any) => {
       const id = +card.dataset.layerId;
-      const layer = customLayers.find(l => l.id === id);
-      if (layer && layer.featureGroup === activeLayer) {
+      const layer = currentCustomLayers.find(l => l.id === id);
+      if (layer && layer.featureGroup === currentActiveLayer) {
         card.classList.add('active');
       } else {
         card.classList.remove('active');
       }
     });
   }
-  customLayers.forEach(l => {
+  currentCustomLayers.forEach(l => {
     l.featureGroup.eachLayer((layer: any) => {
       const type = getObjectType(layer);
       if (!layer.feature) return;

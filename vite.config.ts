@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite';
 
+import { defineConfig } from 'vite';
+
 export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
       input: {
-        main: 'index.ts',
-        src: 'src/index.ts'
+        main: 'index.ts'
       },
       output: {
         entryFileNames: '[name].js',

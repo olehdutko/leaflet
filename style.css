@@ -253,17 +253,16 @@ body {
   background: #333;
   color: #fff;
 }
-.layer-card, .layer-card-title, .layer-card-select, .layer-card-checkbox, .layer-card-slider {
-  font-family: var(--main-font-family);
-}
 
 .layer-card {
-  background-color: #ffffff;
+  /* font-family: var(--main-font-family); */
+
+  background-color: #f1f4fa;
   border-radius: 8px;
+  border: 10px !important;
+  border-color: #000000;
   padding: 12px;
   margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .layer-card.active {
@@ -275,11 +274,11 @@ body {
 }
 
 
-.theme-dark .layer-card {
+/* .theme-dark .layer-card {
   background: #232323;
   border-color: #374151;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
+} */
 
 .layer-card-header-icons {
   display: flex;
