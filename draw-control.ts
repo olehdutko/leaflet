@@ -1,10 +1,11 @@
 declare const L: any;
 import { map } from './map-init.js';
 import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers.js';
-import { getColoredMarkerIcon } from './utils.js';
+import { getColoredMarkerIcon, createTextMarker, setupTextRotation } from './utils.js';
 // import { addDoubleClickToLayer } from './ui.js'; // видалено для уникнення циклічного імпорту
 
 let drawControl: any = null;
+let textModeEnabled = false;
 
 export function initDrawControl() {
   if (drawControl) {
@@ -63,6 +64,9 @@ export function initDrawControl() {
 
   // Додаємо draw control до карти
   map.addControl(drawControl);
+
+  // Додаємо кастомну кнопку для тексту
+  addTextButtonToDrawControl();
 
   // Обробники подій для draw control
   map.on('draw:created', function (e: any) {
@@ -414,6 +418,13 @@ export function setDrawButtonsEnabled(enabled: boolean) {
       btn.removeAttribute('title');
     }
   });
+  
+  // Також обробляємо кнопку тексту
+  const textBtn = document.getElementById('leaflet-draw-text');
+  if (textBtn) {
+    (textBtn as HTMLElement).style.pointerEvents = enabled ? 'auto' : 'none';
+    (textBtn as HTMLElement).style.opacity = enabled ? '1' : '0.5';
+  }
 }
 
 export function updateDrawControlVisibility() {
@@ -454,4 +465,177 @@ export function updateDrawControlForActiveLayer() {
       setDrawButtonsEnabled(true);
     }
   });
+}
+
+// Додаємо кнопку для створення тексту
+function addTextButtonToDrawControl(): void {
+  // Знаходимо draw toolbar
+  setTimeout(() => {
+    const drawToolbar = document.querySelector('.leaflet-draw-toolbar-top');
+    if (!drawToolbar) {
+      console.warn('draw-control.ts: Не вдалося знайти draw toolbar');
+      return;
+    }
+
+    // Перевіряємо, чи кнопка вже існує
+    let textButton = document.getElementById('leaflet-draw-text') as HTMLAnchorElement;
+    
+    if (textButton) {
+      // Оновлюємо існуючу кнопку - повністю очищаємо та перестворюємо
+      textButton.textContent = '';
+      textButton.innerHTML = '';
+      
+      // Видаляємо всі дочірні елементи
+      while (textButton.firstChild) {
+        textButton.removeChild(textButton.firstChild);
+      }
+      
+      // Створюємо іконку
+      const icon = document.createElement('i');
+      icon.className = 'fa fa-font';
+      textButton.appendChild(icon);
+      return;
+    }
+
+    // Створюємо кнопку для тексту
+    textButton = document.createElement('a');
+    textButton.id = 'leaflet-draw-text';
+    textButton.href = '#';
+    textButton.className = 'leaflet-draw-draw-text';
+    textButton.title = 'Додати текст';
+    
+    // Очищаємо весь вміст
+    textButton.textContent = '';
+    textButton.innerHTML = '';
+    
+    // Створюємо іконку
+    const icon = document.createElement('i');
+    icon.className = 'fa fa-font';
+    textButton.appendChild(icon);
+    
+    // Додаємо стилі для кнопки
+    textButton.style.cssText = 'display: block; width: 30px; height: 30px; line-height: 30px; text-align: center;';
+    
+    // Додаємо обробник для очищення тексту, якщо він з'явиться
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+          // Перевіряємо, чи є текстовий вміст
+          const textNodes = Array.from(textButton.childNodes).filter(node => 
+            node.nodeType === Node.TEXT_NODE && node.textContent && node.textContent.trim()
+          );
+          if (textNodes.length > 0) {
+            textNodes.forEach(node => node.remove());
+          }
+          // Перевіряємо, чи є іконка
+          if (!textButton.querySelector('i.fa.fa-font')) {
+            const icon = document.createElement('i');
+            icon.className = 'fa fa-font';
+            textButton.appendChild(icon);
+          }
+        }
+      });
+    });
+    
+    observer.observe(textButton, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+    
+    textButton.addEventListener('click', function(e: Event) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Вмикаємо/вимикаємо режим додавання тексту
+      textModeEnabled = !textModeEnabled;
+      
+      if (textModeEnabled) {
+        textButton.classList.add('leaflet-draw-toolbar-button-enabled');
+        map.getContainer().style.cursor = 'crosshair';
+        
+        // Додаємо одноразовий обробник кліку на карту
+        const onClickMap = function(e: any) {
+          if (!textModeEnabled) return;
+          
+          const latlng = e.latlng;
+          if (!latlng) return;
+          
+          // Генеруємо назву
+          const now = new Date();
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          
+          // Створюємо текстовий маркер
+          const textMarker = createTextMarker(latlng, {
+            textContent: 'Текст',
+            name: `Текст ${timeStr}`,
+            color: '#000000',
+            fontSize: 16,
+            fontWeight: 'normal',
+            fontStyle: 'normal',
+            rotation: 0
+          });
+          
+          // Встановлюємо властивості
+          textMarker.properties = {
+            name: `Текст ${timeStr}`,
+            description: '',
+            type: 'text',
+            textContent: 'Текст',
+            color: '#000000',
+            fontSize: 16,
+            fontWeight: 'normal',
+            fontStyle: 'normal',
+            rotation: 0
+          };
+          
+          // Створюємо feature
+          textMarker.feature = {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [latlng.lng, latlng.lat]
+            },
+            properties: { ...textMarker.properties }
+          };
+          
+          // Додаємо до активного шару
+          if (activeLayer instanceof L.FeatureGroup) {
+            activeLayer.addLayer(textMarker);
+            if ((window as any).addDoubleClickToLayer) {
+              (window as any).addDoubleClickToLayer(textMarker);
+            }
+            saveLayersToStorage();
+            updateActiveLayerUI();
+            
+            // Оновлюємо список об'єктів
+            const layerObj = customLayers.find((l: any) => l.featureGroup === activeLayer);
+            if (layerObj && (window as any).updateObjectsListForLayer) {
+              (window as any).updateObjectsListForLayer(layerObj);
+            }
+          }
+          
+          // Вимикаємо режим
+          textModeEnabled = false;
+          textButton.classList.remove('leaflet-draw-toolbar-button-enabled');
+          map.getContainer().style.cursor = '';
+          map.off('click', onClickMap);
+        };
+        
+        map.on('click', onClickMap);
+      } else {
+        textButton.classList.remove('leaflet-draw-toolbar-button-enabled');
+        map.getContainer().style.cursor = '';
+      }
+    });
+    
+    // Додаємо кнопку до toolbar
+    const toolbarSection = drawToolbar.querySelector('.leaflet-draw-toolbar-section');
+    if (toolbarSection) {
+      toolbarSection.appendChild(textButton);
+    } else {
+      drawToolbar.appendChild(textButton);
+    }
+  }, 100);
 } 

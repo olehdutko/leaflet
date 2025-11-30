@@ -114,6 +114,27 @@
           </div>
           <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
         </div>
+        <div class="form-group" id="text-group" class="hidden">
+          <label for="text-content">Текст</label>
+          <textarea id="text-content" placeholder="Введіть текст" rows="3"></textarea>
+        </div>
+        <div class="form-group" id="text-size-group" class="hidden">
+          <label for="text-size">Розмір шрифту: <span id="text-size-value">16px</span></label>
+          <input type="range" id="text-size" min="8" max="72" value="16">
+        </div>
+        <div class="form-group" id="text-style-group" class="hidden">
+          <label>Стиль шрифту</label>
+          <div style="display: flex; gap: 16px;">
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" id="text-bold">
+              <span>Жирний</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" id="text-italic">
+              <span>Курсив</span>
+            </label>
+          </div>
+        </div>
       </div>
       <div class="modal-footer modal-footer-flex">
         <button id="save-object" class="btn-primary">Оновити</button>
@@ -252,6 +273,6 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet.polylinemeasure@2.4.0/Leaflet.PolylineMeasure.min.js"></script>
   
   <!-- Дебагінг скрипти -->
-  <script type="module" src="./dist/index.js"></script>
+  <script type="module" src="./index.ts"></script>
 </body>
 </html> 

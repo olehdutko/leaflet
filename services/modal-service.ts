@@ -74,6 +74,17 @@ export class ModalService {
       });
     }
 
+    // Обробник для розміру тексту
+    const textSizeInput = document.getElementById('text-size') as HTMLInputElement;
+    if (textSizeInput) {
+      textSizeInput.addEventListener('input', function () {
+        const valueElement = document.getElementById('text-size-value') as HTMLElement;
+        if (valueElement) {
+          valueElement.textContent = (this as HTMLInputElement).value + 'px';
+        }
+      });
+    }
+
     // Закриття по кліку поза модальним вікном
     const modalElement = document.getElementById('edit-object-modal') as HTMLElement;
     if (modalElement) {
@@ -188,6 +199,7 @@ export class ModalService {
     else if (type === 'polyline') typeName = 'полілінію';
     else if (type === 'rectangle') typeName = 'прямокутник';
     else if (type === 'circle') typeName = 'коло';
+    else if (type === 'text') typeName = 'текст';
 
     const properties = this.getObjectProperties(state.currentEditingObject.value);
     const objectName = properties.name ? `"${properties.name}"` : typeName;
@@ -245,6 +257,10 @@ export class ModalService {
     const fillOpacityInput = document.getElementById('fill-opacity') as HTMLInputElement;
     const styleSelect = document.getElementById('line-style') as HTMLSelectElement;
     const iconInput = document.getElementById('marker-icon') as HTMLInputElement;
+    const textContentInput = document.getElementById('text-content') as HTMLTextAreaElement;
+    const textSizeInput = document.getElementById('text-size') as HTMLInputElement;
+    const textBoldInput = document.getElementById('text-bold') as HTMLInputElement;
+    const textItalicInput = document.getElementById('text-italic') as HTMLInputElement;
 
     console.log('ModalService: Знайдені елементи форми:', {
       nameInput: !!nameInput,
@@ -255,10 +271,17 @@ export class ModalService {
       fillColorInput: !!fillColorInput,
       fillOpacityInput: !!fillOpacityInput,
       styleSelect: !!styleSelect,
-      iconInput: !!iconInput
+      iconInput: !!iconInput,
+      textContentInput: !!textContentInput,
+      textSizeInput: !!textSizeInput,
+      textBoldInput: !!textBoldInput,
+      textItalicInput: !!textItalicInput
     });
 
-    const properties = {
+    // Отримуємо тип об'єкта для визначення які поля потрібні
+    const type = this.getObjectType(state.currentEditingObject.value);
+
+    const properties: any = {
       name: nameInput?.value || '',
       description: descInput?.value || '',
       color: colorInput?.value,
@@ -270,12 +293,30 @@ export class ModalService {
       icon: iconInput?.value
     };
 
+    // Додаємо властивості тексту якщо це текстовий об'єкт
+    if (type === 'text') {
+      properties.textContent = textContentInput?.value || '';
+      properties.fontSize = textSizeInput ? parseInt(textSizeInput.value) : 16;
+      properties.fontWeight = textBoldInput?.checked ? 'bold' : 'normal';
+      properties.fontStyle = textItalicInput?.checked ? 'italic' : 'normal';
+      // Зберігаємо поточний кут повороту безпосередньо з властивостей об'єкта
+      const layer = state.currentEditingObject.value;
+      const layerProps = layer?.properties || (layer?.feature && layer.feature.properties) || {};
+      properties.rotation = layerProps.rotation !== undefined ? layerProps.rotation : 0;
+      properties.type = 'text';
+    }
+
     console.log('ModalService: Властивості з форми:', properties);
     return properties;
   }
 
   private getObjectType(layer: any): string {
     if (layer instanceof L.Marker && !(layer instanceof L.CircleMarker)) {
+      // Перевірка для текстового об'єкта
+      const props = layer.properties || (layer.feature && layer.feature.properties) || {};
+      if (props.type === 'text' || props.textContent !== undefined) {
+        return 'text';
+      }
       return 'marker';
     } else if (layer instanceof L.Polyline) {
       return 'polyline';

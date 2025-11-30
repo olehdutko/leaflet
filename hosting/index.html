@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мапа Львова на Leaflet</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="Інтерактивна мапа Львова з можливістю додавання власних шарів, об'єктів та зображень">
+    <meta name="keywords" content="мапа, Львів, Leaflet, інтерактивна мапа, географія">
+    <meta name="author" content="oleh.dutko@gmail.com">
+    
+    <!-- Open Graph tags -->
+    <meta property="og:title" content="Мапа Львова на Leaflet">
+    <meta property="og:description" content="Інтерактивна мапа Львова з можливістю додавання власних шарів, об'єктів та зображень">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="main.js" as="script">
+    <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="header-title">Мапа Львова</h1>
+            <div class="header-controls">
+                <button id="layers-panel-toggle" class="header-btn" title="Панель шарів">
+                    <span class="material-icons">layers</span>
+                </button>
+                <button id="search-toggle" class="header-btn" title="Пошук">
+                    <span class="material-icons">search</span>
+                </button>
+                <button id="draw-toggle" class="header-btn" title="Малювання">
+                    <span class="material-icons">edit</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <!-- Map container -->
+        <div id="map" class="map-container"></div>
+        
+        <!-- Layers panel -->
+        <div id="layers-panel-drawer" class="layers-panel-drawer">
+            <div class="layers-panel-header">
+                <h3>Шари</h3>
+                <button id="add-layer" class="btn btn-primary">
+                    <span class="material-icons">add</span>
+                    Додати шар
+                </button>
+            </div>
+            <div id="layer-controls" class="layer-controls"></div>
+        </div>
+        
+        <!-- Search panel -->
+        <div id="search-panel" class="search-panel">
+            <div class="search-panel-header">
+                <h3>Пошук</h3>
+                <button id="search-close" class="search-close">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="search-content">
+                <div class="search-tabs">
+                    <button class="search-tab active" data-tab="geo">Геопошук</button>
+                    <button class="search-tab" data-tab="objects">Об'єкти</button>
+                </div>
+                <div id="geo-search-content" class="search-tab-content active">
+                    <input type="text" id="geo-search-input" placeholder="Введіть адресу або координати..." class="search-input">
+                    <div id="geo-search-results" class="search-results"></div>
+                </div>
+                <div id="object-search-content" class="search-tab-content">
+                    <input type="text" id="object-search-input" placeholder="Пошук об'єктів..." class="search-input">
+                    <div id="object-search-results" class="search-results"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal for object editing -->
+        <div id="edit-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Редагування об'єкта</h3>
+                    <button id="modal-close" class="modal-close">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="object-form">
+                        <div class="form-group">
+                            <label for="object-name">Назва:</label>
+                            <input type="text" id="object-name" name="name" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="object-description">Опис:</label>
+                            <textarea id="object-description" name="description" class="form-input"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="object-color">Колір:</label>
+                            <input type="color" id="object-color" name="color" class="form-input" value="#1976d2">
+                        </div>
+                        <div class="form-group">
+                            <label for="marker-icon">Іконка:</label>
+                            <input type="text" id="marker-icon" name="icon" class="form-input" value="place">
+                            <div id="marker-icon-preview" class="icon-preview">
+                                <span class="material-icons">place</span>
+                            </div>
+                            <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Зберегти</button>
+                            <button type="button" id="object-delete" class="btn btn-danger">Видалити</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Import/Export controls -->
+        <div class="import-export-controls">
+            <button id="export-all" class="btn btn-secondary" title="Експорт всіх шарів">
+                <span class="material-icons">download</span>
+            </button>
+            <button id="import-all" class="btn btn-secondary" title="Імпорт шарів">
+                <span class="material-icons">upload</span>
+            </button>
+            <input type="file" id="import-all-input" accept=".json,.kmz,.kml" style="display: none;">
+        </div>
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Draw JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    
+    <!-- Leaflet Distortable Image -->
+    <script src="leaflet.distortableimage.js"></script>
+    
+    <!-- Main application -->
+    <script type="module" src="main.js"></script>
+    
+    <!-- Service Worker for PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html> 

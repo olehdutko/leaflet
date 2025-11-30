@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite';
 
-import { defineConfig } from 'vite';
-
 export default defineConfig({
   build: {
     outDir: 'dist',
@@ -16,9 +14,6 @@ export default defineConfig({
       },
       external: ['leaflet']
     }
-  },
-  server: {
-    port: 8000
   },
   optimizeDeps: {
     exclude: ['leaflet']

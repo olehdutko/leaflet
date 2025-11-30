@@ -38,7 +38,7 @@ export function showEditModal(layer: any) {
   // Оновлюємо заголовок
   const modalTitle = LegacyAdapter.DOM.getElement('modal-title');
   if (modalTitle) {
-    LegacyAdapter.DOM.setText('modal-title', `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'обʼєкта'}`);
+    LegacyAdapter.DOM.setText('modal-title', `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : type === 'text' ? 'тексту' : 'обʼєкта'}`);
   }
   // Заповнюємо поля
   const objectName = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-name');
@@ -52,8 +52,11 @@ export function showEditModal(layer: any) {
   const opacityGroup = LegacyAdapter.DOM.getElement<HTMLElement>('opacity-group');
   const markerIconGroup = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-group');
   const imageGroup = LegacyAdapter.DOM.getElement<HTMLElement>('object-image-group');
+  const textGroup = LegacyAdapter.DOM.getElement<HTMLElement>('text-group');
+  const textSizeGroup = LegacyAdapter.DOM.getElement<HTMLElement>('text-size-group');
+  const textStyleGroup = LegacyAdapter.DOM.getElement<HTMLElement>('text-style-group');
   // Приховуємо всі групи
-  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup].forEach(group => {
+  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup, textGroup, textSizeGroup, textStyleGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
   });
   // Показуємо відповідні групи залежно від типу
@@ -66,9 +69,24 @@ export function showEditModal(layer: any) {
     const markerIconPreview = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-preview');
     if (markerIconInput && markerIconPreview) {
       LegacyAdapter.DOM.setInputValue('marker-icon', properties.icon || 'place');
-      LegacyAdapter.DOM.setText('marker-icon-preview', markerIconInput.value);
+      // Оновлюємо прев'ю з підтримкою цифр
+      const iconValue = markerIconInput.value.trim();
+      if (/^\d$/.test(iconValue)) {
+        markerIconPreview.className = 'digit-icon';
+        LegacyAdapter.DOM.setText('marker-icon-preview', iconValue);
+      } else {
+        markerIconPreview.className = 'material-icons';
+        LegacyAdapter.DOM.setText('marker-icon-preview', iconValue);
+      }
       markerIconInput.oninput = function () {
-        LegacyAdapter.DOM.setText('marker-icon-preview', markerIconInput.value);
+        const val = markerIconInput.value.trim();
+        if (/^\d$/.test(val)) {
+          markerIconPreview.className = 'digit-icon';
+          LegacyAdapter.DOM.setText('marker-icon-preview', val);
+        } else {
+          markerIconPreview.className = 'material-icons';
+          LegacyAdapter.DOM.setText('marker-icon-preview', val);
+        }
       };
       
       // Ініціалізуємо автокомпліт для іконок маркера
@@ -106,6 +124,43 @@ export function showEditModal(layer: any) {
     // Приховати координати для не-маркерів
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
+  } else if (type === 'text') {
+    if (textGroup) textGroup.style.display = 'block';
+    if (textSizeGroup) textSizeGroup.style.display = 'block';
+    if (textStyleGroup) textStyleGroup.style.display = 'block';
+    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
+    // Приховати координати
+    const coordsGroup = document.querySelector('.marker-coords-group');
+    if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
+    
+    // Заповнюємо поля тексту
+    const textContent = LegacyAdapter.DOM.getElement<HTMLTextAreaElement>('text-content');
+    if (textContent) {
+      LegacyAdapter.DOM.setInputValue('text-content', properties.textContent || properties.name || '');
+    }
+    
+    const textSize = LegacyAdapter.DOM.getElement<HTMLInputElement>('text-size');
+    const textSizeValue = LegacyAdapter.DOM.getElement<HTMLElement>('text-size-value');
+    if (textSize && textSizeValue) {
+      const fontSize = properties.fontSize || 16;
+      LegacyAdapter.DOM.setInputValue('text-size', fontSize.toString());
+      LegacyAdapter.DOM.setText('text-size-value', fontSize + 'px');
+    }
+    
+    const textBold = LegacyAdapter.DOM.getElement<HTMLInputElement>('text-bold');
+    const textItalic = LegacyAdapter.DOM.getElement<HTMLInputElement>('text-italic');
+    if (textBold) {
+      textBold.checked = properties.fontWeight === 'bold';
+    }
+    if (textItalic) {
+      textItalic.checked = properties.fontStyle === 'italic';
+    }
+    
+    // Оновлюємо колір тексту
+    const objectColorInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
+    if (objectColorInput) {
+      LegacyAdapter.DOM.setInputValue('object-color', properties.color || '#000000');
+    }
   }
   // Заповнюємо значення контролів
   // Колір
@@ -194,7 +249,7 @@ export function showEditModal(layer: any) {
   }
 
   // --- Додаю інтерактивність для вибору кольору ---
-  if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle')) {
+  if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle' || type === 'text')) {
     const colorPalette = LegacyAdapter.DOM.getElement<HTMLElement>('color-palette');
     const objectColorInput = LegacyAdapter.DOM.getElement<HTMLInputElement>('object-color');
     if (colorPalette && objectColorInput) {
@@ -210,6 +265,15 @@ export function showEditModal(layer: any) {
             if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
               (state.currentEditingObject.value as any).properties.fillColor = (swatch as HTMLElement).dataset.color;
             }
+            if (type === 'text') {
+              (state.currentEditingObject.value as any).properties.color = (swatch as HTMLElement).dataset.color;
+              // Зберігаємо кут повороту
+              const currentProps = (state.currentEditingObject.value as any).properties || 
+                                 ((state.currentEditingObject.value as any).feature && (state.currentEditingObject.value as any).feature.properties) || {};
+              if (currentProps.rotation !== undefined) {
+                (state.currentEditingObject.value as any).properties.rotation = currentProps.rotation;
+              }
+            }
             applyObjectProperties(state.currentEditingObject.value as L.Layer, (state.currentEditingObject.value as any).properties);
           }
         };
@@ -222,6 +286,15 @@ export function showEditModal(layer: any) {
           (state.currentEditingObject.value as any).properties.color = (e.target as HTMLInputElement).value;
           if (type === 'polygon' || type === 'circle' || type === 'rectangle') {
             (state.currentEditingObject.value as any).properties.fillColor = (e.target as HTMLInputElement).value;
+          }
+          if (type === 'text') {
+            (state.currentEditingObject.value as any).properties.color = (e.target as HTMLInputElement).value;
+            // Зберігаємо кут повороту
+            const currentProps = (state.currentEditingObject.value as any).properties || 
+                               ((state.currentEditingObject.value as any).feature && (state.currentEditingObject.value as any).feature.properties) || {};
+            if (currentProps.rotation !== undefined) {
+              (state.currentEditingObject.value as any).properties.rotation = currentProps.rotation;
+            }
           }
           applyObjectProperties(state.currentEditingObject.value as L.Layer, (state.currentEditingObject.value as any).properties);
         }
@@ -253,6 +326,84 @@ export function showEditModal(layer: any) {
         (state.currentEditingObject.value as unknown as L.Polyline).options.dashArray = dashArray;
     }
   }
+  // --- Додаю інтерактивність для текстових полів ---
+  if (type === 'text') {
+    const textContent = LegacyAdapter.DOM.getElement<HTMLTextAreaElement>('text-content');
+    const textSize = LegacyAdapter.DOM.getElement<HTMLInputElement>('text-size');
+    const textBold = LegacyAdapter.DOM.getElement<HTMLInputElement>('text-bold');
+    const textItalic = LegacyAdapter.DOM.getElement<HTMLInputElement>('text-italic');
+    const textSizeValue = LegacyAdapter.DOM.getElement<HTMLElement>('text-size-value');
+    
+    // Функція для збереження поточного кута повороту
+    const preserveRotation = (props: any) => {
+      if (state.currentEditingObject.value) {
+        const currentProps = (state.currentEditingObject.value as any).properties || 
+                           ((state.currentEditingObject.value as any).feature && (state.currentEditingObject.value as any).feature.properties) || {};
+        if (currentProps.rotation !== undefined) {
+          props.rotation = currentProps.rotation;
+        }
+      }
+      return props;
+    };
+    
+    if (textContent) {
+      textContent.oninput = function() {
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          const newProps = preserveRotation({
+            ...(state.currentEditingObject.value as any).properties,
+            textContent: (this as HTMLTextAreaElement).value
+          });
+          (state.currentEditingObject.value as any).properties = newProps;
+          applyObjectProperties(state.currentEditingObject.value as L.Layer, newProps);
+        }
+      };
+    }
+    
+    if (textSize && textSizeValue) {
+      textSize.oninput = function() {
+        const size = parseInt((this as HTMLInputElement).value);
+        if (textSizeValue) textSizeValue.textContent = size + 'px';
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          const newProps = preserveRotation({
+            ...(state.currentEditingObject.value as any).properties,
+            fontSize: size
+          });
+          (state.currentEditingObject.value as any).properties = newProps;
+          applyObjectProperties(state.currentEditingObject.value as L.Layer, newProps);
+        }
+      };
+    }
+    
+    if (textBold) {
+      textBold.onchange = function() {
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          const newProps = preserveRotation({
+            ...(state.currentEditingObject.value as any).properties,
+            fontWeight: (this as HTMLInputElement).checked ? 'bold' : 'normal'
+          });
+          (state.currentEditingObject.value as any).properties = newProps;
+          applyObjectProperties(state.currentEditingObject.value as L.Layer, newProps);
+        }
+      };
+    }
+    
+    if (textItalic) {
+      textItalic.onchange = function() {
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          const newProps = preserveRotation({
+            ...(state.currentEditingObject.value as any).properties,
+            fontStyle: (this as HTMLInputElement).checked ? 'italic' : 'normal'
+          });
+          (state.currentEditingObject.value as any).properties = newProps;
+          applyObjectProperties(state.currentEditingObject.value as L.Layer, newProps);
+        }
+      };
+    }
+  }
   // Показуємо модальне вікно
   const editModal = LegacyAdapter.DOM.getElement<HTMLElement>('edit-object-modal');
   if (editModal) editModal.classList.remove('hidden');
@@ -270,6 +421,7 @@ export function showEditModal(layer: any) {
         else if (type === 'polyline') typeName = 'лінії';
         else if (type === 'rectangle') typeName = 'прямокутника';
         else if (type === 'circle') typeName = 'кола';
+        else if (type === 'text') typeName = 'тексту';
       }
       let objectName = typeName;
       if (state.currentEditingObject.value) {
@@ -322,6 +474,9 @@ export function addDoubleClickToLayer(layer: any) {
       html += `<div class='tooltip-desc'>${descWithLinks}</div>`;
     }
     if (properties.image) html += `<div class='tooltip-img-wrap'><img src='${properties.image}' class='tooltip-img' /></div>`;
+    if (properties.textContent && type === 'text') {
+      html += `<div class='tooltip-text'>${properties.textContent}</div>`;
+    }
     return html || '<span class="tooltip-empty">(немає даних)</span>';
   }
 
@@ -1059,17 +1214,37 @@ export function createLayerControl(layerObj: any) {
       // Отримуємо колір об'єкта
       const objectColor = props.color || '#1976d2';
       
+      // Визначаємо іконку для відображення
+      let iconHtml = '';
+      if (type === 'marker') {
+        const iconName = props.icon || 'place';
+        // Перевіряємо, чи це цифра (0-9)
+        if (/^\d$/.test(iconName)) {
+          // Для цифр відображаємо цифру в стилізованому вигляді
+          iconHtml = `<span class="layer-object-digit-icon" style="color: ${objectColor}; font-weight: bold; font-size: 18px; font-family: Arial, sans-serif;">${iconName}</span>`;
+        } else {
+          // Для Material Icons використовуємо стандартний формат
+          iconHtml = `<span class="material-icons" style="color: ${objectColor};">${iconName}</span>`;
+        }
+      } else if (type === 'polygon') {
+        iconHtml = `<i class="fa fa-draw-polygon" style="color: ${objectColor};"></i>`;
+      } else if (type === 'polyline') {
+        iconHtml = `<i class="fa fa-share-alt" style="color: ${objectColor};"></i>`;
+      } else if (type === 'circle') {
+        iconHtml = `<i class="fa fa-circle" style="color: ${objectColor};"></i>`;
+      } else if (type === 'rectangle') {
+        iconHtml = `<i class="fa fa-square" style="color: ${objectColor};"></i>`;
+      } else if (type === 'image') {
+        iconHtml = `<i class="fa fa-image" style="color: ${objectColor};"></i>`;
+      } else if (type === 'text') {
+        iconHtml = `<i class="fa fa-font" style="color: ${objectColor};"></i>`;
+      } else {
+        iconHtml = `<i class="fa fa-question" style="color: ${objectColor};"></i>`;
+      }
+      
       item.innerHTML =
         `<span class="material-icons layer-object-drag-icon">drag_indicator</span>` +
-        (
-          type === 'marker' ? `<span class="material-icons" style="color: ${objectColor};">${props.icon || 'place'}</span>` :
-            type === 'polygon' ? `<i class="fa fa-draw-polygon" style="color: ${objectColor};"></i>` :
-              type === 'polyline' ? `<i class="fa fa-share-alt" style="color: ${objectColor};"></i>` :
-                type === 'circle' ? `<i class="fa fa-circle" style="color: ${objectColor};"></i>` :
-                  type === 'rectangle' ? `<i class="fa fa-square" style="color: ${objectColor};"></i>` :
-                    type === 'image' ? `<i class="fa fa-image" style="color: ${objectColor};"></i>` :
-                      `<i class="fa fa-question" style="color: ${objectColor};"></i>`
-        ) +
+        iconHtml +
         ` <span class="layer-object-name">${props.name || '[без назви]'}</span>`;
       item.dataset.objectId = layer._leaflet_id;
       objectItems.push(item);

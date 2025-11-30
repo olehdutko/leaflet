@@ -137,6 +137,52 @@ import { map, tileLayerOptions } from './map-init.js';
 import { state } from './state.js';
 import { LegacyAdapter } from './adapters/legacy-adapter.js';
 
+// Функція для завантаження текстового об'єкта
+async function loadTextMarker(feature: any, latlng: any, featureGroup: any): Promise<any> {
+  const { createTextMarker, setupTextRotation } = await import('./utils.js');
+  const { addDoubleClickToLayer } = await import('./ui.js');
+  const { applyObjectProperties } = await import('./objects.js');
+  
+  const textMarker = createTextMarker(latlng, {
+    textContent: feature.properties.textContent || feature.properties.name || 'Текст',
+    name: feature.properties.name || 'Текст',
+    description: feature.properties.description || '',
+    color: feature.properties.color || '#000000',
+    fontSize: feature.properties.fontSize || 16,
+    fontWeight: feature.properties.fontWeight || 'normal',
+    fontStyle: feature.properties.fontStyle || 'normal',
+    rotation: feature.properties.rotation || 0,
+    type: 'text'
+  });
+  textMarker.properties = { ...feature.properties };
+  textMarker.feature = feature;
+  
+  // Встановлюємо базовий зум на поточний рівень зум карти при завантаженні
+  // Це забезпечить правильний розмір тексту відразу після завантаження
+  const map = (window as any).map;
+  if (map && textMarker._baseZoom !== undefined) {
+    textMarker._baseZoom = map.getZoom();
+  }
+  
+  if (textMarker._textId) {
+    setupTextRotation(textMarker, textMarker._textId);
+  }
+  featureGroup.addLayer(textMarker);
+  addDoubleClickToLayer(textMarker);
+  if (feature.properties) {
+    applyObjectProperties(textMarker, feature.properties);
+  }
+  
+  // Оновлюємо масштаб після завантаження
+  if (map) {
+    import('./utils.js').then(({ updateTextMarkersScale }) => {
+      updateTextMarkersScale(map);
+    });
+  }
+  
+  return textMarker;
+}
+
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage(): void {
   const currentCustomLayers = getCustomLayers();
@@ -205,6 +251,26 @@ export function saveLayersToStorage(): void {
           if (dash === '10, 10') layer.feature.properties.style = 'dashed';
           else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
           else layer.feature.properties.style = 'solid';
+        }
+      } else if (type === 'text') {
+        // Зберігаємо властивості тексту
+        if (layer.properties) {
+          if (!layer.feature.properties.textContent && layer.properties.textContent) {
+            layer.feature.properties.textContent = layer.properties.textContent;
+          }
+          if (!layer.feature.properties.fontSize && layer.properties.fontSize) {
+            layer.feature.properties.fontSize = layer.properties.fontSize;
+          }
+          if (!layer.feature.properties.fontWeight && layer.properties.fontWeight) {
+            layer.feature.properties.fontWeight = layer.properties.fontWeight;
+          }
+          if (!layer.feature.properties.fontStyle && layer.properties.fontStyle) {
+            layer.feature.properties.fontStyle = layer.properties.fontStyle;
+          }
+          if (layer.properties.rotation !== undefined) {
+            layer.feature.properties.rotation = layer.properties.rotation;
+          }
+          layer.feature.properties.type = 'text';
         }
       }
       
@@ -340,6 +406,22 @@ export function loadLayersFromStorage(): boolean {
       if (obj.geojson) {
         L.geoJSON(obj.geojson, {
           pointToLayer: function (feature: any, latlng: any) {
+            // Перевірка чи це текстовий об'єкт
+            if (feature.properties?.type === 'text' || feature.properties?.textContent !== undefined) {
+              // Для текстових об'єктів використовуємо асинхронне завантаження
+              // Спочатку створюємо тимчасовий маркер
+              const tempMarker = L.marker(latlng);
+              tempMarker._isTextPending = true;
+              tempMarker._textFeature = feature;
+              tempMarker._textLatlng = latlng;
+              // Завантажуємо текстовий маркер асинхронно
+              loadTextMarker(feature, latlng, featureGroup).then(textMarker => {
+                // Видаляємо тимчасовий маркер
+                featureGroup.removeLayer(tempMarker);
+              });
+              return tempMarker;
+            }
+            
             const color = feature.properties?.color || '#1976d2'; // Дефолтний колір
             const iconName = feature.properties?.icon || 'place';
             

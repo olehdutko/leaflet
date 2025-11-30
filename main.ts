@@ -251,7 +251,7 @@ export function setupMarkerIconAutocomplete() {
   input.addEventListener('input', function () {
     const val = input.value.trim().toLowerCase();
     LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
-    LegacyAdapter.DOM.setText('marker-icon-preview', input.value);
+    updateMarkerIconPreview(input.value.trim());
     
     // Перевіряємо, чи завантажені Material Icons
     if (materialIcons.length === 0) {
@@ -270,13 +270,52 @@ export function setupMarkerIconAutocomplete() {
   function showAutocompleteResults(val: string, list: HTMLElement) {
     const matches = filterMaterialIcons(val);
     currentFocus = -1;
+    
+    // Додаємо цифри 0-9 до списку опцій
+    const digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const digitMatches: string[] = [];
+    
+    if (val === '') {
+      // Якщо поле порожнє, показуємо всі цифри
+      digitMatches.push(...digits);
+    } else if (/^\d$/.test(val)) {
+      // Якщо введена одна цифра, показуємо тільки цю цифру
+      digitMatches.push(val);
+    } else {
+      // Якщо введено текст (не цифру), показуємо всі цифри для зручності
+      digitMatches.push(...digits);
+    }
+    
+    // Видаляємо дублікати
+    const uniqueDigitMatches = [...new Set(digitMatches)];
+    
+    // Додаємо цифри до списку опцій
+    uniqueDigitMatches.forEach((digit: string) => {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      // Для цифр використовуємо текст замість Material Icons
+      item.innerHTML = `<span class="digit-icon">${digit}</span> ${digit}`;
+      item.onclick = function () {
+        LegacyAdapter.DOM.setInputValue('marker-icon', digit);
+        updateMarkerIconPreview(digit);
+        LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
+        if (state.currentEditingObject.value) {
+          (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
+          (state.currentEditingObject.value as any).properties.icon = digit;
+          applyObjectProperties(state.currentEditingObject.value, (state.currentEditingObject.value as any).properties);
+        }
+      };
+      list.appendChild(item);
+    });
+    
+    // Додаємо Material Icons
     matches.forEach((name: string) => {
       const item = document.createElement('div');
       item.className = 'autocomplete-item';
       item.innerHTML = `<span class="material-icons">${name}</span> ${name}`;
       item.onclick = function () {
         LegacyAdapter.DOM.setInputValue('marker-icon', name);
-        LegacyAdapter.DOM.setText('marker-icon-preview', name);
+        updateMarkerIconPreview(name);
         LegacyAdapter.DOM.clearElementContent('marker-icon-autocomplete');
         if (state.currentEditingObject.value) {
           (state.currentEditingObject.value as any).properties = (state.currentEditingObject.value as any).properties || {};
@@ -286,6 +325,23 @@ export function setupMarkerIconAutocomplete() {
       };
       list.appendChild(item);
     });
+  }
+  
+  // Функція для оновлення прев'ю іконки (підтримує як Material Icons, так і цифри)
+  function updateMarkerIconPreview(value: string) {
+    const preview = LegacyAdapter.DOM.getElement<HTMLElement>('marker-icon-preview');
+    if (!preview) return;
+    
+    // Перевіряємо, чи це цифра
+    if (/^\d$/.test(value)) {
+      // Для цифр використовуємо текст замість Material Icons
+      preview.className = 'digit-icon';
+      LegacyAdapter.DOM.setText('marker-icon-preview', value);
+    } else {
+      // Для Material Icons використовуємо стандартний клас
+      preview.className = 'material-icons';
+      LegacyAdapter.DOM.setText('marker-icon-preview', value);
+    }
   }
 
   input.onkeydown = function (e) {
@@ -1384,4 +1440,41 @@ interface Window {
     bindDragSaveHandlers();
   }, 5000);
 
+})();
+
+// === Масштабування тексту разом з картою ===
+(function() {
+  'use strict';
+  
+  // Очікуємо, поки карта буде ініціалізована
+  const initTextScaling = () => {
+    const map = (window as any).map;
+    if (!map) {
+      setTimeout(initTextScaling, 100);
+      return;
+    }
+    
+    // Імпортуємо функцію оновлення масштабу
+    import('./utils.js').then(({ updateTextMarkersScale }) => {
+      // Додаємо обробник події zoom
+      map.on('zoom', () => {
+        updateTextMarkersScale(map);
+      });
+      
+      // Також оновлюємо при зміні масштабу через zoomend для надійності
+      map.on('zoomend', () => {
+        updateTextMarkersScale(map);
+      });
+      
+      // Оновлюємо масштаб для існуючих текстових маркерів
+      updateTextMarkersScale(map);
+    });
+  };
+  
+  // Запускаємо ініціалізацію
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTextScaling);
+  } else {
+    initTextScaling();
+  }
 })();

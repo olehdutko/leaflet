@@ -1016,18 +1016,7 @@ body {
   pointer-events: none;
 }
 
-#marker-icon-preview.digit-icon {
-  font-family: Arial, sans-serif;
-  font-weight: bold;
-  font-size: 24px;
-  color: #222;
-}
-
 .theme-dark #marker-icon-preview {
-  color: #f9fafb;
-}
-
-.theme-dark #marker-icon-preview.digit-icon {
   color: #f9fafb;
 }
 
@@ -1734,18 +1723,7 @@ body {
   pointer-events: none;
 }
 
-#marker-icon-preview.digit-icon {
-  font-family: Arial, sans-serif;
-  font-weight: bold;
-  font-size: 24px;
-  color: #222;
-}
-
 .theme-dark #marker-icon-preview {
-  color: #f9fafb;
-}
-
-.theme-dark #marker-icon-preview.digit-icon {
   color: #f9fafb;
 }
 
@@ -2295,7 +2273,6 @@ body.blurred > *:not(#confirm-modal) {
   border: 2px dashed #1976d2;
 } 
 .layer-object-item .material-icons:not(.layer-object-drag-icon),
-.layer-object-item .layer-object-digit-icon,
 .layer-object-item i { pointer-events: none; }
 .layer-object-drag-icon { pointer-events: auto; } 
 
@@ -2396,17 +2373,6 @@ body.blurred > *:not(#confirm-modal) {
   color: #1976d2;
 }
 
-#marker-icon-autocomplete .autocomplete-item .digit-icon {
-  display: inline-block;
-  margin-right: 8px;
-  font-family: Arial, sans-serif;
-  font-weight: bold;
-  font-size: 20px;
-  color: #1976d2;
-  width: 20px;
-  text-align: center;
-}
-
 /* Dark theme support for autocomplete */
 .theme-dark #marker-icon-autocomplete {
   background: #333;
@@ -2425,10 +2391,6 @@ body.blurred > *:not(#confirm-modal) {
 }
 
 .theme-dark #marker-icon-autocomplete .autocomplete-item .material-icons {
-  color: #90caf9;
-}
-
-.theme-dark #marker-icon-autocomplete .autocomplete-item .digit-icon {
   color: #90caf9;
 } 
 
@@ -2452,128 +2414,4 @@ body.blurred > *:not(#confirm-modal) {
   transform: rotate(45deg) !important;
   color: #fff !important;
   font-size: 20px !important;
-}
-
-/* Стиль для цифр у маркерах - компенсує поворот контейнера */
-.custom-marker-icon > div > span:not(.material-icons),
-.custom-marker-icon > div[style*="font-family: Arial"] {
-  transform: rotate(45deg) !important;
-}
-
-/* Стилі для кнопки тексту в draw control */
-#leaflet-draw-text {
-  font-size: 0 !important; /* Приховуємо текст, якщо він з'являється */
-  color: transparent !important;
-  text-indent: 0 !important;
-}
-
-#leaflet-draw-text * {
-  font-size: 18px !important; /* Відновлюємо розмір для іконки */
-}
-
-#leaflet-draw-text i.fa.fa-font {
-  font-size: 18px !important;
-  display: inline-block !important;
-  vertical-align: middle;
-  color: #1976d2 !important;
-}
-
-/* Приховуємо всі текстові вузли */
-#leaflet-draw-text {
-  font-size: 0 !important;
-  line-height: 30px !important;
-}
-
-#leaflet-draw-text::before,
-#leaflet-draw-text::after {
-  content: none !important; /* Видаляємо псевдоелементи */
-  display: none !important;
-}
-
-/* Приховуємо текстовий вміст, але показуємо іконки */
-#leaflet-draw-text {
-  text-indent: 0 !important;
-}
-
-#leaflet-draw-text > *:not(i) {
-  display: none !important;
-}
-
-/* Стилі для текстового маркера */
-.text-marker-icon {
-  background: transparent !important;
-  border: none !important;
-}
-
-.text-marker-container {
-  position: relative;
-  display: inline-block;
-  user-select: none;
-}
-
-.text-marker-content {
-  white-space: nowrap;
-  pointer-events: auto;
-  user-select: none;
-  cursor: move;
-  padding: 4px 8px;
-  background: transparent;
-  border-radius: 4px;
-  box-shadow: none;
-  border: none;
-}
-
-.text-rotation-handle {
-  position: absolute;
-  right: -15px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
-  background: #1976d2;
-  border: 2px solid white;
-  border-radius: 50%;
-  cursor: grab;
-  pointer-events: auto;
-  z-index: 1000;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: background 0.2s;
-}
-
-.text-rotation-handle:hover {
-  background: #1565c0;
-}
-
-.text-rotation-handle:active {
-  cursor: grabbing;
-}
-
-.text-marker-container:hover .text-rotation-handle {
-  display: block;
-}
-
-/* Темна тема для текстового маркера */
-.theme-dark .text-marker-content {
-  background: transparent;
-  color: #fff;
-  border: none;
-}
-
-/* Стилі для полів тексту в модальному вікні */
-#text-group textarea {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-family: inherit;
-  resize: vertical;
-}
-
-#text-size-group input[type="range"] {
-  width: 100%;
-}
-
-#text-style-group label {
-  cursor: pointer;
-  user-select: none;
-}
+} 

@@ -4,6 +4,7 @@
   "description": "Мапа Львова на Leaflet",
   "scripts": {
     "build": "tsc",
+    "build:hosting": "./build-hosting.sh",
     "lint": "eslint . --ext .ts,.js",
     "lint:fix": "eslint . --ext .ts,.js --fix",
     "format": "prettier --write .",

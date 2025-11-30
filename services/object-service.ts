@@ -85,9 +85,21 @@ export class ObjectService {
     const iconName = properties.icon || 'place';
     const color = properties.color || '#1976d2';
 
+    // Перевіряємо, чи це цифра (0-9)
+    const isDigit = /^\d$/.test(iconName);
+    
+    let iconHtml: string;
+    if (isDigit) {
+      // Для цифр використовуємо текст замість Material Icons
+      iconHtml = `<div style="background:${color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;margin-top:2px;"><span style="color:#fff;font-size:18px;font-weight:bold;font-family:Arial,sans-serif;transform:rotate(45deg);">${iconName}</span></div>`;
+    } else {
+      // Для Material Icons використовуємо стандартний формат
+      iconHtml = `<div style="background:${color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="material-icons" style="color:#fff;font-size:20px;transform:rotate(45deg);">${iconName}</i></div>`;
+    }
+
     layer.setIcon(L.divIcon({
       className: 'custom-marker-icon',
-      html: `<div style="background:${color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="material-icons" style="color:#fff;font-size:20px;transform:rotate(45deg);">${iconName}</i></div>`,
+      html: iconHtml,
       iconSize: [28, 28],
       iconAnchor: [14, 28]
     }));
