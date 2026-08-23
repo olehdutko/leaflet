@@ -2,7 +2,7 @@ declare const L: any;
 import { map } from './map-init.js';
 import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers.js';
 import { getColoredMarkerIcon } from './utils.js';
-import { createTextMarker, getDefaultTextProperties } from './text-object.js';
+import { createTextMarker, getDefaultTextProperties, applyTextZoomScale } from './text-object.js';
 // import { addDoubleClickToLayer } from './ui.js'; // видалено для уникнення циклічного імпорту
 
 let drawControl: any = null;
@@ -464,6 +464,8 @@ export function activateTextTool() {
     map.off('click', clickHandler);
     const marker = createTextMarker(e.latlng, 'Текст', getDefaultTextProperties());
     activeLayer.addLayer(marker);
+    marker._textBaseZoom = map.getZoom();
+    applyTextZoomScale(marker, map.getZoom());
     if ((window as any).addDoubleClickToLayer) {
       (window as any).addDoubleClickToLayer(marker);
     }

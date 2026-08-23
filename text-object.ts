@@ -48,6 +48,28 @@ export function isTextObject(layer: any): boolean {
   return props.objectType === 'text' || (props.text !== undefined && props.text !== '');
 }
 
+function getScaleForZoom(currentZoom: number, baseZoom: number): number {
+  // Масштабування пропорційне до зміни масштабу мапи
+  // Leaflet використовує ступінь 2 між зумами
+  return Math.pow(2, currentZoom - baseZoom);
+}
+
+export function applyTextZoomScale(layer: any, currentZoom: number): void {
+  if (!layer || !isTextObject(layer)) return;
+  const baseZoom = layer._textBaseZoom;
+  if (baseZoom === undefined) return;
+  const scale = getScaleForZoom(currentZoom, baseZoom);
+  const icon = layer._icon;
+  if (icon) {
+    icon.style.transformOrigin = 'bottom center';
+    icon.style.transform = `scale(${scale})`;
+  }
+}
+
+function storeTextBaseZoom(layer: any, zoom: number): void {
+  layer._textBaseZoom = zoom;
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -177,6 +199,11 @@ export function createTextMarker(latlng: any, text?: string, options?: TextPrope
     properties: { ...props }
   };
 
+  // Зберігаємо базовий зум для масштабування тексту разом із мапою
+  if (typeof marker._map !== 'undefined' && marker._map) {
+    storeTextBaseZoom(marker, marker._map.getZoom());
+  }
+
   return marker;
 }
 
@@ -193,5 +220,11 @@ export function updateTextMarkerIcon(layer: any, properties: TextProperties): vo
 
   if (layer.setIcon) {
     layer.setIcon(getTextObjectIcon(merged));
+  }
+
+  // Після оновлення іконки відновлюємо масштабування відносно поточного зуму мапи
+  if (layer._map && layer._map.getZoom) {
+    layer._textBaseZoom = layer._map.getZoom();
+    applyTextZoomScale(layer, layer._map.getZoom());
   }
 }

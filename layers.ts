@@ -61,7 +61,7 @@ import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import * as state from './state.js';
-import { isTextObject, getTextObjectIcon } from './text-object.js';
+import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object.js';
 
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage(): void {
@@ -229,6 +229,8 @@ export function loadLayersFromStorage(): boolean {
               // Встановити objectType для текстових об'єктів
               if (isTextObject(layer)) {
                 layer.properties.objectType = 'text';
+                layer._textBaseZoom = map.getZoom();
+                applyTextZoomScale(layer, map.getZoom());
               }
 
               applyObjectProperties(layer, layer.properties);
