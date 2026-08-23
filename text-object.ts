@@ -20,8 +20,14 @@ const DEFAULT_FONT_SIZE = 24;
 const DEFAULT_COLOR = '#1976d2';
 const DEFAULT_CURVE_ANGLE = 0;
 const DEFAULT_CURVE_RADIUS = 100;
-const ICON_WIDTH = 400;
-const ICON_HEIGHT = 200;
+
+interface TextLayout {
+  html: string;
+  width: number;
+  height: number;
+  anchorX: number;
+  anchorY: number;
+}
 
 export function getDefaultTextProperties(): Required<TextProperties> {
   return {
@@ -51,48 +57,66 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
-function buildCurvedTextSvg(props: TextProperties): string {
+function buildCurvedTextSvg(props: TextProperties, uniqueId?: string): TextLayout {
   const text = props.text || DEFAULT_TEXT;
   const fontSize = props.fontSize ?? DEFAULT_FONT_SIZE;
   const color = props.color || DEFAULT_COLOR;
   const angle = props.curveAngle ?? DEFAULT_CURVE_ANGLE;
   const radius = props.curveRadius ?? DEFAULT_CURVE_RADIUS;
 
-  const width = ICON_WIDTH;
-  const height = ICON_HEIGHT;
-  const centerX = width / 2;
-  const centerY = height / 2;
+  const idSuffix = uniqueId || ('_' + Math.random().toString(36).slice(2, 9));
+  const pathId = 'text-curve-path' + idSuffix;
 
+  let width: number;
+  let height: number;
   let pathD: string;
+
   if (angle <= 0) {
+    // Прямий текст: розмір залежить від довжини тексту і шрифту
+    const approxCharWidth = fontSize * 0.6;
+    width = Math.max(200, text.length * approxCharWidth + 40);
+    height = Math.max(120, fontSize + 60);
+    const centerX = width / 2;
+    const centerY = height / 2;
     pathD = 'M 20,' + centerY + ' L ' + (width - 20) + ',' + centerY;
   } else {
+    // Дуговий текст: розмір SVG адаптується під радіус
     const clampedAngle = Math.max(0, Math.min(180, angle));
+    // Крайні точки дуги: x = ±radius*sin(angle/2), y відносно центру
+    const halfRad = (clampedAngle / 2) * Math.PI / 180;
+    const arcHalfWidth = radius * Math.sin(halfRad);
+    const arcTopOffset = radius * (1 - Math.cos(halfRad));
+
+    width = Math.max(400, arcHalfWidth * 2 + 80 + fontSize * 2);
+    height = Math.max(300, arcTopOffset + 160 + fontSize * 2);
+
+    const centerX = width / 2;
+    // Розташовуємо центр кола нижче SVG, щоб дуга йшла знизу вгору
+    const centerY = height - 40 + arcTopOffset * 0.3;
+
     const startAngle = -clampedAngle / 2;
     const endAngle = clampedAngle / 2;
-    const radStart = (startAngle * Math.PI) / 180;
-    const radEnd = (endAngle * Math.PI) / 180;
 
-    const startX = centerX + radius * Math.cos(radStart);
-    const startY = centerY + radius * Math.sin(radStart) * -1;
-    const endX = centerX + radius * Math.cos(radEnd);
-    const endY = centerY + radius * Math.sin(radEnd) * -1;
+    const startX = centerX + radius * Math.cos(startAngle * Math.PI / 180 + Math.PI / 2);
+    const startY = centerY + radius * Math.sin(startAngle * Math.PI / 180 + Math.PI / 2) * -1;
+    const endX = centerX + radius * Math.cos(endAngle * Math.PI / 180 + Math.PI / 2);
+    const endY = centerY + radius * Math.sin(endAngle * Math.PI / 180 + Math.PI / 2) * -1;
 
     const largeArcFlag = clampedAngle > 180 ? 1 : 0;
-    const sweepFlag = 0;
+    const sweepFlag = 1;
 
     pathD = 'M ' + startX + ',' + startY + ' A ' + radius + ',' + radius + ' 0 ' + largeArcFlag + ',' + sweepFlag + ' ' + endX + ',' + endY;
   }
 
   const safeText = escapeHtml(text);
 
-  return (
+  const html = (
     `<svg xmlns="http://www.w3.org/2000/svg"
          width="${width}" height="${height}"
          viewBox="0 0 ${width} ${height}"
          style="overflow:visible;pointer-events:none;">
       <defs>
-        <path id="text-curve-path" d="${pathD}" />
+        <path id="${pathId}" d="${pathD}" />
       </defs>
       <text fill="${color}"
             font-size="${fontSize}px"
@@ -100,18 +124,29 @@ function buildCurvedTextSvg(props: TextProperties): string {
             font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif"
             text-anchor="middle"
             style="pointer-events:auto;white-space:pre;">
-        <textPath href="#text-curve-path" startOffset="50%">${safeText}</textPath>
+        <textPath href="#${pathId}" startOffset="50%">${safeText}</textPath>
       </text>
     </svg>`
   ).trim();
+
+  // Якорь: точка на дні дуги (середина нижньої частини), щоб текст "сидів" на координаті
+  return {
+    html,
+    width,
+    height,
+    anchorX: width / 2,
+    anchorY: height - 40
+  };
 }
 
 export function getTextObjectIcon(props: TextProperties): any {
+  const uniqueId = '_' + Math.random().toString(36).slice(2, 9);
+  const layout = buildCurvedTextSvg(props, uniqueId);
   return L.divIcon({
     className: 'leaflet-text-object',
-    html: buildCurvedTextSvg(props),
-    iconSize: [ICON_WIDTH, ICON_HEIGHT],
-    iconAnchor: [ICON_WIDTH / 2, ICON_HEIGHT / 2]
+    html: layout.html,
+    iconSize: [layout.width, layout.height],
+    iconAnchor: [layout.anchorX, layout.anchorY]
   });
 }
 
@@ -119,8 +154,15 @@ export function createTextMarker(latlng: any, text?: string, options?: TextPrope
   const props = { ...getDefaultTextProperties(), ...options };
   if (text !== undefined) props.text = text;
 
+  const uniqueId = '_' + Math.random().toString(36).slice(2, 9);
+  const layout = buildCurvedTextSvg(props, uniqueId);
   const marker = L.marker(latlng, {
-    icon: getTextObjectIcon(props),
+    icon: L.divIcon({
+      className: 'leaflet-text-object',
+      html: layout.html,
+      iconSize: [layout.width, layout.height],
+      iconAnchor: [layout.anchorX, layout.anchorY]
+    }),
     draggable: true,
     isTextObject: true
   });

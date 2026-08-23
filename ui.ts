@@ -24,7 +24,7 @@ export function showEditModal(layer: any) {
   if (modalTitle) {
     modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : type === 'text' ? 'тексту' : 'обʼєкта'}`;
   }
-  // Заповнюємо поля
+  const objectNameGroup = document.getElementById('object-name-group') as HTMLElement | null;
   const objectName = document.getElementById('object-name') as HTMLInputElement | null;
   if (objectName) objectName.value = properties.name || '';
   const objectDescription = document.getElementById('object-description') as HTMLTextAreaElement | null;
@@ -46,6 +46,10 @@ export function showEditModal(layer: any) {
     textContentGroup, textFontSizeGroup, textCurveAngleGroup, textCurveRadiusGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
   });
+
+  // Для текстових об'єктів приховуємо поле Назва (воно збігається з текстом)
+  if (objectNameGroup) objectNameGroup.style.display = type === 'text' ? 'none' : '';
+
   // Показуємо відповідні групи залежно від типу
   if (type === 'marker') {
     if (colorPickerGroup) colorPickerGroup.style.display = 'block';
@@ -263,7 +267,10 @@ export function showEditModal(layer: any) {
       if (!currentEditingObject.value) return;
       const target = currentEditingObject.value as any;
       target.properties = target.properties || {};
-      if (textContentInput) target.properties.text = textContentInput.value;
+      if (textContentInput) {
+        target.properties.text = textContentInput.value;
+        target.properties.name = textContentInput.value;
+      }
       if (textFontSizeInput) target.properties.fontSize = parseInt(textFontSizeInput.value, 10);
       if (textCurveAngleInput) target.properties.curveAngle = parseInt(textCurveAngleInput.value, 10);
       if (textCurveRadiusInput) target.properties.curveRadius = parseInt(textCurveRadiusInput.value, 10);
@@ -274,9 +281,6 @@ export function showEditModal(layer: any) {
 
     if (textContentInput) {
       textContentInput.oninput = function () {
-        if (textContentInput && currentEditingObject.value) {
-          (currentEditingObject.value as any).properties.name = textContentInput.value;
-        }
         updateTextProps();
       };
     }
