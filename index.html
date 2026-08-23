@@ -45,6 +45,22 @@
   </div>
   <div id="map"></div>
   
+  <!-- AI-асистент -->
+  <div id="ai-assistant-panel" class="ai-assistant-panel collapsed">
+    <button id="ai-assistant-toggle" class="ai-assistant-toggle" title="AI-асистент">
+      <span class="material-icons">smart_toy</span>
+    </button>
+    <div class="ai-assistant-content">
+      <div class="ai-assistant-messages" id="ai-assistant-messages"></div>
+      <div class="ai-assistant-input-wrap">
+        <input type="text" id="ai-assistant-input" placeholder="Наприклад: познач Чорну кам'яницю у Львові" autocomplete="off" />
+        <button id="ai-assistant-send" class="ai-assistant-send">
+          <span class="material-icons">send</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Модальне вікно для редагування об'єктів -->
   <div id="edit-object-modal" class="modal hidden">
     <div class="modal-content modal-content-narrow">
