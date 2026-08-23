@@ -61,6 +61,7 @@ import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import * as state from './state.js';
+import { isTextObject, getTextObjectIcon } from './text-object.js';
 
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage(): void {
@@ -88,6 +89,13 @@ export function saveLayersToStorage(): void {
         if (dash === '10, 10') layer.feature.properties.style = 'dashed';
         else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
         else layer.feature.properties.style = 'solid';
+      } else if (type === 'text') {
+        layer.feature.properties.text = layer.properties?.text || '';
+        layer.feature.properties.fontSize = layer.properties?.fontSize ?? 24;
+        layer.feature.properties.color = layer.properties?.color || '#1976d2';
+        layer.feature.properties.curveAngle = layer.properties?.curveAngle ?? 0;
+        layer.feature.properties.curveRadius = layer.properties?.curveRadius ?? 100;
+        layer.feature.properties.objectType = 'text';
       }
       if (layer.properties && layer.properties.image) {
         // видалено: layer.feature.properties.image = layer.properties.image;
@@ -181,9 +189,12 @@ export function loadLayersFromStorage(): boolean {
       if (obj.geojson) {
         L.geoJSON(obj.geojson, {
           pointToLayer: function (feature: any, latlng: any) {
-            const color = feature.properties?.color || '#1976d2'; // Дефолтний колір
-            const iconName = feature.properties?.icon || 'place';
-
+            const props = feature.properties || {};
+            if (props.objectType === 'text' || props.text !== undefined) {
+              return L.marker(latlng, { icon: getTextObjectIcon(props), draggable: true });
+            }
+            const color = props.color || '#1976d2';
+            const iconName = props.icon || 'place';
             return L.marker(latlng, {
               icon: getColoredMarkerIcon(color, iconName)
             });
@@ -213,6 +224,11 @@ export function loadLayersFromStorage(): boolean {
               }
               if (!layer.properties.description || layer.properties.description === 'undefined') {
                 layer.properties.description = '';
+              }
+
+              // Встановити objectType для текстових об'єктів
+              if (isTextObject(layer)) {
+                layer.properties.objectType = 'text';
               }
 
               applyObjectProperties(layer, layer.properties);
@@ -422,6 +438,13 @@ export function updateActiveLayerUI(): void {
         if (dash === '10, 10') layer.feature.properties.style = 'dashed';
         else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
         else layer.feature.properties.style = 'solid';
+      } else if (type === 'text') {
+        layer.feature.properties.text = layer.properties?.text || '';
+        layer.feature.properties.fontSize = layer.properties?.fontSize ?? 24;
+        layer.feature.properties.color = layer.properties?.color || '#1976d2';
+        layer.feature.properties.curveAngle = layer.properties?.curveAngle ?? 0;
+        layer.feature.properties.curveRadius = layer.properties?.curveRadius ?? 100;
+        layer.feature.properties.objectType = 'text';
       }
     });
   });

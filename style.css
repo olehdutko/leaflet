@@ -1001,12 +1001,28 @@ body {
   cursor: pointer;
 }
 
-#image-group, #color-picker-group, #line-width-group, #style-group, #opacity-group, #marker-icon-group {
+#image-group, #color-picker-group, #line-width-group, #style-group, #opacity-group, #marker-icon-group,
+#text-content-group, #text-font-size-group, #text-curve-angle-group, #text-curve-radius-group {
   display: none;
 }
 
 #marker-icon-group {
   position: relative;
+}
+
+.leaflet-text-object {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-text-object svg {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.leaflet-text-object text {
+  font-weight: 600;
+  pointer-events: auto;
 }
 
 #object-color.color-picker-input {

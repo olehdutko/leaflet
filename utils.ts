@@ -1,5 +1,6 @@
 // --- Утиліти ---
 declare var L: any;
+import { isTextObject } from './text-object.js';
 export function getLayerIcon(type: string): string {
   if (type === 'План') return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><rect width="24" height="24" rx="4" fill="#1976d2"/><path d="M7 17V7l5-2v10l-5 2zM12 5l5 2v10l-5-2V5z" fill="#fff"/></svg>`;
   if (type === 'Ландшафт') return '<i class="fa fa-mountain" style="font-size:22px;color:#1976d2;"></i>';
@@ -41,6 +42,7 @@ export function createTooltip(element: any, text: string) {
 }
 
 export function getObjectType(layer: any): string {
+  if (isTextObject(layer)) return 'text';
   if (layer instanceof L.Marker && !(layer instanceof L.CircleMarker)) return 'marker';
   if (layer instanceof L.CircleMarker) return 'circle';
   if (layer instanceof L.Polygon && !(layer instanceof L.Rectangle)) return 'polygon';

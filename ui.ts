@@ -6,6 +6,7 @@ import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './util
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
 import { updateActiveLayerUI } from './layers.js';
+import { isTextObject } from './text-object.js';
 
 export const layerIdToRenderObjectsList = new Map();
 
@@ -21,7 +22,7 @@ export function showEditModal(layer: any) {
   // Оновлюємо заголовок
   const modalTitle = document.getElementById('modal-title');
   if (modalTitle) {
-    modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : 'обʼєкта'}`;
+    modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : type === 'text' ? 'тексту' : 'обʼєкта'}`;
   }
   // Заповнюємо поля
   const objectName = document.getElementById('object-name') as HTMLInputElement | null;
@@ -35,8 +36,14 @@ export function showEditModal(layer: any) {
   const opacityGroup = document.getElementById('opacity-group') as HTMLElement | null;
   const markerIconGroup = document.getElementById('marker-icon-group') as HTMLElement | null;
   const imageGroup = document.getElementById('object-image-group') as HTMLElement | null;
+  // Текстові групи
+  const textContentGroup = document.getElementById('text-content-group') as HTMLElement | null;
+  const textFontSizeGroup = document.getElementById('text-font-size-group') as HTMLElement | null;
+  const textCurveAngleGroup = document.getElementById('text-curve-angle-group') as HTMLElement | null;
+  const textCurveRadiusGroup = document.getElementById('text-curve-radius-group') as HTMLElement | null;
   // Приховуємо всі групи
-  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup].forEach(group => {
+  [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup,
+    textContentGroup, textFontSizeGroup, textCurveAngleGroup, textCurveRadiusGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
   });
   // Показуємо відповідні групи залежно від типу
@@ -86,11 +93,49 @@ export function showEditModal(layer: any) {
     // Приховати координати для не-маркерів
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = 'none';
+  } else if (type === 'text') {
+    if (colorPickerGroup) colorPickerGroup.style.display = 'block';
+    if (textContentGroup) textContentGroup.style.display = 'block';
+    if (textFontSizeGroup) textFontSizeGroup.style.display = 'block';
+    if (textCurveAngleGroup) textCurveAngleGroup.style.display = 'block';
+    if (textCurveRadiusGroup) textCurveRadiusGroup.style.display = 'block';
+    // Показати координати для текстового об'єкта (це маркер)
+    const coordsGroup = document.querySelector('.marker-coords-group');
+    if (coordsGroup) (coordsGroup as HTMLElement).style.display = '';
+    const latInput = document.getElementById('marker-lat');
+    const lngInput = document.getElementById('marker-lng');
+    if (latInput && lngInput && currentEditingObject.value && currentEditingObject.value.getLatLng) {
+      const latlng = (currentEditingObject.value as any).getLatLng();
+      (latInput as HTMLInputElement).value = latlng.lat.toString();
+      (lngInput as HTMLInputElement).value = latlng.lng.toString();
+    }
   }
   // Заповнюємо значення контролів
   // Колір
   const objectColorInput = document.getElementById('object-color');
   if (objectColorInput) (objectColorInput as HTMLInputElement).value = properties.color || properties.fillColor || '#1976d2';
+  // Текстові контроли
+  const textContentInput = document.getElementById('text-content') as HTMLInputElement | null;
+  const textFontSizeInput = document.getElementById('text-font-size') as HTMLInputElement | null;
+  const textFontSizeValue = document.getElementById('text-font-size-value');
+  const textCurveAngleInput = document.getElementById('text-curve-angle') as HTMLInputElement | null;
+  const textCurveAngleValue = document.getElementById('text-curve-angle-value');
+  const textCurveRadiusInput = document.getElementById('text-curve-radius') as HTMLInputElement | null;
+  const textCurveRadiusValue = document.getElementById('text-curve-radius-value');
+
+  if (textContentInput) textContentInput.value = properties.text || '';
+  if (textFontSizeInput && textFontSizeValue) {
+    textFontSizeInput.value = String(properties.fontSize ?? 24);
+    textFontSizeValue.textContent = (properties.fontSize ?? 24) + 'px';
+  }
+  if (textCurveAngleInput && textCurveAngleValue) {
+    textCurveAngleInput.value = String(properties.curveAngle ?? 0);
+    textCurveAngleValue.textContent = (properties.curveAngle ?? 0) + '°';
+  }
+  if (textCurveRadiusInput && textCurveRadiusValue) {
+    textCurveRadiusInput.value = String(properties.curveRadius ?? 100);
+    textCurveRadiusValue.textContent = String(properties.curveRadius ?? 100);
+  }
   // Товщина
   const lineWidth = document.getElementById('line-width');
   const lineWidthValue = document.getElementById('line-width-value');
@@ -176,7 +221,7 @@ export function showEditModal(layer: any) {
   }
 
   // --- Додаю інтерактивність для вибору кольору ---
-  if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle')) {
+  if (colorPickerGroup && (type === 'polyline' || type === 'marker' || type === 'polygon' || type === 'circle' || type === 'rectangle' || type === 'text')) {
     const colorPalette = document.getElementById('color-palette');
     const objectColorInput = document.getElementById('object-color');
     if (colorPalette && objectColorInput) {
@@ -206,7 +251,51 @@ export function showEditModal(layer: any) {
             (currentEditingObject.value as any).properties.fillColor = (e.target as HTMLInputElement).value;
           }
           applyObjectProperties(currentEditingObject.value as L.Layer, (currentEditingObject.value as any).properties);
+          saveLayersToStorage();
         }
+      };
+    }
+  }
+
+  // --- Текстові контроли: інтерактивність ---
+  if (type === 'text') {
+    const updateTextProps = () => {
+      if (!currentEditingObject.value) return;
+      const target = currentEditingObject.value as any;
+      target.properties = target.properties || {};
+      if (textContentInput) target.properties.text = textContentInput.value;
+      if (textFontSizeInput) target.properties.fontSize = parseInt(textFontSizeInput.value, 10);
+      if (textCurveAngleInput) target.properties.curveAngle = parseInt(textCurveAngleInput.value, 10);
+      if (textCurveRadiusInput) target.properties.curveRadius = parseInt(textCurveRadiusInput.value, 10);
+      if (objectColorInput) target.properties.color = (objectColorInput as HTMLInputElement).value;
+      applyObjectProperties(target as L.Layer, target.properties);
+      saveLayersToStorage();
+    };
+
+    if (textContentInput) {
+      textContentInput.oninput = function () {
+        if (textContentInput && currentEditingObject.value) {
+          (currentEditingObject.value as any).properties.name = textContentInput.value;
+        }
+        updateTextProps();
+      };
+    }
+    if (textFontSizeInput && textFontSizeValue) {
+      textFontSizeInput.oninput = function () {
+        textFontSizeValue.textContent = textFontSizeInput.value + 'px';
+        updateTextProps();
+      };
+    }
+    if (textCurveAngleInput && textCurveAngleValue) {
+      textCurveAngleInput.oninput = function () {
+        textCurveAngleValue.textContent = textCurveAngleInput.value + '°';
+        updateTextProps();
+      };
+    }
+    if (textCurveRadiusInput && textCurveRadiusValue) {
+      textCurveRadiusInput.oninput = function () {
+        textCurveRadiusValue.textContent = textCurveRadiusInput.value;
+        updateTextProps();
       };
     }
   }
@@ -1132,12 +1221,13 @@ export function createLayerControl(layerObj: any) {
         `<span class="material-icons layer-object-drag-icon">drag_indicator</span>` +
         (
           type === 'marker' ? `<span class="material-icons">${props.icon || 'place'}</span>` :
-            type === 'polygon' ? '<i class="fa fa-draw-polygon"></i>' :
-              type === 'polyline' ? '<i class="fa fa-share-alt"></i>' :
-                type === 'circle' ? '<i class="fa fa-circle"></i>' :
-                  type === 'rectangle' ? '<i class="fa fa-square"></i>' :
-                    type === 'image' ? '<i class="fa fa-image"></i>' :
-                      '<i class="fa fa-question"></i>'
+            type === 'text' ? '<span class="material-icons">text_fields</span>' :
+              type === 'polygon' ? '<i class="fa fa-draw-polygon"></i>' :
+                type === 'polyline' ? '<i class="fa fa-share-alt"></i>' :
+                  type === 'circle' ? '<i class="fa fa-circle"></i>' :
+                    type === 'rectangle' ? '<i class="fa fa-square"></i>' :
+                      type === 'image' ? '<i class="fa fa-image"></i>' :
+                        '<i class="fa fa-question"></i>'
         ) +
         ` <span class="layer-object-name">${props.name || '[без назви]'}</span>`;
       item.dataset.objectId = layer._leaflet_id;

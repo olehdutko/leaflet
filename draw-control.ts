@@ -2,6 +2,7 @@ declare const L: any;
 import { map } from './map-init.js';
 import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers.js';
 import { getColoredMarkerIcon } from './utils.js';
+import { createTextMarker, getDefaultTextProperties } from './text-object.js';
 // import { addDoubleClickToLayer } from './ui.js'; // видалено для уникнення циклічного імпорту
 
 let drawControl: any = null;
@@ -408,4 +409,27 @@ export function updateDrawControlForActiveLayer() {
     drawControl.options.edit.featureGroup = activeLayer;
     setDrawButtonsEnabled(true);
   }
+}
+
+export function activateTextTool() {
+  if (!activeLayer || !(activeLayer instanceof L.FeatureGroup)) {
+    alert('Спочатку оберіть або створіть шар для тексту');
+    return;
+  }
+  map.getContainer().style.cursor = 'crosshair';
+  const clickHandler = function (e: any) {
+    map.getContainer().style.cursor = '';
+    map.off('click', clickHandler);
+    const marker = createTextMarker(e.latlng, 'Текст', getDefaultTextProperties());
+    activeLayer.addLayer(marker);
+    if ((window as any).addDoubleClickToLayer) {
+      (window as any).addDoubleClickToLayer(marker);
+    }
+    saveLayersToStorage();
+    updateActiveLayerUI();
+    import('./ui.js').then(({ showEditModal }) => {
+      showEditModal(marker);
+    });
+  };
+  map.on('click', clickHandler);
 } 

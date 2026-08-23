@@ -33,6 +33,7 @@
           <input type="file" id="import-all-input" accept=".json,.geojson,.kmz" style="display:none">
           <button class="layers-panel-btn" id="import-all" title="Імпортувати шари"><i class="fa fa-download"></i></button>
           <button class="layers-panel-btn" id="add-layer" title="Новий шар"><i class="fa fa-plus"></i></button>
+          <button class="layers-panel-btn" id="add-text" title="Додати текст"><span class="material-icons">text_fields</span></button>
         </span>
       </div>
       <!-- Глобальний пошук по об'єктах -->
@@ -113,6 +114,26 @@
             <span id="marker-icon-preview" class="material-icons">place</span>
           </div>
           <div id="marker-icon-autocomplete" class="autocomplete-list"></div>
+        </div>
+        <!-- Текстові контроли -->
+        <div class="form-group" id="text-content-group" class="hidden">
+          <label for="text-content">Текст</label>
+          <input type="text" id="text-content" placeholder="Введіть текст" />
+        </div>
+        <div class="form-group" id="text-font-size-group" class="hidden">
+          <label for="text-font-size">Розмір шрифту: <span id="text-font-size-value">24px</span></label>
+          <input type="range" id="text-font-size" min="10" max="72" value="24">
+        </div>
+        <div class="form-group" id="text-curve-angle-group" class="hidden">
+          <label for="text-curve-angle">Кут дуги: <span id="text-curve-angle-value">0°</span></label>
+          <input type="range" id="text-curve-angle" min="0" max="180" value="0">
+        </div>
+        <div class="form-group" id="text-curve-radius-group" class="hidden">
+          <label for="text-curve-radius">Радіус дуги: <span id="text-curve-radius-value">100</span></label>
+          <input type="range" id="text-curve-radius" min="50" max="500" value="100">
+        </div>
+        <div class="form-group modal-actions">
+          <!-- модальні кнопки знаходяться у .modal-footer -->
         </div>
       </div>
       <div class="modal-footer modal-footer-flex">

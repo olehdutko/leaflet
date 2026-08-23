@@ -1,19 +1,22 @@
 declare const L: any;
+import { isTextObject, updateTextMarkerIcon } from './text-object.js';
 
 export function applyObjectProperties(layer: any, properties: any) {
-  const type = layer && layer instanceof L.Marker && !(layer instanceof L.CircleMarker)
-    ? 'marker'
-    : layer instanceof L.CircleMarker
-      ? 'circle'
-      : layer instanceof L.Polygon && !(layer instanceof L.Rectangle)
-        ? 'polygon'
-        : layer instanceof L.Rectangle
-          ? 'rectangle'
-          : layer instanceof L.Polyline
-            ? 'polyline'
-            : layer instanceof L.ImageOverlay
-              ? 'image'
-              : 'unknown';
+  const type = isTextObject(layer)
+    ? 'text'
+    : layer && layer instanceof L.Marker && !(layer instanceof L.CircleMarker)
+      ? 'marker'
+      : layer instanceof L.CircleMarker
+        ? 'circle'
+        : layer instanceof L.Polygon && !(layer instanceof L.Rectangle)
+          ? 'polygon'
+          : layer instanceof L.Rectangle
+            ? 'rectangle'
+            : layer instanceof L.Polyline
+              ? 'polyline'
+              : layer instanceof L.ImageOverlay
+                ? 'image'
+                : 'unknown';
   if (!layer.properties) layer.properties = {};
   layer.properties.name = properties.name;
   layer.properties.description = properties.description;
@@ -65,5 +68,7 @@ export function applyObjectProperties(layer: any, properties: any) {
     layer.options.weight = weight;
     layer.options.opacity = opacity;
     layer.options.dashArray = properties.style === 'dashed' ? '10, 10' : properties.style === 'dotted' ? '2, 8' : null;
+  } else if (type === 'text') {
+    updateTextMarkerIcon(layer, properties);
   }
 }

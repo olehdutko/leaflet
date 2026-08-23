@@ -1336,13 +1336,15 @@ if (globalSearchInput && globalSearchResults) {
                 return;
             const fg = layerObj.featureGroup;
             fg.eachLayer((layer) => {
-                var _a, _b, _c, _d, _e, _f;
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j;
                 if (layer.visible === false)
                     return; // @ts-ignore
                 const name = ((_a = layer.properties) === null || _a === void 0 ? void 0 : _a.name) || ((_c = (_b = layer.feature) === null || _b === void 0 ? void 0 : _b.properties) === null || _c === void 0 ? void 0 : _c.name) || '';
                 const desc = ((_d = layer.properties) === null || _d === void 0 ? void 0 : _d.description) || ((_f = (_e = layer.feature) === null || _e === void 0 ? void 0 : _e.properties) === null || _f === void 0 ? void 0 : _f.description) || '';
+                const text = ((_g = layer.properties) === null || _g === void 0 ? void 0 : _g.text) || ((_j = (_h = layer.feature) === null || _h === void 0 ? void 0 : _h.properties) === null || _j === void 0 ? void 0 : _j.text) || '';
                 if (name.toLowerCase().includes(query) ||
-                    desc.toLowerCase().includes(query)) {
+                    desc.toLowerCase().includes(query) ||
+                    text.toLowerCase().includes(query)) {
                     results.push({
                         layer,
                         name,
@@ -1517,13 +1519,17 @@ observeOverlayOpacity();
 // initEditModal();
 // centerGeoSearchBar();
 // Імпортуємо draw control функції
-import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
+import { initDrawControl, updateDrawControlVisibility, activateTextTool } from './draw-control.js';
 // Ініціалізуємо draw control
 initDrawControl();
 updateDrawControlVisibility();
 // Додаємо обробники подій для кнопок
 if (addLayerBtn) {
     addLayerBtn.addEventListener('click', addLayer);
+}
+const addTextBtn = document.getElementById('add-text');
+if (addTextBtn) {
+    addTextBtn.addEventListener('click', activateTextTool);
 }
 if (exportAllBtn) {
     exportAllBtn.addEventListener('click', () => {

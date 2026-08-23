@@ -28,11 +28,12 @@ import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import * as state from './state.js';
+import { isTextObject, getTextObjectIcon } from './text-object.js';
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage() {
     customLayers.forEach(l => {
         l.featureGroup.eachLayer((layer) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
             const type = getObjectType(layer);
             if (!layer.feature)
                 return;
@@ -62,6 +63,14 @@ export function saveLayersToStorage() {
                     layer.feature.properties.style = 'dotted';
                 else
                     layer.feature.properties.style = 'solid';
+            }
+            else if (type === 'text') {
+                layer.feature.properties.text = ((_j = layer.properties) === null || _j === void 0 ? void 0 : _j.text) || '';
+                layer.feature.properties.fontSize = (_l = (_k = layer.properties) === null || _k === void 0 ? void 0 : _k.fontSize) !== null && _l !== void 0 ? _l : 24;
+                layer.feature.properties.color = ((_m = layer.properties) === null || _m === void 0 ? void 0 : _m.color) || '#1976d2';
+                layer.feature.properties.curveAngle = (_p = (_o = layer.properties) === null || _o === void 0 ? void 0 : _o.curveAngle) !== null && _p !== void 0 ? _p : 0;
+                layer.feature.properties.curveRadius = (_r = (_q = layer.properties) === null || _q === void 0 ? void 0 : _q.curveRadius) !== null && _r !== void 0 ? _r : 100;
+                layer.feature.properties.objectType = 'text';
             }
             if (layer.properties && layer.properties.image) {
                 // видалено: layer.feature.properties.image = layer.properties.image;
@@ -157,9 +166,12 @@ export function loadLayersFromStorage() {
             if (obj.geojson) {
                 L.geoJSON(obj.geojson, {
                     pointToLayer: function (feature, latlng) {
-                        var _a, _b;
-                        const color = ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.color) || '#1976d2'; // Дефолтний колір
-                        const iconName = ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.icon) || 'place';
+                        const props = feature.properties || {};
+                        if (props.objectType === 'text' || props.text !== undefined) {
+                            return L.marker(latlng, { icon: getTextObjectIcon(props), draggable: true });
+                        }
+                        const color = props.color || '#1976d2';
+                        const iconName = props.icon || 'place';
                         return L.marker(latlng, {
                             icon: getColoredMarkerIcon(color, iconName)
                         });
@@ -190,6 +202,10 @@ export function loadLayersFromStorage() {
                             }
                             if (!layer.properties.description || layer.properties.description === 'undefined') {
                                 layer.properties.description = '';
+                            }
+                            // Встановити objectType для текстових об'єктів
+                            if (isTextObject(layer)) {
+                                layer.properties.objectType = 'text';
                             }
                             applyObjectProperties(layer, layer.properties);
                             if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
@@ -373,7 +389,7 @@ export function updateActiveLayerUI() {
     }
     customLayers.forEach(l => {
         l.featureGroup.eachLayer((layer) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
             const type = getObjectType(layer);
             if (!layer.feature)
                 return;
@@ -402,6 +418,14 @@ export function updateActiveLayerUI() {
                     layer.feature.properties.style = 'dotted';
                 else
                     layer.feature.properties.style = 'solid';
+            }
+            else if (type === 'text') {
+                layer.feature.properties.text = ((_j = layer.properties) === null || _j === void 0 ? void 0 : _j.text) || '';
+                layer.feature.properties.fontSize = (_l = (_k = layer.properties) === null || _k === void 0 ? void 0 : _k.fontSize) !== null && _l !== void 0 ? _l : 24;
+                layer.feature.properties.color = ((_m = layer.properties) === null || _m === void 0 ? void 0 : _m.color) || '#1976d2';
+                layer.feature.properties.curveAngle = (_p = (_o = layer.properties) === null || _o === void 0 ? void 0 : _o.curveAngle) !== null && _p !== void 0 ? _p : 0;
+                layer.feature.properties.curveRadius = (_r = (_q = layer.properties) === null || _q === void 0 ? void 0 : _q.curveRadius) !== null && _r !== void 0 ? _r : 100;
+                layer.feature.properties.objectType = 'text';
             }
         });
     });
