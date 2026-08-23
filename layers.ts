@@ -90,14 +90,13 @@ export function saveLayersToStorage(): void {
         else if (dash === '2, 8') layer.feature.properties.style = 'dotted';
         else layer.feature.properties.style = 'solid';
       } else if (type === 'text') {
-        layer.feature.properties.text = layer.properties?.text || '';
-        layer.feature.properties.fontSize = layer.properties?.fontSize ?? 24;
-        layer.feature.properties.color = layer.properties?.color || '#1976d2';
-        layer.feature.properties.curveAngle = layer.properties?.curveAngle ?? 0;
-        layer.feature.properties.curveRadius = layer.properties?.curveRadius ?? 100;
-        layer.feature.properties.objectType = 'text';
-      }
-      if (layer.properties && layer.properties.image) {
+   layer.feature.properties.text = layer.properties?.text || '';
+   layer.feature.properties.fontSize = layer.properties?.fontSize ?? 24;
+   layer.feature.properties.color = layer.properties?.color || '#1976d2';
+   layer.feature.properties.rotation = layer.properties?.rotation ?? 0;
+   layer.feature.properties.objectType = 'text';
+ }
+ if (layer.properties && layer.properties.image) {
         // видалено: layer.feature.properties.image = layer.properties.image;
       }
     });
@@ -444,8 +443,7 @@ export function updateActiveLayerUI(): void {
         layer.feature.properties.text = layer.properties?.text || '';
         layer.feature.properties.fontSize = layer.properties?.fontSize ?? 24;
         layer.feature.properties.color = layer.properties?.color || '#1976d2';
-        layer.feature.properties.curveAngle = layer.properties?.curveAngle ?? 0;
-        layer.feature.properties.curveRadius = layer.properties?.curveRadius ?? 100;
+        layer.feature.properties.rotation = layer.properties?.rotation ?? 0;
         layer.feature.properties.objectType = 'text';
       }
     });

@@ -123,13 +123,12 @@
           <label for="text-font-size">Розмір шрифту: <span id="text-font-size-value">24px</span></label>
           <input type="range" id="text-font-size" min="10" max="72" value="24">
         </div>
-        <div class="form-group" id="text-curve-angle-group" class="hidden">
-          <label for="text-curve-angle">Кут дуги: <span id="text-curve-angle-value">0°</span></label>
-          <input type="range" id="text-curve-angle" min="0" max="180" value="0">
-        </div>
-        <div class="form-group" id="text-curve-radius-group" class="hidden">
-          <label for="text-curve-radius">Радіус дуги: <span id="text-curve-radius-value">100</span></label>
-          <input type="range" id="text-curve-radius" min="50" max="500" value="100">
+        <div class="form-group" id="text-rotation-group" class="hidden">
+          <label>Повернути текст на 180°</label>
+          <div class="radio-group">
+            <label><input type="radio" name="text-rotation" value="0" checked> Звичайно</label>
+            <label><input type="radio" name="text-rotation" value="180"> Перевернуто</label>
+          </div>
         </div>
         <div class="form-group modal-actions">
           <!-- модальні кнопки знаходяться у .modal-footer -->

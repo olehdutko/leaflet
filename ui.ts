@@ -39,16 +39,18 @@ export function showEditModal(layer: any) {
   // Текстові групи
   const textContentGroup = document.getElementById('text-content-group') as HTMLElement | null;
   const textFontSizeGroup = document.getElementById('text-font-size-group') as HTMLElement | null;
-  const textCurveAngleGroup = document.getElementById('text-curve-angle-group') as HTMLElement | null;
-  const textCurveRadiusGroup = document.getElementById('text-curve-radius-group') as HTMLElement | null;
+  const textRotationGroup = document.getElementById('text-rotation-group') as HTMLElement | null;
   // Приховуємо всі групи
   [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup,
-    textContentGroup, textFontSizeGroup, textCurveAngleGroup, textCurveRadiusGroup].forEach(group => {
+    textContentGroup, textFontSizeGroup, textRotationGroup].forEach(group => {
     if (group) (group as HTMLElement).style.display = 'none';
   });
 
-  // Для текстових об'єктів приховуємо поле Назва (воно збігається з текстом)
+  // Для текстових об'єктів приховуємо поля, які не потрібні: Назва, Опис
   if (objectNameGroup) objectNameGroup.style.display = type === 'text' ? 'none' : '';
+  if (objectDescription && objectDescription.parentElement) {
+    objectDescription.parentElement.style.display = type === 'text' ? 'none' : '';
+  }
 
   // Показуємо відповідні групи залежно від типу
   if (type === 'marker') {
@@ -101,9 +103,8 @@ export function showEditModal(layer: any) {
     if (colorPickerGroup) colorPickerGroup.style.display = 'block';
     if (textContentGroup) textContentGroup.style.display = 'block';
     if (textFontSizeGroup) textFontSizeGroup.style.display = 'block';
-    if (textCurveAngleGroup) textCurveAngleGroup.style.display = 'block';
-    if (textCurveRadiusGroup) textCurveRadiusGroup.style.display = 'block';
-    // Показати координати для текстового об'єкта (це маркер)
+    if (textRotationGroup) textRotationGroup.style.display = 'block';
+    // Приховати координати для текстового об'єкта (це маркер)
     const coordsGroup = document.querySelector('.marker-coords-group');
     if (coordsGroup) (coordsGroup as HTMLElement).style.display = '';
     const latInput = document.getElementById('marker-lat');
@@ -122,24 +123,17 @@ export function showEditModal(layer: any) {
   const textContentInput = document.getElementById('text-content') as HTMLInputElement | null;
   const textFontSizeInput = document.getElementById('text-font-size') as HTMLInputElement | null;
   const textFontSizeValue = document.getElementById('text-font-size-value');
-  const textCurveAngleInput = document.getElementById('text-curve-angle') as HTMLInputElement | null;
-  const textCurveAngleValue = document.getElementById('text-curve-angle-value');
-  const textCurveRadiusInput = document.getElementById('text-curve-radius') as HTMLInputElement | null;
-  const textCurveRadiusValue = document.getElementById('text-curve-radius-value');
+  const textRotationInputs = document.querySelectorAll('input[name="text-rotation"]') as NodeListOf<HTMLInputElement>;
 
   if (textContentInput) textContentInput.value = properties.text || '';
   if (textFontSizeInput && textFontSizeValue) {
     textFontSizeInput.value = String(properties.fontSize ?? 24);
     textFontSizeValue.textContent = (properties.fontSize ?? 24) + 'px';
   }
-  if (textCurveAngleInput && textCurveAngleValue) {
-    textCurveAngleInput.value = String(properties.curveAngle ?? 0);
-    textCurveAngleValue.textContent = (properties.curveAngle ?? 0) + '°';
-  }
-  if (textCurveRadiusInput && textCurveRadiusValue) {
-    textCurveRadiusInput.value = String(properties.curveRadius ?? 100);
-    textCurveRadiusValue.textContent = String(properties.curveRadius ?? 100);
-  }
+  const currentRotation = properties.rotation ?? 0;
+  textRotationInputs.forEach((input: HTMLInputElement) => {
+    input.checked = String(currentRotation) === input.value;
+  });
   // Товщина
   const lineWidth = document.getElementById('line-width');
   const lineWidthValue = document.getElementById('line-width-value');
@@ -264,44 +258,45 @@ export function showEditModal(layer: any) {
   // --- Текстові контроли: інтерактивність ---
   if (type === 'text') {
     const updateTextProps = () => {
-      if (!currentEditingObject.value) return;
-      const target = currentEditingObject.value as any;
-      target.properties = target.properties || {};
-      if (textContentInput) {
-        target.properties.text = textContentInput.value;
-        target.properties.name = textContentInput.value;
-      }
-      if (textFontSizeInput) target.properties.fontSize = parseInt(textFontSizeInput.value, 10);
-      if (textCurveAngleInput) target.properties.curveAngle = parseInt(textCurveAngleInput.value, 10);
-      if (textCurveRadiusInput) target.properties.curveRadius = parseInt(textCurveRadiusInput.value, 10);
-      if (objectColorInput) target.properties.color = (objectColorInput as HTMLInputElement).value;
-      applyObjectProperties(target as L.Layer, target.properties);
-      saveLayersToStorage();
-    };
+   if (!currentEditingObject.value) return;
+   const target = currentEditingObject.value as any;
+   target.properties = target.properties || {};
+   if (textContentInput) {
+     target.properties.text = textContentInput.value;
+     target.properties.name = textContentInput.value;
+   }
+   if (textFontSizeInput) target.properties.fontSize = parseInt(textFontSizeInput.value, 10);
+   if (objectColorInput) target.properties.color = (objectColorInput as HTMLInputElement).value;
 
-    if (textContentInput) {
-      textContentInput.oninput = function () {
-        updateTextProps();
-      };
-    }
-    if (textFontSizeInput && textFontSizeValue) {
-      textFontSizeInput.oninput = function () {
-        textFontSizeValue.textContent = textFontSizeInput.value + 'px';
-        updateTextProps();
-      };
-    }
-    if (textCurveAngleInput && textCurveAngleValue) {
-      textCurveAngleInput.oninput = function () {
-        textCurveAngleValue.textContent = textCurveAngleInput.value + '°';
-        updateTextProps();
-      };
-    }
-    if (textCurveRadiusInput && textCurveRadiusValue) {
-      textCurveRadiusInput.oninput = function () {
-        textCurveRadiusValue.textContent = textCurveRadiusInput.value;
-        updateTextProps();
-      };
-    }
+   // Обертання тексту: 0° або 180°
+   let rotation = 0;
+   textRotationInputs.forEach((input: HTMLInputElement) => {
+     if (input.checked) rotation = parseInt(input.value, 10);
+   });
+   target.properties.rotation = rotation;
+
+   applyObjectProperties(target as L.Layer, target.properties);
+   saveLayersToStorage();
+ };
+
+ if (textContentInput) {
+   textContentInput.oninput = function () {
+     updateTextProps();
+   };
+ }
+ if (textFontSizeInput && textFontSizeValue) {
+   textFontSizeInput.oninput = function () {
+     textFontSizeValue.textContent = textFontSizeInput.value + 'px';
+     updateTextProps();
+   };
+ }
+ if (textRotationInputs) {
+   textRotationInputs.forEach((input: HTMLInputElement) => {
+     input.onchange = function () {
+       updateTextProps();
+     };
+   });
+ }
   }
   // --- Додаю інтерактивність для вибору стилю лінії ---
   if (type === 'polyline') {
