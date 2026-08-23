@@ -1520,9 +1520,21 @@ observeOverlayOpacity();
 // centerGeoSearchBar();
 // Імпортуємо draw control функції
 import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
+import { applyTextZoomScale, isTextObject } from './text-object.js';
 // Ініціалізуємо draw control
 initDrawControl();
 updateDrawControlVisibility();
+// --- Масштабування текстових об'єктів разом із мапою ---
+map.on('zoomend', function () {
+    const currentZoom = map.getZoom();
+    customLayers.forEach(layerObj => {
+        layerObj.featureGroup.eachLayer((layer) => {
+            if (isTextObject(layer)) {
+                applyTextZoomScale(layer, currentZoom);
+            }
+        });
+    });
+});
 // Додаємо обробники подій для кнопок
 if (addLayerBtn) {
     addLayerBtn.addEventListener('click', addLayer);

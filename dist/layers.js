@@ -28,12 +28,12 @@ import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import * as state from './state.js';
-import { isTextObject, getTextObjectIcon } from './text-object.js';
+import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object.js';
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage() {
     customLayers.forEach(l => {
         l.featureGroup.eachLayer((layer) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
             const type = getObjectType(layer);
             if (!layer.feature)
                 return;
@@ -68,8 +68,7 @@ export function saveLayersToStorage() {
                 layer.feature.properties.text = ((_j = layer.properties) === null || _j === void 0 ? void 0 : _j.text) || '';
                 layer.feature.properties.fontSize = (_l = (_k = layer.properties) === null || _k === void 0 ? void 0 : _k.fontSize) !== null && _l !== void 0 ? _l : 24;
                 layer.feature.properties.color = ((_m = layer.properties) === null || _m === void 0 ? void 0 : _m.color) || '#1976d2';
-                layer.feature.properties.curveAngle = (_p = (_o = layer.properties) === null || _o === void 0 ? void 0 : _o.curveAngle) !== null && _p !== void 0 ? _p : 0;
-                layer.feature.properties.curveRadius = (_r = (_q = layer.properties) === null || _q === void 0 ? void 0 : _q.curveRadius) !== null && _r !== void 0 ? _r : 100;
+                layer.feature.properties.rotation = (_p = (_o = layer.properties) === null || _o === void 0 ? void 0 : _o.rotation) !== null && _p !== void 0 ? _p : 0;
                 layer.feature.properties.objectType = 'text';
             }
             if (layer.properties && layer.properties.image) {
@@ -206,6 +205,8 @@ export function loadLayersFromStorage() {
                             // Встановити objectType для текстових об'єктів
                             if (isTextObject(layer)) {
                                 layer.properties.objectType = 'text';
+                                layer._textBaseZoom = map.getZoom();
+                                applyTextZoomScale(layer, map.getZoom());
                             }
                             applyObjectProperties(layer, layer.properties);
                             if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
@@ -389,7 +390,7 @@ export function updateActiveLayerUI() {
     }
     customLayers.forEach(l => {
         l.featureGroup.eachLayer((layer) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
             const type = getObjectType(layer);
             if (!layer.feature)
                 return;
@@ -423,8 +424,7 @@ export function updateActiveLayerUI() {
                 layer.feature.properties.text = ((_j = layer.properties) === null || _j === void 0 ? void 0 : _j.text) || '';
                 layer.feature.properties.fontSize = (_l = (_k = layer.properties) === null || _k === void 0 ? void 0 : _k.fontSize) !== null && _l !== void 0 ? _l : 24;
                 layer.feature.properties.color = ((_m = layer.properties) === null || _m === void 0 ? void 0 : _m.color) || '#1976d2';
-                layer.feature.properties.curveAngle = (_p = (_o = layer.properties) === null || _o === void 0 ? void 0 : _o.curveAngle) !== null && _p !== void 0 ? _p : 0;
-                layer.feature.properties.curveRadius = (_r = (_q = layer.properties) === null || _q === void 0 ? void 0 : _q.curveRadius) !== null && _r !== void 0 ? _r : 100;
+                layer.feature.properties.rotation = (_p = (_o = layer.properties) === null || _o === void 0 ? void 0 : _o.rotation) !== null && _p !== void 0 ? _p : 0;
                 layer.feature.properties.objectType = 'text';
             }
         });
