@@ -1545,7 +1545,7 @@ observeOverlayOpacity();
 // centerGeoSearchBar();
 
 // Імпортуємо draw control функції
-import { initDrawControl, updateDrawControlVisibility, activateTextTool } from './draw-control.js';
+import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
 
 // Ініціалізуємо draw control
 initDrawControl();
@@ -1554,11 +1554,6 @@ updateDrawControlVisibility();
 // Додаємо обробники подій для кнопок
 if (addLayerBtn) {
   addLayerBtn.addEventListener('click', addLayer);
-}
-
-const addTextBtn = document.getElementById('add-text');
-if (addTextBtn) {
-  addTextBtn.addEventListener('click', activateTextTool);
 }
 
 if (exportAllBtn) {

@@ -65,6 +65,9 @@ export function initDrawControl() {
   // Додаємо draw control до карти
   map.addControl(drawControl);
 
+  // Додаємо кастомну кнопку "Текст" до панелі Leaflet.Draw
+  addTextDrawButton();
+
   // Обробники подій для draw control
   map.on('draw:created', function (e: any) {
     const layer = e.layer;
@@ -408,7 +411,46 @@ export function updateDrawControlForActiveLayer() {
     // Оновлюємо feature group для редагування на активний шар
     drawControl.options.edit.featureGroup = activeLayer;
     setDrawButtonsEnabled(true);
+    setTextDrawButtonEnabled(true);
+  } else {
+    setTextDrawButtonEnabled(false);
   }
+}
+
+function setTextDrawButtonEnabled(enabled: boolean) {
+  const textBtn = document.querySelector('.leaflet-draw-text-tool');
+  if (textBtn) {
+    (textBtn as HTMLElement).style.pointerEvents = enabled ? 'auto' : 'none';
+    (textBtn as HTMLElement).style.opacity = enabled ? '1' : '0.5';
+    if (!enabled) {
+      textBtn.setAttribute('title', 'Створення тексту можливе лише для активного шару');
+    } else {
+      textBtn.removeAttribute('title');
+    }
+  }
+}
+
+function addTextDrawButton() {
+  const toolbarTop = document.querySelector('.leaflet-draw-toolbar-top');
+  if (!toolbarTop) return;
+  // Якщо кнопка вже є — не додавати повторно
+  if (toolbarTop.querySelector('.leaflet-draw-text-tool')) return;
+
+  const textBtn = document.createElement('a');
+  textBtn.className = 'leaflet-draw-text-tool';
+  textBtn.href = '#';
+  textBtn.title = 'Додати текст';
+  textBtn.innerHTML = '<span class="material-icons" style="font-size:18px;line-height:26px;">text_fields</span>';
+  textBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:26px;height:26px;';
+
+  textBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    activateTextTool();
+  });
+
+  toolbarTop.appendChild(textBtn);
+  setTextDrawButtonEnabled(!!(activeLayer && activeLayer instanceof L.FeatureGroup));
 }
 
 export function activateTextTool() {

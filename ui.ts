@@ -382,6 +382,8 @@ export function addDoubleClickToLayer(layer: any) {
   const type = getObjectType(layer);
 
   // --- Тултіп функціональність ---
+  // Для текстових об'єктів тултіп не потрібен — текст і так видно на мапі
+  const isText = type === 'text';
   function getTooltipHtml(properties: any) {
     let html = '';
     if (properties.name) html += `<div class='tooltip-title'>${properties.name}</div>`;
@@ -469,9 +471,11 @@ export function addDoubleClickToLayer(layer: any) {
     }, 100);
   }
 
-  // Підключаємо тултіпи
-  layer.on('mouseover', showTooltip);
-  layer.on('mouseout', hideTooltip);
+  // Підключаємо тултіпи (не для текстових об'єктів)
+  if (!isText) {
+    layer.on('mouseover', showTooltip);
+    layer.on('mouseout', hideTooltip);
+  }
 
   // --- Подвійний клік функціональність ---
   layer.on('dblclick', function (e: any) {
