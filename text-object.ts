@@ -54,23 +54,31 @@ export function applyTextZoomScale(layer: any, currentZoom: number): void {
   const baseZoom = layer._textBaseZoom;
   if (baseZoom === undefined) return;
 
-  // Зберігаємо базові властивості окремо; при зміні зуму генеруємо
-  // тимчасово масштабовану іконку, не змінюючи оригінальні властивості.
-  const baseProps = layer._textBaseProperties || layer.properties || getDefaultTextProperties();
   const scale = getScaleForZoom(currentZoom, baseZoom);
-  const scaledProps = {
-    ...baseProps,
-    fontSize: Math.max(8, Math.round((baseProps.fontSize ?? DEFAULT_FONT_SIZE) * scale))
-  };
+  layer._textCurrentScale = scale;
 
-  if (layer.setIcon) {
-    layer.setIcon(getTextObjectIcon(scaledProps));
+  const iconEl = layer._icon as HTMLElement | undefined;
+  if (iconEl) {
+    const inner = iconEl.querySelector('.leaflet-text-object-inner') as HTMLElement | null;
+    if (inner) {
+      const rotation = inner.dataset.rotation || '0';
+      inner.style.transformOrigin = 'center center';
+      inner.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+    }
   }
 }
 
 function storeTextBaseZoom(layer: any, zoom: number): void {
   layer._textBaseZoom = zoom;
-  layer._textBaseProperties = { ...(layer.properties || getDefaultTextProperties()) };
+  layer._textCurrentScale = 1;
+  const iconEl = layer._icon as HTMLElement | undefined;
+  if (iconEl) {
+    const inner = iconEl.querySelector('.leaflet-text-object-inner') as HTMLElement | null;
+    if (inner) {
+      const rotation = inner.dataset.rotation || '0';
+      inner.style.transform = `rotate(${rotation}deg)`;
+    }
+  }
 }
 
 function escapeHtml(text: string): string {
@@ -101,7 +109,7 @@ function buildCurvedTextSvg(props: TextProperties, uniqueId?: string): TextLayou
   // Обертання на 180° можливе через властивість rotation (0 або 180).
   // Об'єкт обертається навколо свого центру.
   const html = (
-    `<div style="width:${width}px;height:${height}px;transform:rotate(${rotation}deg);transform-origin:center center;">
+    `<div class="leaflet-text-object-inner" data-rotation="${rotation}" style="width:${width}px;height:${height}px;transform:rotate(${rotation}deg);transform-origin:center center;">
       <svg xmlns="http://www.w3.org/2000/svg"
            width="${width}" height="${height}"
            viewBox="0 0 ${width} ${height}"

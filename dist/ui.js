@@ -5,6 +5,7 @@ import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './util
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
 import { updateActiveLayerUI } from './layers.js';
+import { startTextMouseRotation } from './text-object.js';
 export const layerIdToRenderObjectsList = new Map();
 export function updateObjectsListForLayer(layerObj) {
     const fn = layerIdToRenderObjectsList.get(layerObj.id);
@@ -12,7 +13,7 @@ export function updateObjectsListForLayer(layerObj) {
         fn();
 }
 export function showEditModal(layer) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b;
     currentEditingObject.value = layer;
     const type = getObjectType(layer);
     const properties = getObjectProperties(layer);
@@ -21,7 +22,7 @@ export function showEditModal(layer) {
     if (modalTitle) {
         modalTitle.textContent = `Редагування ${type === 'marker' ? 'маркера' : type === 'polygon' ? 'полігону' : type === 'polyline' ? 'полілінії' : type === 'image' ? 'зображення' : type === 'text' ? 'тексту' : 'обʼєкта'}`;
     }
-    // Заповнюємо поля
+    const objectNameGroup = document.getElementById('object-name-group');
     const objectName = document.getElementById('object-name');
     if (objectName)
         objectName.value = properties.name || '';
@@ -33,19 +34,25 @@ export function showEditModal(layer) {
     const lineWidthGroup = document.getElementById('line-width-group');
     const styleGroup = document.getElementById('style-group');
     const opacityGroup = document.getElementById('opacity-group');
+    const objectDescriptionGroup = document.getElementById('object-description-group');
     const markerIconGroup = document.getElementById('marker-icon-group');
     const imageGroup = document.getElementById('object-image-group');
     // Текстові групи
     const textContentGroup = document.getElementById('text-content-group');
     const textFontSizeGroup = document.getElementById('text-font-size-group');
-    const textCurveAngleGroup = document.getElementById('text-curve-angle-group');
-    const textCurveRadiusGroup = document.getElementById('text-curve-radius-group');
+    const textRotationGroup = document.getElementById('text-rotation-group');
+    const textRotateMouseBtn = document.getElementById('text-rotate-mouse');
     // Приховуємо всі групи
     [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup,
-        textContentGroup, textFontSizeGroup, textCurveAngleGroup, textCurveRadiusGroup].forEach(group => {
+        textContentGroup, textFontSizeGroup, textRotationGroup].forEach(group => {
         if (group)
             group.style.display = 'none';
     });
+    // Для текстових об'єктів приховуємо поля, які не потрібні: Назва, Опис
+    if (objectNameGroup)
+        objectNameGroup.style.display = type === 'text' ? 'none' : '';
+    if (objectDescriptionGroup)
+        objectDescriptionGroup.style.display = type === 'text' ? 'none' : '';
     // Показуємо відповідні групи залежно від типу
     if (type === 'marker') {
         if (colorPickerGroup)
@@ -120,11 +127,9 @@ export function showEditModal(layer) {
             textContentGroup.style.display = 'block';
         if (textFontSizeGroup)
             textFontSizeGroup.style.display = 'block';
-        if (textCurveAngleGroup)
-            textCurveAngleGroup.style.display = 'block';
-        if (textCurveRadiusGroup)
-            textCurveRadiusGroup.style.display = 'block';
-        // Показати координати для текстового об'єкта (це маркер)
+        if (textRotationGroup)
+            textRotationGroup.style.display = 'block';
+        // Приховати координати для текстового об'єкта (це маркер)
         const coordsGroup = document.querySelector('.marker-coords-group');
         if (coordsGroup)
             coordsGroup.style.display = '';
@@ -145,23 +150,11 @@ export function showEditModal(layer) {
     const textContentInput = document.getElementById('text-content');
     const textFontSizeInput = document.getElementById('text-font-size');
     const textFontSizeValue = document.getElementById('text-font-size-value');
-    const textCurveAngleInput = document.getElementById('text-curve-angle');
-    const textCurveAngleValue = document.getElementById('text-curve-angle-value');
-    const textCurveRadiusInput = document.getElementById('text-curve-radius');
-    const textCurveRadiusValue = document.getElementById('text-curve-radius-value');
     if (textContentInput)
         textContentInput.value = properties.text || '';
     if (textFontSizeInput && textFontSizeValue) {
         textFontSizeInput.value = String((_a = properties.fontSize) !== null && _a !== void 0 ? _a : 24);
         textFontSizeValue.textContent = ((_b = properties.fontSize) !== null && _b !== void 0 ? _b : 24) + 'px';
-    }
-    if (textCurveAngleInput && textCurveAngleValue) {
-        textCurveAngleInput.value = String((_c = properties.curveAngle) !== null && _c !== void 0 ? _c : 0);
-        textCurveAngleValue.textContent = ((_d = properties.curveAngle) !== null && _d !== void 0 ? _d : 0) + '°';
-    }
-    if (textCurveRadiusInput && textCurveRadiusValue) {
-        textCurveRadiusInput.value = String((_e = properties.curveRadius) !== null && _e !== void 0 ? _e : 100);
-        textCurveRadiusValue.textContent = String((_f = properties.curveRadius) !== null && _f !== void 0 ? _f : 100);
     }
     // Товщина
     const lineWidth = document.getElementById('line-width');
@@ -293,14 +286,12 @@ export function showEditModal(layer) {
                 return;
             const target = currentEditingObject.value;
             target.properties = target.properties || {};
-            if (textContentInput)
+            if (textContentInput) {
                 target.properties.text = textContentInput.value;
+                target.properties.name = textContentInput.value;
+            }
             if (textFontSizeInput)
                 target.properties.fontSize = parseInt(textFontSizeInput.value, 10);
-            if (textCurveAngleInput)
-                target.properties.curveAngle = parseInt(textCurveAngleInput.value, 10);
-            if (textCurveRadiusInput)
-                target.properties.curveRadius = parseInt(textCurveRadiusInput.value, 10);
             if (objectColorInput)
                 target.properties.color = objectColorInput.value;
             applyObjectProperties(target, target.properties);
@@ -308,9 +299,6 @@ export function showEditModal(layer) {
         };
         if (textContentInput) {
             textContentInput.oninput = function () {
-                if (textContentInput && currentEditingObject.value) {
-                    currentEditingObject.value.properties.name = textContentInput.value;
-                }
                 updateTextProps();
             };
         }
@@ -320,16 +308,12 @@ export function showEditModal(layer) {
                 updateTextProps();
             };
         }
-        if (textCurveAngleInput && textCurveAngleValue) {
-            textCurveAngleInput.oninput = function () {
-                textCurveAngleValue.textContent = textCurveAngleInput.value + '°';
-                updateTextProps();
-            };
-        }
-        if (textCurveRadiusInput && textCurveRadiusValue) {
-            textCurveRadiusInput.oninput = function () {
-                textCurveRadiusValue.textContent = textCurveRadiusInput.value;
-                updateTextProps();
+        if (textRotateMouseBtn) {
+            textRotateMouseBtn.onclick = function () {
+                startTextMouseRotation(currentEditingObject.value, map, () => {
+                    saveLayersToStorage();
+                });
+                closeEditModal();
             };
         }
     }

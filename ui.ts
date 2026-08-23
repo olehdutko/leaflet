@@ -34,6 +34,7 @@ export function showEditModal(layer: any) {
   const lineWidthGroup = document.getElementById('line-width-group') as HTMLElement | null;
   const styleGroup = document.getElementById('style-group') as HTMLElement | null;
   const opacityGroup = document.getElementById('opacity-group') as HTMLElement | null;
+  const objectDescriptionGroup = document.getElementById('object-description-group') as HTMLElement | null;
   const markerIconGroup = document.getElementById('marker-icon-group') as HTMLElement | null;
   const imageGroup = document.getElementById('object-image-group') as HTMLElement | null;
   // Текстові групи
@@ -49,9 +50,7 @@ export function showEditModal(layer: any) {
 
   // Для текстових об'єктів приховуємо поля, які не потрібні: Назва, Опис
   if (objectNameGroup) objectNameGroup.style.display = type === 'text' ? 'none' : '';
-  if (objectDescription && objectDescription.parentElement) {
-    objectDescription.parentElement.style.display = type === 'text' ? 'none' : '';
-  }
+  if (objectDescriptionGroup) objectDescriptionGroup.style.display = type === 'text' ? 'none' : '';
 
   // Показуємо відповідні групи залежно від типу
   if (type === 'marker') {
@@ -496,6 +495,10 @@ export function addDoubleClickToLayer(layer: any) {
       e.originalEvent?.stopPropagation?.();
       e.originalEvent?.preventDefault?.();
       showEditModal(layer);
+    });
+    // Зберігаємо позицію після перетягування маркера
+    layer.on('dragend', function () {
+      saveLayersToStorage();
     });
   }
 }

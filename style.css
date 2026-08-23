@@ -1025,6 +1025,12 @@ body {
   pointer-events: auto;
 }
 
+.leaflet-text-object-inner {
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+}
+
 #object-color.color-picker-input {
   width: 32px;
   height: 32px;
