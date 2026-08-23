@@ -6,7 +6,7 @@ import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './util
 import { saveLayersToStorage } from './layers.js';
 import { applyObjectProperties } from './objects.js';
 import { updateActiveLayerUI } from './layers.js';
-import { isTextObject } from './text-object.js';
+import { applyTextZoomScale, isTextObject, startTextMouseRotation } from './text-object.js';
 
 export const layerIdToRenderObjectsList = new Map();
 
@@ -40,6 +40,7 @@ export function showEditModal(layer: any) {
   const textContentGroup = document.getElementById('text-content-group') as HTMLElement | null;
   const textFontSizeGroup = document.getElementById('text-font-size-group') as HTMLElement | null;
   const textRotationGroup = document.getElementById('text-rotation-group') as HTMLElement | null;
+  const textRotateMouseBtn = document.getElementById('text-rotate-mouse') as HTMLButtonElement | null;
   // Приховуємо всі групи
   [colorPickerGroup, lineWidthGroup, styleGroup, opacityGroup, markerIconGroup, imageGroup,
     textContentGroup, textFontSizeGroup, textRotationGroup].forEach(group => {
@@ -123,17 +124,12 @@ export function showEditModal(layer: any) {
   const textContentInput = document.getElementById('text-content') as HTMLInputElement | null;
   const textFontSizeInput = document.getElementById('text-font-size') as HTMLInputElement | null;
   const textFontSizeValue = document.getElementById('text-font-size-value');
-  const textRotationInputs = document.querySelectorAll('input[name="text-rotation"]') as NodeListOf<HTMLInputElement>;
 
   if (textContentInput) textContentInput.value = properties.text || '';
   if (textFontSizeInput && textFontSizeValue) {
     textFontSizeInput.value = String(properties.fontSize ?? 24);
     textFontSizeValue.textContent = (properties.fontSize ?? 24) + 'px';
   }
-  const currentRotation = properties.rotation ?? 0;
-  textRotationInputs.forEach((input: HTMLInputElement) => {
-    input.checked = String(currentRotation) === input.value;
-  });
   // Товщина
   const lineWidth = document.getElementById('line-width');
   const lineWidthValue = document.getElementById('line-width-value');
@@ -258,45 +254,38 @@ export function showEditModal(layer: any) {
   // --- Текстові контроли: інтерактивність ---
   if (type === 'text') {
     const updateTextProps = () => {
-   if (!currentEditingObject.value) return;
-   const target = currentEditingObject.value as any;
-   target.properties = target.properties || {};
-   if (textContentInput) {
-     target.properties.text = textContentInput.value;
-     target.properties.name = textContentInput.value;
-   }
-   if (textFontSizeInput) target.properties.fontSize = parseInt(textFontSizeInput.value, 10);
-   if (objectColorInput) target.properties.color = (objectColorInput as HTMLInputElement).value;
+      if (!currentEditingObject.value) return;
+      const target = currentEditingObject.value as any;
+      target.properties = target.properties || {};
+      if (textContentInput) {
+        target.properties.text = textContentInput.value;
+        target.properties.name = textContentInput.value;
+      }
+      if (textFontSizeInput) target.properties.fontSize = parseInt(textFontSizeInput.value, 10);
+      if (objectColorInput) target.properties.color = (objectColorInput as HTMLInputElement).value;
+      applyObjectProperties(target as L.Layer, target.properties);
+      saveLayersToStorage();
+    };
 
-   // Обертання тексту: 0° або 180°
-   let rotation = 0;
-   textRotationInputs.forEach((input: HTMLInputElement) => {
-     if (input.checked) rotation = parseInt(input.value, 10);
-   });
-   target.properties.rotation = rotation;
-
-   applyObjectProperties(target as L.Layer, target.properties);
-   saveLayersToStorage();
- };
-
- if (textContentInput) {
-   textContentInput.oninput = function () {
-     updateTextProps();
-   };
- }
- if (textFontSizeInput && textFontSizeValue) {
-   textFontSizeInput.oninput = function () {
-     textFontSizeValue.textContent = textFontSizeInput.value + 'px';
-     updateTextProps();
-   };
- }
- if (textRotationInputs) {
-   textRotationInputs.forEach((input: HTMLInputElement) => {
-     input.onchange = function () {
-       updateTextProps();
-     };
-   });
- }
+    if (textContentInput) {
+      textContentInput.oninput = function () {
+        updateTextProps();
+      };
+    }
+    if (textFontSizeInput && textFontSizeValue) {
+      textFontSizeInput.oninput = function () {
+        textFontSizeValue.textContent = textFontSizeInput.value + 'px';
+        updateTextProps();
+      };
+    }
+    if (textRotateMouseBtn) {
+      textRotateMouseBtn.onclick = function () {
+        startTextMouseRotation(currentEditingObject.value, map, () => {
+          saveLayersToStorage();
+        });
+        closeEditModal();
+      };
+    }
   }
   // --- Додаю інтерактивність для вибору стилю лінії ---
   if (type === 'polyline') {

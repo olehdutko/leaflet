@@ -188,9 +188,45 @@ export function updateTextMarkerIcon(layer: any, properties: TextProperties): vo
     layer.setIcon(getTextObjectIcon(merged));
   }
 
-  // Після оновлення іконки відновлюємо масштабування відносно поточного зуму мапи
   if (layer._map && layer._map.getZoom) {
-    layer._textBaseZoom = layer._map.getZoom();
+    storeTextBaseZoom(layer, layer._map.getZoom());
     applyTextZoomScale(layer, layer._map.getZoom());
   }
+}
+
+export function startTextMouseRotation(layer: any, mapInstance: any, onDone?: () => void): void {
+  if (!layer || !isTextObject(layer) || !mapInstance) return;
+
+  const container = mapInstance.getContainer();
+  if (!container) return;
+
+  // Закриваємо модалку, якщо відкрита
+  container.style.cursor = 'crosshair';
+
+  let isRotating = true;
+  const center = layer.getLatLng();
+  const centerPoint = mapInstance.latLngToContainerPoint(center);
+
+  function updateRotationFromMouse(e: MouseEvent) {
+    if (!isRotating) return;
+    const dx = e.clientX - centerPoint.x;
+    const dy = e.clientY - centerPoint.y;
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    updateTextMarkerIcon(layer, { rotation: angle });
+  }
+
+  function stopRotation() {
+    if (!isRotating) return;
+    isRotating = false;
+    container.style.cursor = '';
+    document.removeEventListener('mousemove', updateRotationFromMouse);
+    document.removeEventListener('mouseup', stopRotation);
+    if (onDone) onDone();
+  }
+
+  document.addEventListener('mousemove', updateRotationFromMouse);
+  document.addEventListener('mouseup', stopRotation);
+
+  // Початкове оновлення за поточним положенням миші
+  updateRotationFromMouse({ clientX: centerPoint.x, clientY: centerPoint.y - 50 } as MouseEvent);
 }
