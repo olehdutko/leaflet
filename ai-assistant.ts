@@ -2,6 +2,7 @@ declare const L: any;
 import { map } from './map-init.js';
 import { LefleatApi } from './api.js';
 import { closeEditModal } from './main.js';
+import { updateObjectsListForLayer } from './ui.js';
 
 const ASSISTANT_ID = 'ai-assistant-panel';
 const MESSAGES_ID = 'ai-assistant-messages';
@@ -94,12 +95,18 @@ async function handleUserQuery(rawQuery: string): Promise<void> {
 
     addMessage(`Знайшов ${displayName}. Створюю маркер...`, 'assistant');
 
-    LefleatApi.addMarker(lat, lon, {
+    const result = LefleatApi.addMarker(lat, lon, {
       name: placeName,
       description: displayName,
       icon: 'place',
       color: '#1976d2',
     });
+
+    if (result && result.layer && result.layer.featureGroup) {
+      updateObjectsListForLayer(result.layer.featureGroup);
+    } else if ((window as any).activeLayer) {
+      updateObjectsListForLayer((window as any).activeLayer);
+    }
 
     map.flyTo([lat, lon], 17, { duration: 1.2 });
 

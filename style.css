@@ -671,6 +671,36 @@ body {
   display: none !important;
 }
 
+/* Кастомна кнопка додавання тексту в Leaflet.Draw toolbar */
+.leaflet-draw-text-tool {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden !important;
+  padding: 0 !important;
+  background-image: none !important;
+  background-position: 50% 50% !important;
+  background-repeat: no-repeat !important;
+  background-size: 0 0 !important;
+  color: #333 !important;
+}
+
+.leaflet-bar a.leaflet-draw-text-tool {
+  background-color: #fff;
+}
+
+.leaflet-touch .leaflet-bar a.leaflet-draw-text-tool {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+}
+
+.leaflet-draw-text-tool svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .distortable-image-overlay img {
   pointer-events: auto !important;
 }
@@ -1361,9 +1391,8 @@ body.blurred > *:not(#confirm-modal) {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  z-index: 3000 !important;
   background: rgba(0,0,0,0.18) !important;
-  z-index: 9999 !important;
+  z-index: 200000 !important;
 }
 #confirm-modal.hidden {
   display: none !important;

@@ -531,6 +531,10 @@ export function addDoubleClickToLayer(layer) {
             (_d = (_c = e.originalEvent) === null || _c === void 0 ? void 0 : _c.preventDefault) === null || _d === void 0 ? void 0 : _d.call(_c);
             showEditModal(layer);
         });
+        // Зберігаємо позицію після перетягування маркера
+        layer.on('dragend', function () {
+            saveLayersToStorage();
+        });
     }
 }
 export function showConfirmDialog({ title = 'Підтвердження', message = '', onConfirm, onCancel, buttons }) {

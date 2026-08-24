@@ -9,6 +9,7 @@ import {
 import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { createTextMarker, getDefaultTextProperties, TextProperties } from './text-object.js';
 import { applyObjectProperties } from './objects.js';
+import { updateObjectsListForLayer } from './ui.js';
 
 let objectIdCounter = 0;
 
@@ -33,6 +34,10 @@ function findObjectById(id: string): any {
     });
   });
   return found;
+}
+
+function findLayerObjByFeatureGroup(fg: any): any {
+  return customLayers.find(layerObj => layerObj.featureGroup === fg) || null;
 }
 
 function attachBaseMetadata(layer: any, props: any): void {
@@ -65,6 +70,7 @@ export const LefleatApi = {
     marker.feature.geometry.coordinates = [lng, lat];
     fg.addLayer(marker);
     saveLayersToStorage();
+    updateObjectsListForLayer(findLayerObjByFeatureGroup(fg));
     return { id: marker._lefleatId, layer: marker };
   },
 
@@ -85,6 +91,7 @@ export const LefleatApi = {
     marker._textBaseZoom = map.getZoom();
     fg.addLayer(marker);
     saveLayersToStorage();
+    updateObjectsListForLayer(findLayerObjByFeatureGroup(fg));
     return { id: marker._lefleatId, layer: marker };
   },
 
@@ -109,6 +116,7 @@ export const LefleatApi = {
     });
     fg.addLayer(polygon);
     saveLayersToStorage();
+    updateObjectsListForLayer(findLayerObjByFeatureGroup(fg));
     return { id: polygon._lefleatId, layer: polygon };
   },
 
@@ -129,6 +137,7 @@ export const LefleatApi = {
     });
     fg.addLayer(polyline);
     saveLayersToStorage();
+    updateObjectsListForLayer(findLayerObjByFeatureGroup(fg));
     return { id: polyline._lefleatId, layer: polyline };
   },
 
@@ -170,6 +179,7 @@ export const LefleatApi = {
     if (parent) {
       parent.featureGroup.removeLayer(layer);
       saveLayersToStorage();
+      updateObjectsListForLayer(parent);
       return true;
     }
     return false;

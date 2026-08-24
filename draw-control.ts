@@ -440,8 +440,8 @@ function addTextDrawButton() {
   textBtn.className = 'leaflet-draw-text-tool';
   textBtn.href = '#';
   textBtn.title = 'Додати текст';
-  textBtn.innerHTML = '<span class="material-icons" style="font-size:18px;line-height:26px;">text_fields</span>';
-  textBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:26px;height:26px;';
+  textBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"></path><path d="M9 20h6"></path><path d="M12 4v16"></path></svg>';
+  textBtn.style.cssText = '';
 
   textBtn.addEventListener('click', function (e) {
     e.preventDefault();
