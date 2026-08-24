@@ -1521,9 +1521,12 @@ observeOverlayOpacity();
 // Імпортуємо draw control функції
 import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
 import { applyTextZoomScale, isTextObject } from './text-object.js';
+import { initAiAssistant } from './ai-assistant.js';
 // Ініціалізуємо draw control
 initDrawControl();
 updateDrawControlVisibility();
+// Ініціалізуємо AI-асистента
+initAiAssistant();
 // --- Масштабування текстових об'єктів разом із мапою ---
 map.on('zoomend', function () {
     const currentZoom = map.getZoom();

@@ -29,6 +29,19 @@ import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import * as state from './state.js';
 import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object.js';
+// Перетворення Leaflet LatLng масиву на GeoJSON координати [lng, lat]
+function latlngsToCoords(latlngs) {
+    if (!Array.isArray(latlngs))
+        return [];
+    return latlngs.map((item) => {
+        if (Array.isArray(item))
+            return latlngsToCoords(item);
+        if (item && typeof item.lng === 'number' && typeof item.lat === 'number') {
+            return [item.lng, item.lat];
+        }
+        return item;
+    });
+}
 // --- Реалізація з main.ts ---
 export function saveLayersToStorage() {
     customLayers.forEach(l => {
@@ -73,6 +86,23 @@ export function saveLayersToStorage() {
             }
             if (layer.properties && layer.properties.image) {
                 // видалено: layer.feature.properties.image = layer.properties.image;
+            }
+            // Оновлюємо координати з поточного стану шару, щоб після drag/reposition
+            // об'єкт відновлювався в правильному місці.
+            if (layer.getLatLng && layer.feature.geometry.type === 'Point') {
+                const latlng = layer.getLatLng();
+                layer.feature.geometry.coordinates = [latlng.lng, latlng.lat];
+            }
+            else if (layer.getLatLngs && layer.feature.geometry.type !== 'Point') {
+                const latlngs = layer.getLatLngs();
+                if (Array.isArray(latlngs)) {
+                    if (layer.feature.geometry.type === 'Polygon') {
+                        layer.feature.geometry.coordinates = [latlngsToCoords(latlngs[0])];
+                    }
+                    else if (layer.feature.geometry.type === 'Polyline' || layer.feature.geometry.type === 'LineString') {
+                        layer.feature.geometry.coordinates = latlngsToCoords(latlngs);
+                    }
+                }
             }
         });
     });
