@@ -22,5 +22,6 @@ export const tileLayerOptions = {
 export const map = L.map('map', {
     center: center,
     zoom: 13,
+    zoomControl: false,
 });
-map.attributionControl.addAttribution('<a href="mailto:oleh.dutko@gmail.com">oleh.dutko@gmail.com</a>');
+// Attribution moved to layers panel footer

@@ -65,6 +65,10 @@ export function initDrawControl() {
   // Додаємо draw control до карти
   map.addControl(drawControl);
 
+  // Додаємо zoom control під draw toolbar
+  const zoomControl = L.control.zoom({ position: 'topright' });
+  map.addControl(zoomControl);
+
   // Додаємо кастомну кнопку "Текст" до панелі Leaflet.Draw
   addTextDrawButton();
 

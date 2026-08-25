@@ -600,6 +600,7 @@ export function showConfirmDialog({ title = 'Підтвердження', messag
     }
 }
 export function createLayerControl(layerObj) {
+    var _a;
     if (!layerControlsDiv)
         return;
     const layerCard = document.createElement('div');
@@ -1100,33 +1101,61 @@ export function createLayerControl(layerObj) {
             }
         }
     };
-    // Plan dropdown with blue bookmark icon
+    // Custom styled tile type dropdown
     const selectContainer = document.createElement('div');
-    selectContainer.className = 'layer-card-select';
-    const select = document.createElement('select');
-    select.innerHTML = `
-    <option value="План" ${layerObj.tileType === 'План' ? 'selected' : ''}>План</option>
-    <option value="Ландшафт" ${layerObj.tileType === 'Ландшафт' ? 'selected' : ''}>Ландшафт</option>
-    <option value="Супутник" ${layerObj.tileType === 'Супутник' ? 'selected' : ''}>Супутник</option>
-  `;
-    select.onchange = (e) => {
-        const newType = e.target.value;
-        const newTileLayer = createTileLayer(newType, layerObj.tileLayer.options.opacity);
-        map.removeLayer(layerObj.tileLayer);
-        layerObj.tileLayer = newTileLayer;
-        layerObj.tileType = newType;
-        if (layerObj.visible) {
-            newTileLayer.addTo(map);
-        }
-        saveLayersToStorage();
-    };
-    // Add bookmark icon to select container
+    selectContainer.className = 'layer-card-select custom-select';
     const bookmarkIcon = document.createElement('i');
     bookmarkIcon.className = 'fa fa-bookmark';
-    bookmarkIcon.style.color = '#1976d2';
+    bookmarkIcon.style.color = 'var(--accent-color)';
     bookmarkIcon.style.marginRight = '8px';
+    bookmarkIcon.style.fontSize = '14px';
+    const options = [
+        { value: 'План', label: 'План' },
+        { value: 'Ландшафт', label: 'Ландшафт' },
+        { value: 'Супутник', label: 'Супутник' }
+    ];
+    const selectedLabel = document.createElement('span');
+    selectedLabel.className = 'custom-select-value';
+    selectedLabel.textContent = ((_a = options.find(o => o.value === layerObj.tileType)) === null || _a === void 0 ? void 0 : _a.label) || 'План';
+    const dropdown = document.createElement('div');
+    dropdown.className = 'custom-select-dropdown hidden';
+    options.forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'custom-select-option' + (opt.value === layerObj.tileType ? ' selected' : '');
+        item.textContent = opt.label;
+        item.dataset.value = opt.value;
+        item.addEventListener('click', () => {
+            const newType = opt.value;
+            if (newType === layerObj.tileType)
+                return;
+            selectedLabel.textContent = opt.label;
+            dropdown.querySelectorAll('.custom-select-option').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            const newTileLayer = createTileLayer(newType, layerObj.tileLayer.options.opacity);
+            map.removeLayer(layerObj.tileLayer);
+            layerObj.tileLayer = newTileLayer;
+            layerObj.tileType = newType;
+            if (layerObj.visible) {
+                newTileLayer.addTo(map);
+            }
+            saveLayersToStorage();
+            dropdown.classList.add('hidden');
+        });
+        dropdown.appendChild(item);
+    });
+    selectContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = dropdown.classList.contains('hidden');
+        document.querySelectorAll('.custom-select-dropdown').forEach(d => d.classList.add('hidden'));
+        if (isHidden)
+            dropdown.classList.remove('hidden');
+    });
+    document.addEventListener('click', () => {
+        dropdown.classList.add('hidden');
+    });
     selectContainer.appendChild(bookmarkIcon);
-    selectContainer.appendChild(select);
+    selectContainer.appendChild(selectedLabel);
+    selectContainer.appendChild(dropdown);
     // Geonames checkbox with note
     const geonamesContainer = document.createElement('div');
     geonamesContainer.className = 'layer-card-checkbox';
@@ -1506,12 +1535,15 @@ const layersPanelToggle = document.getElementById('layers-panel-toggle');
 if (layersPanelDrawer && layersPanelToggle) {
     layersPanelToggle.addEventListener('click', () => {
         const isClosed = layersPanelDrawer.classList.toggle('closed');
+        document.body.classList.toggle('layers-collapsed', isClosed);
         const icon = layersPanelToggle.querySelector('.material-icons');
         if (icon) {
             icon.textContent = isClosed ? 'chevron_right' : 'chevron_left';
         }
         setTimeout(() => { map.invalidateSize(); }, 300); // даємо CSS анімації завершитись
     });
+    // Sync initial body class on load
+    document.body.classList.toggle('layers-collapsed', layersPanelDrawer.classList.contains('closed'));
 }
 window.addDoubleClickToLayer = addDoubleClickToLayer;
 // Експортуємо для використання в window.requestOverlayDelete після завантаження layers.js
