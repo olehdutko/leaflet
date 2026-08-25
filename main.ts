@@ -1148,14 +1148,17 @@ let searchMarker: any = null;
         (window as any).searchMarker = null;
       }
       // @ts-ignore
+      const pinSvg = encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='28' height='38' viewBox='0 0 24 34' fill='none'>
+        <path d='M12 0C5.373 0 0 5.373 0 12c0 9 12 22 12 22s12-13 12-22C24 5.373 18.627 0 12 0z' fill='%23B85C38'/>
+        <circle cx='12' cy='12' r='5' fill='white'/>
+      </svg>`);
+      // @ts-ignore
       (window as any).searchMarker = L.marker([parseFloat(item.lat), parseFloat(item.lon)], {
         icon: L.icon({
-          iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-          shadowSize: [41, 41]
+          iconUrl: 'data:image/svg+xml,' + pinSvg,
+          iconSize: [28, 38],
+          iconAnchor: [14, 36],
+          popupAnchor: [0, -32]
         })
       }).addTo(map);
       // додати обробник подвійного кліку та тултіпів
@@ -1168,18 +1171,6 @@ let searchMarker: any = null;
   }
 })();
 
-function centerGeoSearchBar() {
-  const bar = document.getElementById('geosearch-bar');
-  const mapDiv = document.getElementById('map');
-  if (!bar || !mapDiv) return;
-  const mapRect = mapDiv.getBoundingClientRect();
-  // Центр мапи
-  const centerX = mapRect.left + mapRect.width / 2;
-  (bar as HTMLElement).style.left = centerX + 'px';
-  (bar as HTMLElement).style.transform = 'translateX(-50%)';
-}
-
-window.addEventListener('resize', centerGeoSearchBar);
 
 document.addEventListener('DOMContentLoaded', () => {
   // Оновлюємо title сторінки з версією
@@ -1192,7 +1183,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   waitForMaterialIconsAndInitAutocomplete();
   initEditModal();
-  centerGeoSearchBar();
 });
 
 // --- функція для обробки KMZ файлів ---
@@ -1542,7 +1532,6 @@ observeOverlayOpacity();
 // loadLayersFromStorage(); // ВИДАЛЕНО - подвійний виклик спричиняв дублікати!
 // waitForMaterialIconsAndInitAutocomplete();
 // initEditModal();
-// centerGeoSearchBar();
 
 // Імпортуємо draw control функції
 import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';

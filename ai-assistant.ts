@@ -8,7 +8,8 @@ const ASSISTANT_ID = 'ai-assistant-panel';
 const MESSAGES_ID = 'ai-assistant-messages';
 const INPUT_ID = 'ai-assistant-input';
 const SEND_ID = 'ai-assistant-send';
-const TOGGLE_ID = 'ai-assistant-toggle';
+const TOGGLE_ID = 'ai-assistant-top-toggle';
+const FLOATING_TOGGLE_ID = 'ai-assistant-toggle';
 
 let panel: HTMLElement | null = null;
 let messagesEl: HTMLElement | null = null;
@@ -122,8 +123,9 @@ export function initAiAssistant(): void {
   inputEl = document.getElementById(INPUT_ID) as HTMLInputElement | null;
   sendBtn = document.getElementById(SEND_ID) as HTMLButtonElement | null;
   toggleBtn = document.getElementById(TOGGLE_ID) as HTMLButtonElement | null;
+  const floatingToggleBtn = document.getElementById(FLOATING_TOGGLE_ID) as HTMLButtonElement | null;
 
-  if (!panel || !messagesEl || !inputEl || !sendBtn || !toggleBtn) {
+  if (!panel || !messagesEl || !inputEl || !sendBtn) {
     console.warn('AI assistant DOM elements not found');
     return;
   }
@@ -132,7 +134,8 @@ export function initAiAssistant(): void {
   clearMessages();
   addMessage('Привіт! Скажи, що позначити на мапі. Наприклад: "Познач Чорну кам\'яницю".', 'assistant');
 
-  toggleBtn.addEventListener('click', () => togglePanel());
+  if (toggleBtn) toggleBtn.addEventListener('click', () => togglePanel());
+  if (floatingToggleBtn) floatingToggleBtn.addEventListener('click', () => togglePanel());
 
   sendBtn.addEventListener('click', () => {
     if (inputEl && inputEl.value.trim()) handleUserQuery(inputEl.value);

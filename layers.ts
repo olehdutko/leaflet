@@ -51,6 +51,7 @@ export function createTileLayer(type: string, opacity = 1, showLabels = true): L
   return L.tileLayer(url, {
     maxZoom: opt.maxZoom,
     attribution: opt.attribution,
+    detectRetina: true,
     opacity: opacity
   });
 }
