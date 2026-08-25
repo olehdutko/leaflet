@@ -1610,7 +1610,11 @@ body {
 
 .layers-panel-btn:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
+  color: var(--accent-color);
+}
+
+.layers-panel-btn:hover i {
+  color: var(--accent-color);
 }
 
 .layers-panel-btn.accent {
@@ -1618,7 +1622,19 @@ body {
   color: #fff;
 }
 
-.layers-panel-btn.accent:hover { background: var(--accent-color-hover); }
+.layers-panel-btn.accent:hover {
+  background: var(--accent-color-hover);
+  color: #fff;
+}
+
+.layers-panel-btn.accent i,
+.layers-panel-btn.accent:hover i {
+  color: #fff;
+}
+
+.layers-panel-btn.accent:hover i {
+  color: #fff;
+}
 
 #global-object-search-wrap {
   padding: 10px 12px;
@@ -2634,13 +2650,17 @@ html, body {
 .leaflet-control-zoom.leaflet-bar a {
   width: 34px !important;
   height: 34px !important;
-  line-height: 34px !important;
+  line-height: 1 !important;
   background: var(--bg-surface) !important;
   color: var(--text-primary) !important;
   border-color: var(--border-color) !important;
-  font-size: 18px !important;
+  font-size: 20px !important;
   font-weight: 500 !important;
   transition: background .12s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
 }
 
 .leaflet-control-zoom.leaflet-bar a:hover {
@@ -2675,7 +2695,12 @@ html, body {
   background-color: var(--bg-surface) !important;
   border-color: var(--border-color) !important;
   transition: background-color .12s !important;
-  text-indent: 0 !important;
+  text-indent: -9999px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-repeat: no-repeat !important;
+  /* Do NOT override background-position — Leaflet.draw sprite positions must stay intact */
 }
 
 .leaflet-draw-toolbar.leaflet-bar a:hover {
@@ -2693,6 +2718,11 @@ html, body {
   color: var(--text-primary) !important;
   font-family: 'Inter', sans-serif !important;
   font-size: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  line-height: 1 !important;
   font-weight: 600 !important;
   text-indent: 0 !important;
 }
@@ -2862,8 +2892,8 @@ body.layers-collapsed #brand span {
 #global-object-search-wrap {
   border-bottom: none !important;
   border-top: none !important;
-  padding: 0 !important;
-  margin: 0 4px 8px 4px !important;
+  padding: 0 12px !important;
+  margin: 0 0 8px 0 !important;
   box-shadow: none !important;
   background: transparent !important;
 }
@@ -3026,4 +3056,145 @@ body.layers-collapsed #layers-panel-toggle {
 /* ===== Layers toggle above panels ===== */
 #layers-panel-toggle {
   z-index: 3500 !important;
+}
+
+
+/* ===== Historical overlays ===== */
+#historical-overlays-section {
+  margin: 0 0 12px 0;
+  padding: 0 12px;
+}
+
+.historical-overlays-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 0 6px 0;
+  margin-bottom: 6px;
+}
+
+.historical-overlays-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.historical-overlays-title i {
+  color: var(--accent-color);
+}
+
+.historical-overlays-header #add-historical-overlay {
+  color: var(--accent-color) !important;
+}
+
+
+
+#historical-overlays-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.historical-overlay-item {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.historical-overlay-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.historical-overlay-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historical-overlay-year {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 40px;
+  text-align: right;
+}
+
+.historical-overlay-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.historical-overlay-actions button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-surface);
+  color: var(--accent-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.historical-overlay-actions button i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.historical-overlay-actions button .fa,
+.historical-overlay-actions button i,
+.historical-overlay-actions button svg {
+  color: var(--accent-color) !important;
+  fill: var(--accent-color) !important;
+}
+
+.historical-overlay-actions button:hover {
+  background: var(--bg-hover);
+  color: var(--accent-color);
+}
+
+.historical-overlay-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--border-color);
+  border-radius: 2px;
+  outline: none;
+}
+
+.historical-overlay-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  cursor: pointer;
+}
+
+
+/* ===== Historical overlay action icons - force accent color ===== */
+.historical-overlay-actions button,
+.historical-overlay-actions button i,
+.historical-overlay-actions button .fa,
+.historical-overlay-actions button .fa::before,
+.historical-overlay-actions button .fa-eye,
+.historical-overlay-actions button .fa-eye-slash,
+.historical-overlay-actions button .fa-trash {
+  color: #B85C38 !important;
 }
