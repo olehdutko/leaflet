@@ -1538,8 +1538,7 @@ import { applyTextZoomScale, isTextObject } from './text-object';
 import { initAiAssistant } from './ai-assistant';
 import type * as L from 'leaflet';
 
-// Ініціалізуємо draw control
-initDrawControl();
+// draw control вже ініціалізовано в draw-control.ts
 updateDrawControlVisibility();
 
 // Ініціалізуємо AI-асистента
