@@ -1,6 +1,10 @@
-// leaflet-extensions.d.ts - Leaflet runtime extensions used by Lefleat
+// leaflet-types.d.ts - global L for runtime + type augmentations for internal fields
 
 import * as Leaflet from 'leaflet';
+
+declare global {
+  const L: typeof Leaflet & Record<string, any>;
+}
 
 declare module 'leaflet' {
   interface Layer {
@@ -21,11 +25,15 @@ declare module 'leaflet' {
   }
 
   interface Map {
-    _layers?: Record<number, Layer>;
+    _layers?: Record<number, any>;
   }
 
   interface Polygon {
     getArea?: () => number;
+  }
+
+  interface MarkerOptions {
+    isTextObject?: boolean;
   }
 
   namespace Control {
@@ -39,6 +47,5 @@ declare module 'leaflet' {
     function geodesicArea(latlngs: LatLng[]): number;
   }
 }
-
 
 export {};

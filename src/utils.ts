@@ -1,6 +1,5 @@
 // --- Утиліти ---
-import { isTextObject } from './text-object.js';
-import * as L from 'leaflet';
+import { isTextObject } from './text-object';
 export function getLayerIcon(type: string): string {
   if (type === 'План') return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><rect width="24" height="24" rx="4" fill="#1976d2"/><path d="M7 17V7l5-2v10l-5 2zM12 5l5 2v10l-5-2V5z" fill="#fff"/></svg>`;
   if (type === 'Ландшафт') return '<i class="fa fa-mountain" style="font-size:22px;color:#1976d2;"></i>';

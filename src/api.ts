@@ -1,15 +1,15 @@
-import { map } from './map-init.js';
+import { map } from './map-init';
 import {
   customLayers,
   activeLayer,
   saveLayersToStorage,
   updateActiveLayerUI,
-} from './layers.js';
-import { getObjectType, getColoredMarkerIcon } from './utils.js';
-import { createTextMarker, getDefaultTextProperties, TextProperties } from './text-object.js';
-import { applyObjectProperties } from './objects.js';
-import { updateObjectsListForLayer } from './ui.js';
-import * as L from 'leaflet';
+} from './layers';
+import { getObjectType, getColoredMarkerIcon } from './utils';
+import { createTextMarker, getDefaultTextProperties, TextProperties } from './text-object';
+import { applyObjectProperties } from './objects';
+import { updateObjectsListForLayer } from './ui';
+import type * as L from 'leaflet';
 
 let objectIdCounter = 0;
 

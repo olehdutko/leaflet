@@ -1,7 +1,7 @@
-import { map } from './map-init.js';
-import { LefleatApi } from './api.js';
-import { closeEditModal } from './main.js';
-import { updateObjectsListForLayer } from './ui.js';
+import { map } from './map-init';
+import { LefleatApi } from './api';
+import { closeEditModal } from './main';
+import { updateObjectsListForLayer } from './ui';
 
 const ASSISTANT_ID = 'ai-assistant-panel';
 const MESSAGES_ID = 'ai-assistant-messages';

@@ -56,13 +56,14 @@ export function createTileLayer(type: string, opacity = 1, showLabels = true): L
 }
 
 // --- Тимчасові оголошення для зовнішніх залежностей ---
-import { showEditModal, addDoubleClickToLayer, createLayerControl, layerControlsDiv } from './ui.js';
-import { getObjectType, getColoredMarkerIcon } from './utils.js';
-import { applyObjectProperties } from './objects.js';
-import { map, tileLayerOptions } from './map-init.js';
-import * as state from './state.js';
-import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object.js';
-import { getLayersData, setLayersData } from './storage.js';
+import { showEditModal, addDoubleClickToLayer, createLayerControl, layerControlsDiv } from './ui';
+import { getObjectType, getColoredMarkerIcon } from './utils';
+import { applyObjectProperties } from './objects';
+import { map, tileLayerOptions } from './map-init';
+import * as state from './state';
+import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object';
+import { getLayersData, setLayersData } from './storage';
+import type * as L from 'leaflet';
 
 // Перетворення Leaflet LatLng масиву на GeoJSON координати [lng, lat]
 function latlngsToCoords(latlngs: any[]): any[] {
@@ -414,7 +415,7 @@ export function addLayer(): void {
   saveLayersToStorage();
 
   // Оновлюємо видимість draw control
-  import('./draw-control.js').then(({ updateDrawControlVisibility }) => {
+  import('./draw-control').then(({ updateDrawControlVisibility }) => {
     updateDrawControlVisibility();
   });
 }
@@ -427,7 +428,7 @@ export function setActiveLayer(featureGroup: any): void {
   updateActiveLayerUI();
 
   // Оновлюємо draw control для нового активного шару
-  import('./draw-control.js').then(({ updateDrawControlForActiveLayer, updateDrawControlVisibility }) => {
+  import('./draw-control').then(({ updateDrawControlForActiveLayer, updateDrawControlVisibility }) => {
     updateDrawControlForActiveLayer();
     updateDrawControlVisibility();
   });
@@ -790,6 +791,5 @@ export function restoreOverlaysForFeatureGroup(featureGroup: any) {
 }
 
 // Експортуємо customLayers та saveLayersToStorage в глобальну область для requestOverlayDelete
-import * as L from 'leaflet';
 (window as any).customLayers = customLayers;
 (window as any).saveLayersToStorage = saveLayersToStorage;

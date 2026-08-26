@@ -1,9 +1,9 @@
-import { map } from './map-init.js';
-import * as L from 'leaflet';
-import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers.js';
-import { getColoredMarkerIcon } from './utils.js';
-import { createTextMarker, getDefaultTextProperties, applyTextZoomScale } from './text-object.js';
-// import { addDoubleClickToLayer } from './ui.js'; // видалено для уникнення циклічного імпорту
+import { map } from './map-init';
+import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers';
+import { getColoredMarkerIcon } from './utils';
+import { createTextMarker, getDefaultTextProperties, applyTextZoomScale } from './text-object';
+import type * as L from 'leaflet';
+// import { addDoubleClickToLayer } from './ui'; // видалено для уникнення циклічного імпорту
 
 let drawControl: any = null;
 
@@ -475,7 +475,7 @@ export function activateTextTool() {
     }
     saveLayersToStorage();
     updateActiveLayerUI();
-    import('./ui.js').then(({ showEditModal }) => {
+    import('./ui').then(({ showEditModal }) => {
       showEditModal(marker);
     });
   };
