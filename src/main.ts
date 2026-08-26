@@ -21,7 +21,7 @@ export function updatePageTitle(baseTitle: string = 'Мапа Львова на 
     }
 
     // Показуємо діалог підтвердження перед видаленням
-    import('./ui.js').then(({ showConfirmDialog }) => {
+    import('./ui').then(({ showConfirmDialog }) => {
         showConfirmDialog({
             title: 'Видалення зображення',
             message: 'Ви дійсно хочете видалити це зображення?',
@@ -412,7 +412,7 @@ function performOverlayDeletion(overlay: any) {
                 }
                 
                 // Зберігаємо зміни
-                import('./layers.js').then(({ saveLayersToStorage }) => {
+                import('./layers').then(({ saveLayersToStorage }) => {
                     saveLayersToStorage();
                     console.log('✅ Збережено зміни в localStorage');
                 });
@@ -468,7 +468,7 @@ function performOverlayDeletion(overlay: any) {
             }
             
             // Зберігаємо зміни
-            import('./layers.js').then(({ saveLayersToStorage }) => {
+            import('./layers').then(({ saveLayersToStorage }) => {
                 saveLayersToStorage();
                 console.log('✅ Збережено зміни в localStorage');
             });
@@ -493,8 +493,7 @@ function performOverlayDeletion(overlay: any) {
 };
 
 // Використовуємо глобальну змінну L з CDN
-declare const L: any;
-import { map } from './map-init.js';
+import { map } from './map-init';
 // Центр Львова
 const center: [number, number] = [49.8397, 24.0297];
 // Доступні підкладки для шарів
@@ -531,11 +530,11 @@ const tileLayerOptions = {
 // ... existing code ...
 
 // --- Користувацькі шари ---
-import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer, updateActiveLayerUI } from './layers.js';
+import { customLayers, activeLayer, layerId, getNextLayerId, createTileLayer, saveLayersToStorage, loadLayersFromStorage, addLayer, updateActiveLayerUI } from './layers';
 
-import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput } from './ui.js';
-import { materialIcons, currentEditingObject } from './state.js';
-import { showConfirmDialog } from './ui.js';
+import { layerControlsDiv, addLayerBtn, exportAllBtn, importAllBtn, importAllInput } from './ui';
+import { materialIcons, currentEditingObject } from './state';
+import { showConfirmDialog } from './ui';
 
 // --- глобальний прапорець для drag & drop тултіпів ---
 // let isDraggingObject = false; // видалено, бо імпортується з ui.ts
@@ -550,10 +549,10 @@ import { showConfirmDialog } from './ui.js';
 // function updateActiveLayerUI() { ... }
 // ... existing code ...
 
-import { getLayerIcon, createTooltip, getObjectType, getObjectProperties } from './utils.js';
+import { getLayerIcon, createTooltip, getObjectType, getObjectProperties } from './utils';
 
 // --- оновлена функція createLayerControl ---
-import { createLayerControl } from './ui.js';
+import { createLayerControl } from './ui';
 
 // --- Автокомпліт для інпуту іконки маркера ---
 function setupMarkerIconAutocomplete() {
@@ -1162,7 +1161,7 @@ let searchMarker: any = null;
         })
       }).addTo(map);
       // додати обробник подвійного кліку та тултіпів
-      import('./ui.js').then(({ addDoubleClickToLayer }) => {
+      import('./ui').then(({ addDoubleClickToLayer }) => {
         addDoubleClickToLayer((window as any).searchMarker);
       });
       // @ts-ignore
@@ -1172,11 +1171,11 @@ let searchMarker: any = null;
 })();
 
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Оновлюємо title сторінки з версією
   updatePageTitle();
 
-  const loadSuccess = loadLayersFromStorage();
+  const loadSuccess = await loadLayersFromStorage();
   // Якщо завантаження не вдалося, створюємо початковий шар
   if (!loadSuccess) {
     addLayer();
@@ -1214,7 +1213,7 @@ async function handleKmzFile(file: File) {
     // додати всі об'єкти з KML до featureGroup
     kmlLayer.eachLayer((layer: any) => {
       featureGroup.addLayer(layer);
-      import('./ui.js').then(({ addDoubleClickToLayer }) => {
+      import('./ui').then(({ addDoubleClickToLayer }) => {
         addDoubleClickToLayer(layer);
       });
 
@@ -1534,12 +1533,12 @@ observeOverlayOpacity();
 // initEditModal();
 
 // Імпортуємо draw control функції
-import { initDrawControl, updateDrawControlVisibility } from './draw-control.js';
-import { applyTextZoomScale, isTextObject } from './text-object.js';
-import { initAiAssistant } from './ai-assistant.js';
+import { initDrawControl, updateDrawControlVisibility } from './draw-control';
+import { applyTextZoomScale, isTextObject } from './text-object';
+import { initAiAssistant } from './ai-assistant';
+import type * as L from 'leaflet';
 
-// Ініціалізуємо draw control
-initDrawControl();
+// draw control вже ініціалізовано в draw-control.ts
 updateDrawControlVisibility();
 
 // Ініціалізуємо AI-асистента

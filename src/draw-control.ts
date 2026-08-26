@@ -1,20 +1,20 @@
-declare const L: any;
-import { map } from './map-init.js';
-import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers.js';
-import { getColoredMarkerIcon } from './utils.js';
-import { createTextMarker, getDefaultTextProperties, applyTextZoomScale } from './text-object.js';
-// import { addDoubleClickToLayer } from './ui.js'; // видалено для уникнення циклічного імпорту
+import { map } from './map-init';
+import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers';
+import { getColoredMarkerIcon } from './utils';
+import { createTextMarker, getDefaultTextProperties, applyTextZoomScale } from './text-object';
+import type * as L from 'leaflet';
+// import { addDoubleClickToLayer } from './ui'; // видалено для уникнення циклічного імпорту
 
 let drawControl: any = null;
 
 export function initDrawControl() {
-  if (drawControl) {
-    map.removeControl(drawControl);
-  }
+  if (drawControl) return; // вже ініціалізовано
+  if ((window as any).lefleatDrawControlInitialized) return;
+  (window as any).lefleatDrawControlInitialized = true;
 
   // Створюємо feature group для draw control (тимчасовий)
   const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
+  map.addLayer(drawnItems as L.Layer);
 
   // Створюємо draw control
   drawControl = new L.Control.Draw({
@@ -356,6 +356,12 @@ export function initDrawControl() {
 
       // Оновлюємо UI
       updateActiveLayerUI();
+      
+      // Оновлюємо список об'єктів у панелі
+      import('./ui').then(({ updateObjectsListForLayer }) => {
+        const layerObj = customLayers.find(l => l.featureGroup === activeLayer);
+        if (layerObj) updateObjectsListForLayer(layerObj);
+      });
     }
   });
 
@@ -393,7 +399,7 @@ export function updateDrawControlVisibility() {
   const hasActiveLayer = !!(activeLayer && typeof L.FeatureGroup !== 'undefined' && activeLayer instanceof L.FeatureGroup);
   if (hasActiveLayer) {
     if (!drawControl) {
-      initDrawControl();
+      return; // draw control ще не ініціалізовано
     }
     const drawSection = document.querySelector('.leaflet-draw');
     if (drawSection) {
@@ -475,7 +481,7 @@ export function activateTextTool() {
     }
     saveLayersToStorage();
     updateActiveLayerUI();
-    import('./ui.js').then(({ showEditModal }) => {
+    import('./ui').then(({ showEditModal }) => {
       showEditModal(marker);
     });
   };

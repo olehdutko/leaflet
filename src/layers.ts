@@ -1,4 +1,3 @@
-declare const L: any;
 // Тип для обʼєкта шару
 export interface ObjectProperties {
   name?: string;
@@ -57,12 +56,14 @@ export function createTileLayer(type: string, opacity = 1, showLabels = true): L
 }
 
 // --- Тимчасові оголошення для зовнішніх залежностей ---
-import { showEditModal, addDoubleClickToLayer, createLayerControl, layerControlsDiv } from './ui.js';
-import { getObjectType, getColoredMarkerIcon } from './utils.js';
-import { applyObjectProperties } from './objects.js';
-import { map, tileLayerOptions } from './map-init.js';
-import * as state from './state.js';
-import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object.js';
+import { showEditModal, addDoubleClickToLayer, createLayerControl, layerControlsDiv } from './ui';
+import { getObjectType, getColoredMarkerIcon } from './utils';
+import { applyObjectProperties } from './objects';
+import { map, tileLayerOptions } from './map-init';
+import * as state from './state';
+import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object';
+import { getLayersData, setLayersData } from './storage';
+import type * as L from 'leaflet';
 
 // Перетворення Leaflet LatLng масиву на GeoJSON координати [lng, lat]
 function latlngsToCoords(latlngs: any[]): any[] {
@@ -185,17 +186,17 @@ export function saveLayersToStorage(): void {
   });
   // Перевіряємо, що дані не порожні перед збереженням
   if (layersData.length > 0) {
-    localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
+    setLayersData(layersData);
   }
 }
 
-export function loadLayersFromStorage(): boolean {
-  const data = localStorage.getItem('lefleat_layers');
+export async function loadLayersFromStorage(): Promise<boolean> {
+  const data = await getLayersData();
   if (!data) {
     return false;
   }
   try {
-    let arr = JSON.parse(data);
+    let arr = data;
     if (!Array.isArray(arr)) arr = [arr];
     customLayers.forEach(l => {
       map.removeLayer(l.tileLayer);
@@ -414,7 +415,7 @@ export function addLayer(): void {
   saveLayersToStorage();
 
   // Оновлюємо видимість draw control
-  import('./draw-control.js').then(({ updateDrawControlVisibility }) => {
+  import('./draw-control').then(({ updateDrawControlVisibility }) => {
     updateDrawControlVisibility();
   });
 }
@@ -427,7 +428,7 @@ export function setActiveLayer(featureGroup: any): void {
   updateActiveLayerUI();
 
   // Оновлюємо draw control для нового активного шару
-  import('./draw-control.js').then(({ updateDrawControlForActiveLayer, updateDrawControlVisibility }) => {
+  import('./draw-control').then(({ updateDrawControlForActiveLayer, updateDrawControlVisibility }) => {
     updateDrawControlForActiveLayer();
     updateDrawControlVisibility();
   });

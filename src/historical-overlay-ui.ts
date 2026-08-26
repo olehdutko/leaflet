@@ -5,7 +5,7 @@ import {
   setHistoricalOverlayVisible,
   getAllHistoricalOverlayIds,
   getHistoricalOverlay,
-} from './historical-overlay.js';
+} from './historical-overlay';
 
 const fileInput = document.getElementById('historical-overlay-input') as HTMLInputElement | null;
 const addBtn = document.getElementById('add-historical-overlay') as HTMLButtonElement | null;

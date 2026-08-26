@@ -1,4 +1,3 @@
-declare const L: any;
 
 export const center: [number, number] = [49.8397, 24.0297];
 export const tileLayerOptions = {

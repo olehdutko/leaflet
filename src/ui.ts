@@ -1,12 +1,11 @@
-import { materialIcons, currentEditingObject } from './state.js';
-import { closeEditModal } from './main.js';
-import { map } from './map-init.js';
-declare const L: any;
-import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './utils.js';
-import { saveLayersToStorage } from './layers.js';
-import { applyObjectProperties } from './objects.js';
-import { updateActiveLayerUI } from './layers.js';
-import { applyTextZoomScale, isTextObject, startTextMouseRotation } from './text-object.js';
+import { materialIcons, currentEditingObject } from './state';
+import { closeEditModal } from './main';
+import { map } from './map-init';
+import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './utils';
+import { saveLayersToStorage } from './layers';
+import { applyObjectProperties } from './objects';
+import { updateActiveLayerUI } from './layers';
+import { applyTextZoomScale, isTextObject, startTextMouseRotation } from './text-object';
 
 export const layerIdToRenderObjectsList = new Map();
 
@@ -180,7 +179,7 @@ export function showEditModal(layer: any) {
               (currentEditingObject.value as any).properties.image = imageUrl;
               
               // Автоматично зберігаємо зміни
-              import('./layers.js').then(({ saveLayersToStorage }) => {
+              import('./layers').then(({ saveLayersToStorage }) => {
                 saveLayersToStorage();
                 console.log('💾 Зображення збережено в localStorage');
               });
@@ -204,7 +203,7 @@ export function showEditModal(layer: any) {
           delete (currentEditingObject.value as any).properties.image;
           
           // Автоматично зберігаємо зміни
-          import('./layers.js').then(({ saveLayersToStorage }) => {
+          import('./layers').then(({ saveLayersToStorage }) => {
             saveLayersToStorage();
             console.log('💾 Видалення зображення збережено в localStorage');
           });
@@ -575,7 +574,7 @@ export function createLayerControl(layerObj: any) {
     }
 
     // Set this layer as active
-    import('./layers.js').then(({ setActiveLayer }) => {
+    import('./layers').then(({ setActiveLayer }) => {
       setActiveLayer(layerObj.featureGroup);
     });
   };
@@ -624,7 +623,7 @@ export function createLayerControl(layerObj: any) {
 
       } else if (layerObj.featureGroup.images && layerObj.featureGroup.images.length > 0) {
         // overlayInstances відсутні або пусті - відновлюємо з images
-        import('./layers.js').then(({ restoreOverlaysForFeatureGroup }) => {
+        import('./layers').then(({ restoreOverlaysForFeatureGroup }) => {
           restoreOverlaysForFeatureGroup(layerObj.featureGroup);
         });
       }
@@ -652,7 +651,7 @@ export function createLayerControl(layerObj: any) {
       map.removeLayer(layerObj.featureGroup);
 
       // НЕ викликаємо removeFeatureGroupAndOverlays - вона очищає дані!
-      // import('./layers.js').then(({ removeFeatureGroupAndOverlays }) => {
+      // import('./layers').then(({ removeFeatureGroupAndOverlays }) => {
       //   removeFeatureGroupAndOverlays(layerObj.featureGroup);
       // });
 
@@ -663,7 +662,7 @@ export function createLayerControl(layerObj: any) {
     }
 
     // Зберігаємо стан видимості в localStorage
-    import('./layers.js').then(({ saveLayersToStorage }) => {
+    import('./layers').then(({ saveLayersToStorage }) => {
       saveLayersToStorage();
     });
 
@@ -718,7 +717,7 @@ export function createLayerControl(layerObj: any) {
   galleryBtn.title = 'Галерея';
   galleryBtn.onclick = () => {
     // Встановлюємо цей шар як активний
-    import('./layers.js').then(({ setActiveLayer }) => {
+    import('./layers').then(({ setActiveLayer }) => {
       setActiveLayer(layerObj.featureGroup);
     });
 
@@ -797,7 +796,7 @@ export function createLayerControl(layerObj: any) {
           }
         } else {
           console.log(`⚠️ saveLayersToStorage недоступна, використовуємо async import`);
-          import('./layers.js').then(({ saveLayersToStorage }) => {
+          import('./layers').then(({ saveLayersToStorage }) => {
             saveLayersToStorage();
             console.log(`✅ Async збереження завершено`);
           });
@@ -867,7 +866,7 @@ export function createLayerControl(layerObj: any) {
               }, 25);
             } else {
               console.log(`⚠️ saveLayersToStorage недоступна, використовуємо import`);
-              import('./layers.js').then(({ saveLayersToStorage }) => {
+              import('./layers').then(({ saveLayersToStorage }) => {
                 saveLayersToStorage();
                 console.log(`✅ Збереження виконано через import`);
               });
@@ -1217,7 +1216,7 @@ export function createLayerControl(layerObj: any) {
         img.opacity = value;
       });
     }
-    import('./layers.js').then(({ saveLayersToStorage }) => saveLayersToStorage());
+    import('./layers').then(({ saveLayersToStorage }) => saveLayersToStorage());
   };
   opacityContainer.appendChild(opacitySlider);
 
@@ -1228,14 +1227,23 @@ export function createLayerControl(layerObj: any) {
   objectsIcon.className = 'fa fa-list';
   const objectsTitle = document.createElement('span');
   objectsTitle.textContent = 'Об\'єкти';
+  const objectsCount = document.createElement('span');
+  objectsCount.className = 'layer-objects-count';
+  objectsCount.style.marginLeft = 'auto';
+  objectsCount.style.fontSize = '11px';
+  objectsCount.style.color = '#666';
+  const objectCountSpan = objectsCount;
   objectsHeader.appendChild(objectsIcon);
   objectsHeader.appendChild(objectsTitle);
+  objectsHeader.appendChild(objectsCount);
 
   // список об'єктів шару
   const objectsListWrap = document.createElement('div');
   objectsListWrap.className = 'layer-objects-list';
   function renderObjectsList() {
     objectsListWrap.innerHTML = '';
+    let objectCount = 0;
+    const imageCount = layerObj.featureGroup.images ? layerObj.featureGroup.images.length : 0;
     const objectItems: HTMLElement[] = [];
     layerObj.featureGroup.eachLayer((layer: any) => {
       const type = getObjectType(layer);
@@ -1258,6 +1266,7 @@ export function createLayerControl(layerObj: any) {
         ` <span class="layer-object-name">${props.name || '[без назви]'}</span>`;
       item.dataset.objectId = layer._leaflet_id;
       objectItems.push(item);
+      objectCount++;
       // drag&drop
       item.draggable = true;
       item.tabIndex = 0;
@@ -1444,6 +1453,9 @@ export function createLayerControl(layerObj: any) {
         updateObjectsListForLayer(layerObj);
       }, 100);
     };
+    if (objectCountSpan) {
+      objectCountSpan.textContent = `${objectCount + imageCount}`;
+    }
   }
   if (layerObj.featureGroup.images && Array.isArray(layerObj.featureGroup.images)) {
     layerObj.featureGroup.images.forEach((img: any) => {
@@ -1535,8 +1547,9 @@ export function selectLayer(layerId: string) {
 }
 
 // Додаємо необхідні імпорти
-import { customLayers, createTileLayer } from './layers.js';
-import { updateDrawControlVisibility } from './draw-control.js';
+import { customLayers, createTileLayer } from './layers';
+import { updateDrawControlVisibility } from './draw-control';
+import type * as L from 'leaflet';
 
 // Робимо renderObjectsList глобально доступною
 // (window as any).renderObjectsList = renderObjectsList; // більше не потрібно
@@ -1546,7 +1559,7 @@ const saveObjectBtn = document.getElementById('save-object');
 if (saveObjectBtn) {
   saveObjectBtn.addEventListener('click', () => {
     // Оновлюємо картку активного шару після збереження змін
-    import('./layers.js').then(({ customLayers, activeLayer }) => {
+    import('./layers').then(({ customLayers, activeLayer }) => {
       const layerObj = customLayers.find((l: any) => l.featureGroup === activeLayer);
       if (layerObj) {
         // Знаходимо стару картку і замінюємо її новою
@@ -1583,7 +1596,7 @@ if (layersPanelDrawer && layersPanelToggle) {
 (window as any).addDoubleClickToLayer = addDoubleClickToLayer;
 
 // Експортуємо для використання в window.requestOverlayDelete після завантаження layers.js
-import('./layers.js').then(({ saveLayersToStorage, customLayers }) => {
+import('./layers').then(({ saveLayersToStorage, customLayers }) => {
   (window as any).saveLayersToStorage = saveLayersToStorage;
   (window as any).customLayers = customLayers;
 });
@@ -1593,7 +1606,7 @@ import('./layers.js').then(({ saveLayersToStorage, customLayers }) => {
 
 // Функція для оновлення UI всіх шарів після видалення overlay
 function updateObjectsListForAllLayers() {
-  import('./layers.js').then(({ customLayers }) => {
+  import('./layers').then(({ customLayers }) => {
     customLayers.forEach(layerObj => {
       const updateFn = layerIdToRenderObjectsList.get(layerObj.id);
       if (updateFn) {
@@ -1612,7 +1625,7 @@ if (typeof window !== 'undefined' && typeof L !== 'undefined') {
     // Знаходимо всі leaflet-marker-icon
     document.querySelectorAll('.leaflet-marker-icon').forEach(icon => {
       // Знаходимо відповідний leaflet-обʼєкт
-      const marker = Object.values(map._layers).find((l: any) => l._icon === icon);
+      const marker = map._layers ? Object.values(map._layers).find((l: any) => l._icon === icon) : undefined;
       const iconEl = icon as HTMLElement & { __dblclickHandlerAttached?: boolean };
       if (marker && !iconEl.__dblclickHandlerAttached) {
         iconEl.addEventListener('dblclick', (e: any) => {

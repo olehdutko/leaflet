@@ -1,8 +1,8 @@
+import type * as L from 'leaflet';
 // text-object.ts - Ізольований модуль для текстових об'єктів на мапі
 // Відповідає за створення, оновлення та розпізнавання текстових маркерів.
 // Не імпортує UI/шари/контроли, щоб уникнути циклічних залежностей.
 
-declare const L: any;
 
 export interface TextProperties {
   name?: string;
@@ -159,10 +159,10 @@ export function createTextMarker(latlng: any, text?: string, options?: TextPrope
       iconSize: [layout.width, layout.height],
       iconAnchor: [layout.anchorX, layout.anchorY]
     }),
-    draggable: true,
-    isTextObject: true
+    draggable: true
   });
 
+  marker.isTextObject = true;
   marker.properties = { ...props };
   marker.feature = {
     type: 'Feature',
@@ -174,8 +174,11 @@ export function createTextMarker(latlng: any, text?: string, options?: TextPrope
   };
 
   // Зберігаємо базовий зум для масштабування тексту разом із мапою
-  if (typeof marker._map !== 'undefined' && marker._map) {
-    storeTextBaseZoom(marker, marker._map.getZoom());
+  if (marker instanceof L.Marker) {
+    const markerMap = (marker as any)._map;
+    if (markerMap) {
+      storeTextBaseZoom(marker, markerMap.getZoom());
+    }
   }
 
   return marker;

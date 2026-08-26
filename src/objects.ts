@@ -1,5 +1,4 @@
-declare const L: any;
-import { isTextObject, updateTextMarkerIcon } from './text-object.js';
+import { isTextObject, updateTextMarkerIcon } from './text-object';
 
 export function applyObjectProperties(layer: any, properties: any) {
   const type = isTextObject(layer)

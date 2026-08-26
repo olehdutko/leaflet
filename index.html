@@ -3,20 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <title>Lefleat — Мапа спадщини Львова</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-  <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-distortableimage@0.20.7/dist/leaflet.distortableimage.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.polylinemeasure@2.4.0/Leaflet.PolylineMeasure.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:wght@400;500;600&display=swap" />
-  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- Top bar -->
@@ -32,7 +26,6 @@
     <button id="ai-assistant-top-toggle" class="ai-top-toggle" title="AI-асистент" aria-label="AI-асистент">
       <i class="fa-solid fa-robot"></i>
     </button>
-
   </div>
 
   <!-- Layer panel drawer -->
@@ -193,126 +186,15 @@
   </div>
   <div id="confirm-modal-backdrop" class="modal-backdrop hidden"></div>
 
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    window.L = window.L || {};
-    window.L.drawLocal = {
-    window.L = window.L || {};
-    window.L.drawLocal = {
-      draw: {
-        toolbar: {
-          actions: {
-            title: 'Скасувати малювання',
-            text: 'Скасувати'
-          },
-          finish: {
-            title: 'Завершити малювання',
-            text: 'Завершити'
-          },
-          undo: {
-            title: 'Видалити останню точку',
-            text: 'Видалити останню точку'
-          },
-          buttons: {
-            polyline: 'Намалювати лінію',
-            polygon: 'Намалювати полігон',
-            rectangle: 'Намалювати прямокутник',
-            circle: 'Намалювати коло',
-            marker: 'Додати маркер',
-            circlemarker: 'Додати круглий маркер'
-          }
-        },
-        handlers: {
-          polygon: {
-            tooltip: {
-              start: 'Клікніть для початку малювання полігону.',
-              cont: 'Клікніть для продовження малювання полігону.',
-              end: 'Клікніть на першу точку для завершення полігону.'
-            },
-            error: '<strong>Помилка:</strong> полігон не може сам себе перетинати!'
-          },
-          polyline: {
-            tooltip: {
-              start: 'Клікніть для початку малювання лінії.',
-              cont: 'Клікніть для продовження малювання лінії.',
-              end: 'Клікніть на останню точку для завершення лінії.'
-            },
-            error: '<strong>Помилка:</strong> лінії не можуть перетинатися!'
-          },
-          rectangle: {
-            tooltip: {
-              start: 'Клікніть і тягніть для малювання прямокутника.'
-            },
-            error: ''
-          },
-          circle: {
-            tooltip: {
-              start: 'Клікніть і тягніть для малювання кола.'
-            },
-            error: ''
-          },
-          marker: {
-            tooltip: {
-              start: 'Клікніть для додавання маркера.'
-            },
-            error: ''
-          },
-          circlemarker: {
-            tooltip: {
-              start: 'Клікніть для додавання круглого маркера.'
-            },
-            error: ''
-          }
-        }
-      },
-      edit: {
-        toolbar: {
-          actions: {
-            save: {
-              title: 'Зберегти зміни',
-              text: 'Зберегти'
-            },
-            cancel: {
-              title: 'Скасувати редагування',
-              text: 'Скасувати'
-            }
-          },
-          buttons: {
-            edit: 'Редагувати шари',
-            editDisabled: 'Немає шарів для редагування',
-            remove: 'Видалити шари',
-            removeDisabled: 'Немає шарів для видалення'
-          }
-        },
-        handlers: {
-          edit: {
-            tooltip: {
-              text: 'Перетягніть маркери для редагування обʼєкта.',
-              subtext: ''
-            }
-          },
-          remove: {
-            tooltip: {
-              text: 'Клікніть на обʼєкт для видалення.',
-              subtext: ''
-            }
-          }
-        }
-      }
-    };
-  </script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.js"></script>  
-  <script src="./leaflet.distortableimage.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-toolbar@0.4.0-alpha.2/dist/leaflet.toolbar.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-distortableimage@0.20.7/dist/leaflet.distortableimage.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <!-- Додаємо бібліотеки для KMZ імпорту -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.polylinemeasure@2.4.0/Leaflet.PolylineMeasure.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet.polylinemeasure@2.4.0/Leaflet.PolylineMeasure.min.js"></script>
-  
-  <!-- Дебагінг скрипти -->
-  <script src="./overlay-position-fix.js"></script>
-  <script src="./drag-save-fix.js"></script>
-  <script type="module" src="./dist/index.js"></script>
+  <script type="module" src="/src/index.ts"></script>
 </body>
-</html> 
+</html>
