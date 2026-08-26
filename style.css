@@ -499,9 +499,10 @@ body {
   font-size: 20px;
 }
 
-/* Приховати лише кнопки редагування та видалення у popup Leaflet.draw */
-.leaflet-draw-edit-edit,
-.leaflet-draw-edit-remove {
+/* Приховати панель редагування та видалення Leaflet.draw */
+.leaflet-draw-toolbar.leaflet-bar a.leaflet-draw-edit-edit,
+.leaflet-draw-toolbar.leaflet-bar a.leaflet-draw-edit-remove,
+.leaflet-draw-section:nth-child(2) {
   display: none !important;
 }
 
