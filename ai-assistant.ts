@@ -1,4 +1,3 @@
-declare const L: any;
 import { map } from './map-init.js';
 import { LefleatApi } from './api.js';
 import { closeEditModal } from './main.js';

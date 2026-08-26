@@ -1,4 +1,3 @@
-declare const L: any;
 import { map } from './map-init.js';
 import {
   customLayers,
@@ -10,6 +9,7 @@ import { getObjectType, getColoredMarkerIcon } from './utils.js';
 import { createTextMarker, getDefaultTextProperties, TextProperties } from './text-object.js';
 import { applyObjectProperties } from './objects.js';
 import { updateObjectsListForLayer } from './ui.js';
+import * as L from 'leaflet';
 
 let objectIdCounter = 0;
 
@@ -67,7 +67,7 @@ export const LefleatApi = {
       icon: options.icon || 'place',
       objectType: 'marker',
     });
-    marker.feature.geometry.coordinates = [lng, lat];
+    marker.feature!.geometry.coordinates = [lng, lat];
     fg.addLayer(marker);
     saveLayersToStorage();
     updateObjectsListForLayer(findLayerObjByFeatureGroup(fg));

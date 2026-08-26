@@ -1,4 +1,4 @@
-declare const L: any;
+import * as L from 'leaflet';
 
 export const center: [number, number] = [49.8397, 24.0297];
 export const tileLayerOptions = {

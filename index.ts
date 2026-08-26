@@ -8,8 +8,15 @@ import './ai-assistant.js';
 // Історичні підкладки
 import { restoreHistoricalOverlays } from './historical-overlay.js';
 import { initHistoricalOverlayUI } from './historical-overlay-ui.js';
+import { migrateLegacyStorage } from './storage.js';
 
 (async () => {
+  // One-time migration from localStorage to IndexedDB
+  try {
+    await migrateLegacyStorage();
+  } catch (e) {
+    console.warn('⚠️ Legacy storage migration failed:', e);
+  }
   // Wait for map initialization
   let attempts = 0;
   while (attempts < 50) {

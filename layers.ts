@@ -1,4 +1,3 @@
-declare const L: any;
 // Тип для обʼєкта шару
 export interface ObjectProperties {
   name?: string;
@@ -63,6 +62,7 @@ import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import * as state from './state.js';
 import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object.js';
+import { getLayersData, setLayersData } from './storage.js';
 
 // Перетворення Leaflet LatLng масиву на GeoJSON координати [lng, lat]
 function latlngsToCoords(latlngs: any[]): any[] {
@@ -185,17 +185,17 @@ export function saveLayersToStorage(): void {
   });
   // Перевіряємо, що дані не порожні перед збереженням
   if (layersData.length > 0) {
-    localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
+    setLayersData(layersData);
   }
 }
 
-export function loadLayersFromStorage(): boolean {
-  const data = localStorage.getItem('lefleat_layers');
+export async function loadLayersFromStorage(): Promise<boolean> {
+  const data = await getLayersData();
   if (!data) {
     return false;
   }
   try {
-    let arr = JSON.parse(data);
+    let arr = data;
     if (!Array.isArray(arr)) arr = [arr];
     customLayers.forEach(l => {
       map.removeLayer(l.tileLayer);
@@ -790,5 +790,6 @@ export function restoreOverlaysForFeatureGroup(featureGroup: any) {
 }
 
 // Експортуємо customLayers та saveLayersToStorage в глобальну область для requestOverlayDelete
+import * as L from 'leaflet';
 (window as any).customLayers = customLayers;
 (window as any).saveLayersToStorage = saveLayersToStorage;

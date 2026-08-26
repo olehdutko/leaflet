@@ -1,5 +1,5 @@
-declare const L: any;
 import { isTextObject, updateTextMarkerIcon } from './text-object.js';
+import * as L from 'leaflet';
 
 export function applyObjectProperties(layer: any, properties: any) {
   const type = isTextObject(layer)

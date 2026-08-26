@@ -1,3 +1,12 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 export let customLayers = [];
 export let activeLayer = null;
 export let layerId = 1;
@@ -30,6 +39,7 @@ import { applyObjectProperties } from './objects.js';
 import { map, tileLayerOptions } from './map-init.js';
 import * as state from './state.js';
 import { isTextObject, getTextObjectIcon, applyTextZoomScale } from './text-object.js';
+import { getLayersData, setLayersData } from './storage.js';
 // Перетворення Leaflet LatLng масиву на GeoJSON координати [lng, lat]
 function latlngsToCoords(latlngs) {
     if (!Array.isArray(latlngs))
@@ -165,212 +175,214 @@ export function saveLayersToStorage() {
     });
     // Перевіряємо, що дані не порожні перед збереженням
     if (layersData.length > 0) {
-        localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
+        setLayersData(layersData);
     }
 }
 export function loadLayersFromStorage() {
-    const data = localStorage.getItem('lefleat_layers');
-    if (!data) {
-        return false;
-    }
-    try {
-        let arr = JSON.parse(data);
-        if (!Array.isArray(arr))
-            arr = [arr];
-        customLayers.forEach(l => {
-            map.removeLayer(l.tileLayer);
-            map.removeLayer(l.featureGroup);
-        });
-        customLayers = [];
-        if (layerControlsDiv) {
-            layerControlsDiv.innerHTML = '';
+    return __awaiter(this, void 0, void 0, function* () {
+        const data = yield getLayersData();
+        if (!data) {
+            return false;
         }
-        arr.forEach((obj) => {
-            const tileLayer = createTileLayer(obj.tileType, obj.opacity, obj.showLabels);
-            const featureGroup = new L.FeatureGroup();
-            // Додаємо на карту тільки якщо шар видимий
-            if (obj.visible !== false) {
-                tileLayer.addTo(map);
-                featureGroup.addTo(map);
-            }
-            if (obj.geojson) {
-                L.geoJSON(obj.geojson, {
-                    pointToLayer: function (feature, latlng) {
-                        const props = feature.properties || {};
-                        if (props.objectType === 'text' || props.text !== undefined) {
-                            return L.marker(latlng, { icon: getTextObjectIcon(props), draggable: true });
-                        }
-                        const color = props.color || '#1976d2';
-                        const iconName = props.icon || 'place';
-                        return L.marker(latlng, {
-                            icon: getColoredMarkerIcon(color, iconName)
-                        });
-                    },
-                    style: function (feature) {
-                        var _a, _b, _c, _d, _e, _f, _g;
-                        return {
-                            color: ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.color) || '#1976d2',
-                            weight: ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.weight) || 3,
-                            opacity: (_d = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c.opacity) !== null && _d !== void 0 ? _d : 1,
-                            fillColor: ((_e = feature.properties) === null || _e === void 0 ? void 0 : _e.fillColor) || '#1976d2',
-                            fillOpacity: (_g = (_f = feature.properties) === null || _f === void 0 ? void 0 : _f.fillOpacity) !== null && _g !== void 0 ? _g : 0.2
-                        };
-                    },
-                    onEachFeature: function (feature, layer) {
-                        var _a;
-                        featureGroup.addLayer(layer);
-                        addDoubleClickToLayer(layer);
-                        if (feature.properties) {
-                            layer.properties = Object.assign({}, feature.properties);
-                            // Виправляємо undefined значення для назви та опису
-                            if (!layer.properties.name || layer.properties.name === 'undefined') {
-                                const type = (_a = feature.geometry) === null || _a === void 0 ? void 0 : _a.type;
-                                const objectType = type === 'Point' ? 'Маркер' :
-                                    type === 'Polygon' ? 'Полігон' :
-                                        type === 'LineString' ? 'Лінія' : 'Об\'єкт';
-                                layer.properties.name = `${objectType} [без назви]`;
-                            }
-                            if (!layer.properties.description || layer.properties.description === 'undefined') {
-                                layer.properties.description = '';
-                            }
-                            // Встановити objectType для текстових об'єктів
-                            if (isTextObject(layer)) {
-                                layer.properties.objectType = 'text';
-                                layer._textBaseZoom = map.getZoom();
-                                applyTextZoomScale(layer, map.getZoom());
-                            }
-                            applyObjectProperties(layer, layer.properties);
-                            if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
-                                let dashArray = null;
-                                if (feature.properties.style === 'dashed')
-                                    dashArray = '10, 10';
-                                else if (feature.properties.style === 'dotted')
-                                    dashArray = '2, 8';
-                                layer.options.dashArray = dashArray;
-                                layer.setStyle({ dashArray });
-                            }
-                            if (feature.properties.image) {
-                                // видалено: layer.properties.image = feature.properties.image;
-                            }
-                        }
-                    }
-                });
-            }
-            // Відновлюємо overlays (зображення)
-            if (obj.overlays && Array.isArray(obj.overlays)) {
-                const imageData = obj.overlays.map((img) => {
-                    var _a;
-                    return ({
-                        url: img.url,
-                        bounds: img.bounds,
-                        opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1,
-                        corners: img.corners
-                    });
-                });
-                // Зберігаємо в обох форматах для сумісності
-                featureGroup.images = imageData;
-                featureGroup.overlays = [];
-                // Відновлюємо overlay тільки для видимих шарів
-                if (obj.visible !== false) {
-                    restoreOverlaysForFeatureGroup(featureGroup);
-                }
-            }
-            const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
-            customLayers.push(layerObj);
-            createLayerControl(layerObj);
-            featureGroup.bringToFront();
-        });
-        const firstVisible = customLayers.find(l => l.visible);
-        if (firstVisible) {
-            setActiveLayer(firstVisible.featureGroup);
-        }
-        else {
-            activeLayer = null;
-            updateActiveLayerUI();
-        }
-        if (window.Sortable && layerControlsDiv) {
-            if (window.layerControlsSortable)
-                window.layerControlsSortable.destroy();
-            window.layerControlsSortable = new window.Sortable(layerControlsDiv, {
-                animation: 150,
-                handle: '.layer-card-drag-handle',
-                onEnd: function (evt) {
-                    if (layerControlsDiv) {
-                        const newOrder = Array.from(layerControlsDiv.children).map((card) => +card.dataset.layerId);
-                        customLayers.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
-                        saveLayersToStorage();
-                    }
-                }
+        try {
+            let arr = data;
+            if (!Array.isArray(arr))
+                arr = [arr];
+            customLayers.forEach(l => {
+                map.removeLayer(l.tileLayer);
+                map.removeLayer(l.featureGroup);
             });
-        }
-        // Автоматичне виправлення проблем з видимістю об'єктів
-        const totalObjects = customLayers.reduce((sum, layer) => sum + layer.featureGroup.getLayers().length, 0);
-        // Перевірка та автоматичне виправлення через затримку
-        setTimeout(() => {
-            const visibleObjectsCount = customLayers.reduce((sum, layer) => {
-                if (!layer.visible)
-                    return sum;
-                return sum + layer.featureGroup.getLayers().filter((l) => map.hasLayer(l)).length;
-            }, 0);
-            if (visibleObjectsCount === 0 && totalObjects > 0) {
-                // Спроба повторної ініціалізації видимих шарів
-                customLayers.forEach(layer => {
-                    if (layer.visible && layer.featureGroup.getLayers().length > 0) {
-                        if (!map.hasLayer(layer.featureGroup)) {
-                            layer.featureGroup.addTo(map);
-                        }
-                        layer.featureGroup.bringToFront();
-                    }
-                });
-            }
-        }, 100);
-        // Оновлюємо layerId до максимального існуючого ID + 1
-        const maxId = customLayers.length > 0 ? Math.max(...customLayers.map(l => l.id)) : 0;
-        layerId = maxId + 1;
-        // Перевіряємо та виправляємо дублюючі ID
-        const usedIds = new Set();
-        let hasChanges = false;
-        customLayers.forEach((layer, index) => {
-            if (usedIds.has(layer.id)) {
-                // Знайшли дублікат - присвоюємо новий унікальний ID
-                while (usedIds.has(layerId)) {
-                    layerId++;
-                }
-                layer.id = layerId;
-                usedIds.add(layerId);
-                layerId++;
-                hasChanges = true;
-                // Оновлюємо data-layer-id в DOM
-                const layerCard = document.querySelector(`[data-layer-id="${layer.id}"]`);
-                if (!layerCard) {
-                    // Шукаємо картку по інших ознаках та оновлюємо
-                    const allCards = document.querySelectorAll('.layer-card');
-                    if (allCards[index]) {
-                        allCards[index].dataset.layerId = layer.id.toString();
-                    }
-                }
-            }
-            else {
-                usedIds.add(layer.id);
-            }
-        });
-        // Якщо були зміни, зберігаємо оновлені дані
-        if (hasChanges) {
-            saveLayersToStorage();
-            // Перегенеровуємо UI щоб оновити всі data-layer-id
+            customLayers = [];
             if (layerControlsDiv) {
                 layerControlsDiv.innerHTML = '';
-                customLayers.forEach(layer => {
-                    createLayerControl(layer);
+            }
+            arr.forEach((obj) => {
+                const tileLayer = createTileLayer(obj.tileType, obj.opacity, obj.showLabels);
+                const featureGroup = new L.FeatureGroup();
+                // Додаємо на карту тільки якщо шар видимий
+                if (obj.visible !== false) {
+                    tileLayer.addTo(map);
+                    featureGroup.addTo(map);
+                }
+                if (obj.geojson) {
+                    L.geoJSON(obj.geojson, {
+                        pointToLayer: function (feature, latlng) {
+                            const props = feature.properties || {};
+                            if (props.objectType === 'text' || props.text !== undefined) {
+                                return L.marker(latlng, { icon: getTextObjectIcon(props), draggable: true });
+                            }
+                            const color = props.color || '#1976d2';
+                            const iconName = props.icon || 'place';
+                            return L.marker(latlng, {
+                                icon: getColoredMarkerIcon(color, iconName)
+                            });
+                        },
+                        style: function (feature) {
+                            var _a, _b, _c, _d, _e, _f, _g;
+                            return {
+                                color: ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.color) || '#1976d2',
+                                weight: ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.weight) || 3,
+                                opacity: (_d = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c.opacity) !== null && _d !== void 0 ? _d : 1,
+                                fillColor: ((_e = feature.properties) === null || _e === void 0 ? void 0 : _e.fillColor) || '#1976d2',
+                                fillOpacity: (_g = (_f = feature.properties) === null || _f === void 0 ? void 0 : _f.fillOpacity) !== null && _g !== void 0 ? _g : 0.2
+                            };
+                        },
+                        onEachFeature: function (feature, layer) {
+                            var _a;
+                            featureGroup.addLayer(layer);
+                            addDoubleClickToLayer(layer);
+                            if (feature.properties) {
+                                layer.properties = Object.assign({}, feature.properties);
+                                // Виправляємо undefined значення для назви та опису
+                                if (!layer.properties.name || layer.properties.name === 'undefined') {
+                                    const type = (_a = feature.geometry) === null || _a === void 0 ? void 0 : _a.type;
+                                    const objectType = type === 'Point' ? 'Маркер' :
+                                        type === 'Polygon' ? 'Полігон' :
+                                            type === 'LineString' ? 'Лінія' : 'Об\'єкт';
+                                    layer.properties.name = `${objectType} [без назви]`;
+                                }
+                                if (!layer.properties.description || layer.properties.description === 'undefined') {
+                                    layer.properties.description = '';
+                                }
+                                // Встановити objectType для текстових об'єктів
+                                if (isTextObject(layer)) {
+                                    layer.properties.objectType = 'text';
+                                    layer._textBaseZoom = map.getZoom();
+                                    applyTextZoomScale(layer, map.getZoom());
+                                }
+                                applyObjectProperties(layer, layer.properties);
+                                if (feature.geometry && feature.geometry.type === 'LineString' && feature.properties.style) {
+                                    let dashArray = null;
+                                    if (feature.properties.style === 'dashed')
+                                        dashArray = '10, 10';
+                                    else if (feature.properties.style === 'dotted')
+                                        dashArray = '2, 8';
+                                    layer.options.dashArray = dashArray;
+                                    layer.setStyle({ dashArray });
+                                }
+                                if (feature.properties.image) {
+                                    // видалено: layer.properties.image = feature.properties.image;
+                                }
+                            }
+                        }
+                    });
+                }
+                // Відновлюємо overlays (зображення)
+                if (obj.overlays && Array.isArray(obj.overlays)) {
+                    const imageData = obj.overlays.map((img) => {
+                        var _a;
+                        return ({
+                            url: img.url,
+                            bounds: img.bounds,
+                            opacity: (_a = img.opacity) !== null && _a !== void 0 ? _a : 1,
+                            corners: img.corners
+                        });
+                    });
+                    // Зберігаємо в обох форматах для сумісності
+                    featureGroup.images = imageData;
+                    featureGroup.overlays = [];
+                    // Відновлюємо overlay тільки для видимих шарів
+                    if (obj.visible !== false) {
+                        restoreOverlaysForFeatureGroup(featureGroup);
+                    }
+                }
+                const layerObj = { id: obj.id, tileLayer, featureGroup, tileType: obj.tileType, title: obj.title, visible: obj.visible !== false, collapsed: obj.hasOwnProperty('collapsed') ? obj.collapsed : false };
+                customLayers.push(layerObj);
+                createLayerControl(layerObj);
+                featureGroup.bringToFront();
+            });
+            const firstVisible = customLayers.find(l => l.visible);
+            if (firstVisible) {
+                setActiveLayer(firstVisible.featureGroup);
+            }
+            else {
+                activeLayer = null;
+                updateActiveLayerUI();
+            }
+            if (window.Sortable && layerControlsDiv) {
+                if (window.layerControlsSortable)
+                    window.layerControlsSortable.destroy();
+                window.layerControlsSortable = new window.Sortable(layerControlsDiv, {
+                    animation: 150,
+                    handle: '.layer-card-drag-handle',
+                    onEnd: function (evt) {
+                        if (layerControlsDiv) {
+                            const newOrder = Array.from(layerControlsDiv.children).map((card) => +card.dataset.layerId);
+                            customLayers.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+                            saveLayersToStorage();
+                        }
+                    }
                 });
             }
+            // Автоматичне виправлення проблем з видимістю об'єктів
+            const totalObjects = customLayers.reduce((sum, layer) => sum + layer.featureGroup.getLayers().length, 0);
+            // Перевірка та автоматичне виправлення через затримку
+            setTimeout(() => {
+                const visibleObjectsCount = customLayers.reduce((sum, layer) => {
+                    if (!layer.visible)
+                        return sum;
+                    return sum + layer.featureGroup.getLayers().filter((l) => map.hasLayer(l)).length;
+                }, 0);
+                if (visibleObjectsCount === 0 && totalObjects > 0) {
+                    // Спроба повторної ініціалізації видимих шарів
+                    customLayers.forEach(layer => {
+                        if (layer.visible && layer.featureGroup.getLayers().length > 0) {
+                            if (!map.hasLayer(layer.featureGroup)) {
+                                layer.featureGroup.addTo(map);
+                            }
+                            layer.featureGroup.bringToFront();
+                        }
+                    });
+                }
+            }, 100);
+            // Оновлюємо layerId до максимального існуючого ID + 1
+            const maxId = customLayers.length > 0 ? Math.max(...customLayers.map(l => l.id)) : 0;
+            layerId = maxId + 1;
+            // Перевіряємо та виправляємо дублюючі ID
+            const usedIds = new Set();
+            let hasChanges = false;
+            customLayers.forEach((layer, index) => {
+                if (usedIds.has(layer.id)) {
+                    // Знайшли дублікат - присвоюємо новий унікальний ID
+                    while (usedIds.has(layerId)) {
+                        layerId++;
+                    }
+                    layer.id = layerId;
+                    usedIds.add(layerId);
+                    layerId++;
+                    hasChanges = true;
+                    // Оновлюємо data-layer-id в DOM
+                    const layerCard = document.querySelector(`[data-layer-id="${layer.id}"]`);
+                    if (!layerCard) {
+                        // Шукаємо картку по інших ознаках та оновлюємо
+                        const allCards = document.querySelectorAll('.layer-card');
+                        if (allCards[index]) {
+                            allCards[index].dataset.layerId = layer.id.toString();
+                        }
+                    }
+                }
+                else {
+                    usedIds.add(layer.id);
+                }
+            });
+            // Якщо були зміни, зберігаємо оновлені дані
+            if (hasChanges) {
+                saveLayersToStorage();
+                // Перегенеровуємо UI щоб оновити всі data-layer-id
+                if (layerControlsDiv) {
+                    layerControlsDiv.innerHTML = '';
+                    customLayers.forEach(layer => {
+                        createLayerControl(layer);
+                    });
+                }
+            }
+            return true;
         }
-        return true;
-    }
-    catch (e) {
-        // НЕ викликаємо saveLayersToStorage(), щоб не перезаписати дані!
-        return false;
-    }
+        catch (e) {
+            // НЕ викликаємо saveLayersToStorage(), щоб не перезаписати дані!
+            return false;
+        }
+    });
 }
 export function addLayer() {
     const tileType = "План";
@@ -733,5 +745,6 @@ export function restoreOverlaysForFeatureGroup(featureGroup) {
     featureGroup._restoringOverlays = false;
 }
 // Експортуємо customLayers та saveLayersToStorage в глобальну область для requestOverlayDelete
+import * as L from 'leaflet';
 window.customLayers = customLayers;
 window.saveLayersToStorage = saveLayersToStorage;

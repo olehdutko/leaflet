@@ -446,6 +446,7 @@ function performOverlayDeletion(overlay) {
     }
 }
 ;
+// Використовуємо глобальну змінну L з CDN
 import { map } from './map-init.js';
 // Центр Львова
 const center = [49.8397, 24.0297];
@@ -1159,17 +1160,17 @@ let searchMarker = null;
         }
     }
 })();
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => __awaiter(void 0, void 0, void 0, function* () {
     // Оновлюємо title сторінки з версією
     updatePageTitle();
-    const loadSuccess = loadLayersFromStorage();
+    const loadSuccess = yield loadLayersFromStorage();
     // Якщо завантаження не вдалося, створюємо початковий шар
     if (!loadSuccess) {
         addLayer();
     }
     waitForMaterialIconsAndInitAutocomplete();
     initEditModal();
-});
+}));
 // --- функція для обробки KMZ файлів ---
 function handleKmzFile(file) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1636,6 +1637,7 @@ if (importAllBtn && importAllInput) {
     });
 }
 // === Додаю інструмент вимірювання відстані ===
+import * as L from 'leaflet';
 if (typeof window.L !== 'undefined' &&
     map &&
     window.L.Control &&

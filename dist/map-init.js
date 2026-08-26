@@ -1,3 +1,4 @@
+import * as L from 'leaflet';
 export const center = [49.8397, 24.0297];
 export const tileLayerOptions = {
     "План": {

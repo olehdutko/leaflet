@@ -1,5 +1,5 @@
-declare const L: any;
 import { map } from './map-init.js';
+import * as L from 'leaflet';
 import { customLayers, activeLayer, saveLayersToStorage, updateActiveLayerUI } from './layers.js';
 import { getColoredMarkerIcon } from './utils.js';
 import { createTextMarker, getDefaultTextProperties, applyTextZoomScale } from './text-object.js';
@@ -14,7 +14,7 @@ export function initDrawControl() {
 
   // Створюємо feature group для draw control (тимчасовий)
   const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
+  map.addLayer(drawnItems as L.Layer);
 
   // Створюємо draw control
   drawControl = new L.Control.Draw({

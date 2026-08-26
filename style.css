@@ -2293,7 +2293,8 @@ body {
   background: var(--bg-canvas);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  max-height: 180px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .layer-object-item {

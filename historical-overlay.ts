@@ -1,4 +1,5 @@
 import { map } from './map-init.js';
+import * as L from 'leaflet';
 
 const DB_NAME = 'LefleatHistoricalOverlaysDB';
 const STORE_NAME = 'historicalOverlays';

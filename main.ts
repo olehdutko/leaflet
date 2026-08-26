@@ -493,7 +493,6 @@ function performOverlayDeletion(overlay: any) {
 };
 
 // Використовуємо глобальну змінну L з CDN
-declare const L: any;
 import { map } from './map-init.js';
 // Центр Львова
 const center: [number, number] = [49.8397, 24.0297];
@@ -1172,11 +1171,11 @@ let searchMarker: any = null;
 })();
 
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Оновлюємо title сторінки з версією
   updatePageTitle();
 
-  const loadSuccess = loadLayersFromStorage();
+  const loadSuccess = await loadLayersFromStorage();
   // Якщо завантаження не вдалося, створюємо початковий шар
   if (!loadSuccess) {
     addLayer();
@@ -1660,6 +1659,7 @@ if (importAllBtn && importAllInput) {
 }
 
 // === Додаю інструмент вимірювання відстані ===
+import * as L from 'leaflet';
 if (
   typeof (window as any).L !== 'undefined' &&
   (map as any) &&
