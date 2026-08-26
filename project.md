@@ -2,21 +2,26 @@
 
 ## 📁 Структура проєкту
 
-Lefleat — це невелике односторінкове браузерне застосунок (SPA) для роботи з інтерактивною картою Львова. Кодова база пласка: майже весь вихідний код лежить у корні репозиторію, що відповідає явному правилу проєкту «один функціональний блок — один файл».
+Lefleat — це односторінковий браузерний застосунок (SPA) для роботи з інтерактивною картою Львова. Кодова база пласка: весь вихідний код TypeScript лежить у корні репозиторію, що відповідає правилу проєкту «один функціональний блок — один файл».
 
 ```text
 lefleat/
 ├── index.html              # Розмітка сторінки, CDN-залежності, точка входу скриптів
-├── index.ts                # Точка входу TypeScript (лише імпорт main.js)
+├── index.ts                # Точка входу TypeScript (лише імпорти)
 ├── main.ts                 # Основна логіка застосунку: ініціалізація, імпорт/експорт, вимірювання
 ├── map-init.ts             # Створення екземпляра Leaflet-карти та базові tile-шари
 ├── layers.ts               # Керування користувацькими шарами, серіалізація в localStorage
-├── draw-control.ts         # Інтеграція Leaflet.Draw: створення об’єктів на карті
+├── draw-control.ts         # Інтеграція Leaflet.Draw + кастомна кнопка тексту
+├── text-object.ts          # Текстові об'єкти на мапі
 ├── objects.ts              # Застосування властивостей (колір, іконка, товщина) до гео-об’єктів
 ├── ui.ts                   # Рендер панелі шарів, модальних вікон, пошуку, тултипів
 ├── utils.ts                # Утиліти: типізація шарів Leaflet, тултипи, іконки маркерів
 ├── state.ts                # Мінімальний глобальний mutable-стейт
 ├── overlay-transform.ts    # Робота зі спотворюваними image-overlays (leaflet.distortableimage)
+├── historical-overlay.ts   # Логіка історичних підкладок (растрові зображення на мапі)
+├── historical-overlay-ui.ts # UI для управління історичними підкладками
+├── ai-assistant.ts         # AI-панель для пошуку місць через Nominatim
+├── api.ts                  # Програмний API LefleatApi для зовнішніх скриптів
 ├── style.css               # Єдиний файл стилів інтерфейсу
 ├── package.json            # Залежності та npm-скрипти
 ├── tsconfig.json           # Конфігурація TypeScript
@@ -24,36 +29,41 @@ lefleat/
 ├── .prettierrc             # Форматування Prettier
 ├── RULES.md                # Правила організації коду
 ├── README.md               # Документація для користувачів
+├── PROJECT_DOC.md          # Короткий огляд проєкту
+├── SETUP_INSTRUCTIONS.md   # Інструкції з налаштування
+├── OBJECT_IMAGES_FEATURE.md # Документація зображень об'єктів
+├── OVERLAY_DELETE_FIX.md   # Документація видалення overlay
 ├── del/                    # Дебаг-скрипти (не імпортуються продакшеном)
+├── tests/                  # Місце для тестів (порожнє)
+├── assets/                 # Ресурси
+├── hosting/                # Файли хостингу
 └── dist/                   # Скомпільований JS (ігнорується git)
 ```
 
 **Принципи організації коду:**
 
-- **Feature-based розбиття по файлах.** Кожен модуль відповідає за одну функціональну область: карта, шари, малювання, UI, утиліти. Це не повноцінна feature-sliced архітектура, а радше «один файл — одна відповідальність».
-- **Тонка точка входу.** `index.ts` містить лише імпорт `main.js` та один `console.log`, що закріплено правилами ESLint.
-- **CDN-first підхід.** Усі основні бібліотеки (Leaflet, Leaflet.Draw, FontAwesome, Material Icons тощо) підключаються через CDN у `index.html`, а не через npm.
-- **Mutable shared state.** `state.ts` експортує змінювані змінні (`materialIcons`, `currentEditingObject`), які імпортуються багатьма модулями. Це спрощена заміна повноцінному стору.
+- **Feature-based розбиття по файлах.** Кожен модуль відповідає за одну функціональну область: карта, шари, малювання, UI, утиліти, історичні підкладки, AI-асистент.
+- **Тонка точка входу.** `index.ts` містить лише імпорти та мінімальну ініціалізацію.
+- **CDN-first підхід.** Основні бібліотеки (Leaflet, Leaflet.Draw, FontAwesome, Material Icons, SortableJS, JSZip, leaflet-omnivore, Leaflet.PolylineMeasure, leaflet-distortableimage) підключаються через CDN у `index.html`.
+- **Mutable shared state.** `state.ts` експортує змінювані змінні (`materialIcons`, `currentEditingObject`), які імпортуються багатьма модулями.
 
 ## 🛠 Технологічний стек
 
 | Компонент | Технологія | Версія / Примітка |
 |-----------|-----------|-------------------|
-| Мова | TypeScript | 5.8.3 (`typescript` у `dependencies`) |
-| Карта | Leaflet.js | CDN-версія (`unpkg.com`) |
+| Мова | TypeScript | 5.8.3 (`dependencies`) |
+| Карта | Leaflet.js | CDN (`unpkg.com`) |
 | Малювання | Leaflet.Draw | CDN (`unpkg.com`) |
 | Image overlays | leaflet-distortableimage | CDN + локальна копія `leaflet.distortableimage.js` |
 | Вимірювання | Leaflet.PolylineMeasure | CDN |
 | Імпорт KMZ | JSZip + leaflet-omnivore | CDN |
 | UI-іконки | FontAwesome 6.4.2 + Material Icons | CDN |
 | Drag-and-drop шарів | SortableJS | CDN |
-| Збірка | TypeScript Compiler (`tsc`) | `target: ES6`, `module: ESNext` |
+| Збірка | TypeScript Compiler (`tsc`) | `target: ES6`, `module: ESNext`, `moduleResolution: bundler` |
 | Лінтер | ESLint 8 + @typescript-eslint | extends `recommended` |
-| Форматування | Prettier 3 | 2 пробіли, 80 символів у рядку, single quotes, trailing commas |
+| Форматування | Prettier 3 | 2 пробіли, 80 символів, single quotes, trailing commas |
 | Зберігання | Browser `localStorage` | Ключі з префіксом `lefleat_` |
-| Стилізація | Vanilla CSS | Один файл `style.css`, Grid/Flexbox |
-
-**Важлива заувага:** незважаючи на те, що `PROJECT_DOC.md` згадує Vite, у реальному `package.json` немає `vite` ні в `dependencies`, ні в `devDependencies`. Збірка виконується через `tsc`, а в `index.html` підключається `./dist/index.js`. Це невідповідність між документацією та фактичним стеком.
+| Стилізація | Vanilla CSS | Один файл `style.css`, CSS-змінні, Grid/Flexbox |
 
 ### package.json scripts
 
@@ -64,17 +74,20 @@ lefleat/
   "lint:fix": "eslint . --ext .ts,.js --fix",
   "format": "prettier --write .",
   "check-rules": "npm run lint && npm run format --check",
-  "dev": "npm run build && npm run check-rules"
+  "dev": "npm run build && npm run check-rules",
+  "serve": "python3 -m http.server 8090 --directory ."
 }
 ```
 
-- `dev` не запускає сервер розробки, а лише збирає й перевіряє правила. Локальний запуск відбувається відкриттям `index.html` у браузері.
+- `dev` не запускає dev-сервер, а лише збирає й перевіряє правила.
+- `serve` піднімає локальний HTTP-сервер для відкриття `index.html` у браузері.
+- Локальний запуск: `npm run build && npm run serve`, потім `http://localhost:8090`.
 
 ## 🏗 Архітектура
 
 ### Компонентна модель
 
-Застосунок не використовує React/Vue/Angular. Це **Vanilla TypeScript + DOM API**: рендер UI виконується через `document.createElement`, `element.innerHTML`, `element.textContent` та прямі маніпуляції з DOM. Можна умовно назвати архітектуру «jQuery-стиль без jQuery»: імперативний DOM-рендер, event-лістенери, глобальні змінні.
+Застосунок не використовує React/Vue/Angular. Це **Vanilla TypeScript + DOM API**: рендер UI виконується через `document.createElement`, `element.innerHTML`, `element.textContent` та прямі маніпуляції з DOM.
 
 Приклад рендера списку об’єктів шару (`ui.ts`):
 
@@ -85,30 +98,32 @@ export function updateObjectsListForLayer(layerObj: any) {
 }
 ```
 
-Це callback-реєстр: при відкритті панелі шару реєструється функція рендера, і наступні зміни викликають її за `id`. Паттерн схожий на ручну реалізацію підписки без повноцінного pub/sub.
+Це callback-реєстр: при відкритті панелі шару реєструється функція рендера, і наступні зміни викликають її за `id`.
 
 ### Розділення логіки
 
-Логіка розділена не через hooks/HOC, а через **ES6-модулі з чіткими імпортами**:
+Логіка розділена через **ES6-модулі з чіткими імпортами**:
 
 - `map-init.ts` — ініціалізація карти (singleton `export const map`).
 - `layers.ts` — CRUD шарів, серіалізація/десеріалізація GeoJSON в `localStorage`.
-- `draw-control.ts` — обробка подій `draw:created`, створення об’єктів.
+- `draw-control.ts` — обробка подій `draw:created`, створення об’єктів, кастомна кнопка тексту.
+- `text-object.ts` — створення та управління текстовими об'єктами.
 - `objects.ts` — застосування візуальних властивостей до об’єктів Leaflet.
-- `ui.ts` — DOM-UI: панель шарів, модалки, autocomplete, тултипи.
-- `utils.ts` — чисті функції для визначення типу шару та генерації іконок.
+- `ui.ts` — DOM-UI: панель шарів, модалки, autocomplete, тултипи, пошук об'єктів.
+- `historical-overlay.ts` / `historical-overlay-ui.ts` — історичні растрові підкладки.
+- `ai-assistant.ts` — AI-пошук через Nominatim.
+- `api.ts` — глобальний `LefleatApi`.
 
 Мережа імпортів між TypeScript-модулями:
 
 ```text
-index -> main
+index -> main, api, ai-assistant, historical-overlay, historical-overlay-ui
 main -> draw-control, layers, map-init, state, ui, utils
-draw-control -> layers, map-init, ui, utils
-layers -> map-init, objects, state, ui, utils
 ui -> draw-control, layers, main, map-init, objects, state, utils
+layers -> map-init, objects, state, ui, utils
 ```
 
-**Зверніть увагу:** `ui.ts` імпортує `draw-control`, а `draw-control` своєю чергою використовує `ui`. Також `ui -> main` і `main -> ui`. У коді є коментар `// видалено для уникнення циклічного імпорту` у `draw-control.ts`, але циклічні зв’язки між `main/ui/layers` лишаються. TypeScript із `moduleResolution: bundler` і `tsc` зазвичай справляються з такими циклами, але це ускладнює розуміння потоку даних.
+У коді є коментар `// видалено для уникнення циклічного імпорту` у `draw-control.ts`, але деякі циклічні зв’язки між `main/ui/layers` лишаються. TypeScript із `moduleResolution: bundler` справляється з такими циклами, але це ускладнює розуміння потоку даних.
 
 ### Управління станом
 
@@ -120,7 +135,7 @@ export let materialIcons: string[] = [];
 export const currentEditingObject = { value: null as any };
 ```
 
-`currentEditingObject` — це об’єкт-обгортка, щоб різні модулі могли писати в одне й те саме поле за посиланням. Це спрощена альтернатива React-рефам або глобальному стору.
+`currentEditingObject` — обгортка для спільного доступу за посиланням.
 
 `layers.ts` містить ще один набір глобальних змінних:
 
@@ -133,7 +148,7 @@ export let layerId = 1;
 Такий підхід працює для невеликого застосунку, але:
 
 - відсутній єдиний джерело правди;
-- налагодження складна, бо стан розмазано по модулях;
+- налагодження складніше, бо стан розмазано по модулях;
 - тестування без monkey-patching модулів утруднене.
 
 ### Робота з даними
@@ -157,9 +172,9 @@ export function saveLayersToStorage(): void {
 }
 ```
 
-Завантаження назад (`loadLayersFromStorage`) використовує `L.geoJSON(...)` з колбеками `pointToLayer`, `style`, `onEachFeature`. Це стандартний Leaflet-паттерн.
+Завантаження назад (`loadLayersFromStorage`) використовує `L.geoJSON(...)` з колбеками `pointToLayer`, `style`, `onEachFeature`.
 
-Імпорт/експорт підтримує JSON, GeoJSON та KMZ. KMZ розбирається через `JSZip` і `leaflet-omnivore`, завантажені з CDN.
+Імпорт/експорт підтримує JSON, GeoJSON та KMZ. KMZ розбирається через `JSZip` і `leaflet-omnivore`.
 
 ### Роутинг і навігація
 
@@ -167,17 +182,23 @@ export function saveLayersToStorage(): void {
 
 ### Обробка помилок і loading-станів
 
-- **Помилки:** використовуються `try/catch` навколо парсингу JSON, GeoJSON-операцій та імпорту. Критичні помилки показуються через `alert()` (наприклад, помилка імпорту). Усього `alert()` зустрічається 4 рази, всі — у `main.ts`.
-- **Loading-станів:** формальних loading-спінерів немає. Тривалі операції (наприклад, `FileReader.readAsDataURL`) виконуються асинхронно, але без візуальної індикації завантаження.
+- **Помилки:** `try/catch` навколо парсингу JSON, GeoJSON-операцій та імпорту. Критичні помилки показуються через `alert()`.
+- **Loading-станів:** формальних loading-спінерів немає. Тривалі операції (`FileReader.readAsDataURL`) виконуються асинхронно без візуальної індикації.
 
 ## 🎨 UI/UX і стилізація
 
 ### Підходи до стилізації
 
-- **Один глобальний CSS-файл** `style.css` (~1630 рядків).
+- **Один глобальний CSS-файл** `style.css` (~3200 рядків).
 - **Немає CSS Modules, Sass, Tailwind або CSS-in-JS.** Усі стилі класичні, на селекторах.
-- **4 CSS-змінних** (`--primary-color` тощо) — мінімальний рівень дизайн-системи.
-- **2 медіа-запити** — базова адаптивність, переважно для панелі шарів на мобільних екранах.
+- **CSS-змінні** для дизайн-системи світлого мінімалістичного інтерфейсу:
+  - `--bg-canvas: #F7F5F0` — теплий паперовий фон
+  - `--bg-surface: #FFFFFF` — білі плаваючі картки
+  - `--accent-color: #B85C38` — терракотовий акцент
+  - `--text-primary: #2A2825` — основний текст
+  - `--text-muted: #6F6B63` — вторинний текст
+  - `--border-color: #E3DDD2` — тонкі рамки
+- **Медіа-запити** для адаптивності панелі шарів на мобільних екранах.
 
 ### Дизайн-система / UI-kit
 
@@ -187,207 +208,147 @@ export function saveLayersToStorage(): void {
 - `.modal`, `.modal-content`, `.modal-header`, `.modal-body`, `.modal-footer` — модальні вікна.
 - `.form-group`, `.color-palette`, `.color-swatch` — форми.
 - `.layer-card` — картки шарів у бічній панелі.
+- `.ai-top-toggle`, `#top-bar`, `#geosearch-bar` — нові елементи top bar.
 
-Кольорова палітра жорстко задана в CSS і в коді: основний `#1976d2` (Material blue).
+### Layout
+
+- **Top bar**: фіксована панель зверху з брендом, геопошуком і кнопкою AI. Колись плаваюча AI-кнопка замінена на інтегрований елемент top bar.
+- **Панель шарів**: `#layers-panel-drawer` зліва. Містить заголовок, історичні підкладки, пошук об'єктів, список шарів та footer з attribution.
+- **Панель інструментів**: Leaflet.Draw + кастомна кнопка тексту, розташовані справа під zoom-кнопками.
+- **Attribution**: винесено з мапи в `.layers-panel-footer`.
 
 ### Адаптивність
 
-Адаптивність базова. Панель шарів (`#layers-panel-drawer`) ховається/показується за кнопкою. У CSS є `@media` для невеликих екранів, але більша частина інтерфейсу розрахована на десктоп (наприклад, модальне вікно редагування шириною ~520 px).
+Адаптивність базова. Панель шарів ховається/показується за кнопкою. Більша частина інтерфейсу розрахована на десктоп.
 
 ### Темізація
 
-Темізація не реалізована. В `index.html` закоментований блок перемикача світлої/темної теми.
+Темізація не реалізована. Інтерфейс світлий, мінімалістичний, з терракотовим акцентом.
 
 ### Доступність (a11y)
 
-- Мова сторінки задана: `<html lang="uk">`.
-- У інпутів і кнопок є `title` і `aria`-подібні текстові підказки через `title`, але **систематичного використання ARIA-атрибутів немає**.
-- Модальні вікна закриваються по Escape — цю вимогу задокументовано в `RULES.md`, але потрібно перевіряти вручну, що фокус дійсно trapped.
-- Іконки Material Icons і FontAwesome використовуються без прихованих текстових альтернатив, що може погіршити доступність для скринрідерів.
+- Мова сторінки: `<html lang="uk">`.
+- У інпутів і кнопок є `title` і `aria-label`.
+- Модальні вікна закриваються по Escape.
+- Іконки FontAwesome/Material використовуються без прихованих текстових альтернатив, що може бути проблемою для скринрідерів.
 
 ## ✅ Якість коду
 
 ### Лінтери і форматування
 
-- **ESLint** із `@typescript-eslint/recommended`. Важливі правила:
-  - `no-console: 'warn'` — але консоль активно використовується для логування.
-  - `@typescript-eslint/no-explicit-any: 'warn'` — проєкт містить ~301 використання `any`, тому warning-и, ймовірно, присутні.
+- **ESLint** із `@typescript-eslint/recommended`.
+  - `no-console: 'warn'` — консоль активно використовується для логування.
+  - `@typescript-eslint/no-explicit-any: 'warn'` — в проєкті багато `any`.
   - `no-restricted-syntax` для `index.ts` забороняє оголошення функцій, змінних і виразів, крім `ImportDeclaration`.
-- **Prettier** налаштований стандартно: 2 пробіли, 80 символів у рядку, single quotes, trailing commas.
+- **Prettier** налаштований стандартно: 2 пробіли, 80 символів, single quotes, trailing commas.
 
 ### Узгодження щодо іменування
 
 - Файли: `camelCase.ts`.
 - Функції та змінні: `camelCase`.
 - CSS-класи: `kebab-case`.
-- Коментарі: **українська мова** (це явне правило `RULES.md`).
+- Коментарі: **українська мова**.
 
 ### TypeScript типізація
 
 Типізація **слабка**:
 
-- ~301 використання `any` у 10 TS-файлах.
-- Багато інтерфейсів визначені, але з `[key: string]: any` — `ObjectProperties`, `OverlayData`, `OverlayImageMeta`.
-- Leaflet типізується через `declare const L: any` або `declare var L: any`, що вимикає перевірку всієї бібліотеки.
+- Багато використань `any`.
+- Деякі інтерфейси містять `[key: string]: any`.
+- Leaflet типізується через `declare const L: any` або `declare var L: any`.
 - `state.ts` містить `as any` і `null as any`.
-- `tsconfig.json` включає `strict: true`, але через безліч `any` і `ts-ignore` перевірка фактично послаблена вручну.
-
-**Сильні сторони:**
-
-- Є інтерфейси для основних сутностей (`LayerObj`, `ObjectProperties`).
-- Функції експортуються явно, структура модулів зрозуміла.
+- `tsconfig.json` включає `strict: true`, але через безліч `any` перевірка фактично послаблена.
 
 **Зони покращення:**
 
-- Встановити `@types/leaflet` і типізувати `L` замість `any`.
+- Використовувати вже встановлений `@types/leaflet` замість `any`.
 - Прибрати `[key: string]: any` із ключових інтерфейсів.
 - Замінити `any` на конкретні типи в `main.ts`, `ui.ts`, `layers.ts`.
 
 ### Тести
 
-**Тестів немає.** Директорія `tests/` містить лише `.DS_Store`. В `package.json` немає скриптів для тестів і немає тестових фреймворків.
+**Тестів немає.** Директорія `tests/` містить лише `.DS_Store`. В `package.json` немає тестових скриптів.
 
 ### Документація в коді
 
-- Коментарі переважно українською, часто у вигляді коротких пояснень (`// Виправляємо undefined значення`, `// Fallback до стандартного toGeoJSON`).
-- JSDoc використовується рідко; в `layers.ts` є один JSDoc-блок для `createTileLayer`.
-- Логування в консоль (`console.log`/`warn`/`error`) використовується дуже інтенсивно: ~159 викликів у TS-коді. Це допомагає налагодженню, але засмічує продакшен.
+- Коментарі переважно українською.
+- JSDoc використовується рідко.
+- Логування в консоль інтенсивне: багато `console.log`/`warn`/`error` у TS-коді.
 
 ### Потенційні проблеми безпеки
 
-- Використання `innerHTML` у 29 місцях (11 у `main.ts`, 16 у `ui.ts`, 2 у `layers.ts`). Частина з них — генерація SVG/іконок, але редагування опису об’єкта допускає HTML, що може бути вектором XSS, якщо користувацький ввід не санітизується.
+- Використання `innerHTML` у багатьох місцях (`main.ts`, `ui.ts`, `layers.ts`). Частина — генерація SVG/іконок, але редагування опису об’єкта допускає HTML, що може бути вектором XSS.
 - `textContent` використовується в тултипах — це правильно й безпечно.
 
 ## 🔧 Ключові компоненти
 
 ### 1. `map-init.ts` — ініціалізація карти
 
-**Призначення:** створює глобальний singleton `map`, задає центр Львова та три базові tile-шари (План, Ландшафт, Супутник).
+Створює глобальний singleton `map`, задає центр Львова та базові tile-шари (План, Ландшафт, Супутник).
 
 ```typescript
-import { map } from './map-init.js';
-
 export const center: [number, number] = [49.8397, 24.0297];
-export const tileLayerOptions = {
-  "План": {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '© OpenStreetMap',
-    maxZoom: 19,
-  },
-  // ...
-};
-export const map = L.map('map', { center, zoom: 13 });
+export const map = L.map('map', { center, zoom: 13, zoomControl: false });
 ```
-
-**API:** експортує `map`, `center`, `tileLayerOptions`. Усі модулі імпортують `map` звідси.
 
 ### 2. `layers.ts` — керування шарами та persistence
 
-**Призначення:** центральний модуль для шарів. Створює шари, зберігає/завантажує їх із `localStorage`, керує видимістю та порядком.
-
-```typescript
-export let customLayers: LayerObj[] = [];
-export let activeLayer: any = null;
-
-export function saveLayersToStorage(): void {
-  const layersData = customLayers.map(l => ({ /* GeoJSON + метадані */ }));
-  localStorage.setItem('lefleat_layers', JSON.stringify(layersData));
-}
-
-export function loadLayersFromStorage(): boolean {
-  const data = localStorage.getItem('lefleat_layers');
-  if (!data) return false;
-  // Парсинг, валідація, відновлення шарів
-}
-```
-
-**Інтеграції:** залежить від `map-init`, `ui`, `objects`, `utils`, `state`.
+Центральний модуль для шарів. Створює шари, зберігає/завантажує їх із `localStorage`, керує видимістю та порядком.
 
 ### 3. `draw-control.ts` — створення об’єктів
 
-**Призначення:** ініціалізує `L.Control.Draw`, обробляє подію `draw:created`, створює `feature` для GeoJSON і додає об’єкт в активний шар.
+Ініціалізує `L.Control.Draw`, обробляє подію `draw:created`, створює `feature` для GeoJSON і додає об’єкт в активний шар. Також додає кастомну кнопку «Текст» у панель Leaflet.Draw.
 
-```typescript
-map.on('draw:created', function (e: any) {
-  const layer = e.layer;
-  const type = e.layerType;
-  // Генерація імені, розрахунок довжини/площі, створення feature
-  layer.feature = {
-    type: 'Feature',
-    geometry: { type: 'LineString', coordinates: coords },
-    properties: { name, description, color, weight, opacity, style }
-  };
-  activeLayer.addLayer(layer);
-  saveLayersToStorage();
-});
-```
+### 4. `text-object.ts` — текстові об'єкти
 
-**Інтеграції:** `map-init`, `layers`, `utils`, `ui`.
+Створює маркери з HTML-контентом, які масштабуються при зміні zoom і можуть обертатися.
 
-### 4. `ui.ts` — користувацький інтерфейс
+### 5. `ui.ts` — користувацький інтерфейс
 
-**Призначення:** найбільший модуль (~1509 рядків). Рендерить бічну панель шарів, модальні вікна, autocomplete для іконок і геопошук, тултипи.
+Найбільший модуль. Рендерить бічну панель шарів, модальні вікна, autocomplete для іконок і геопошук, тултипи, глобальний пошук об'єктів.
 
-```typescript
-export function showEditModal(layer: any) {
-  currentEditingObject.value = layer;
-  const type = getObjectType(layer);
-  const properties = getObjectProperties(layer);
-  // Заповнення DOM-полів, показ/приховування груп контролів
-  // Обробники onchange/onclick для кольору, товщини, іконки, зображення
-}
-```
+### 6. `historical-overlay.ts` / `historical-overlay-ui.ts` — історичні підкладки
 
-**Інтеграції:** практично всі інші модулі (`state`, `map-init`, `utils`, `layers`, `objects`, `main`, `draw-control`).
+Додають можливість завантажувати растрові зображення, позиціонувати їх на мапі, зберігати в `localStorage` і відновлювати при завантаженні.
 
-### 5. `overlay-transform.ts` — спотворювані зображення
+### 7. `ai-assistant.ts` — AI-асистент
 
-**Призначення:** окремий модуль для роботи з `leaflet.distortableimage`. Додає на карту растрові зображення з можливістю трансформації за кутами та зберігає їх в `localStorage`.
+Пошук місць через Nominatim та автоматичне додавання маркерів. UI інтегрований у top bar, плаваюча кнопка прихована.
 
-```typescript
-export function addOverlay(map: L.Map, url: string) {
-  const overlay = (window as any).L.distortableImageOverlay(url, {
-    bounds, selected: true
-  }).addTo(map);
-  overlays.push(overlay);
-  images.push({ url, bounds, corners: overlay.getCorners?.() });
-  saveImages();
-}
-```
+### 8. `api.ts` — програмний API
 
-**Примітка:** цей модуль створює **власний екземпляр карти** в `initOverlayMap`, що конфліктує з основною картою з `map-init.ts`. У продакшені цей експорт, ймовірно, не використовується; основна логіка overlays знаходиться в `main.ts` і `layers.ts`.
+Глобальний об’єкт `LefleatApi` для додавання об'єктів з консолі.
 
 ## 📋 Патерни та best practices
 
 ### Характерні патерни
 
 1. **Module-level singletons.** `map`, `customLayers`, `activeLayer` — глобальні змінні, експортовані з модулів.
-2. **Callback-реєстри.** `layerIdToRenderObjectsList` в `ui.ts` — Map для оновлення UI за `id` без повноцінного pub/sub.
+2. **Callback-реєстри.** `layerIdToRenderObjectsList` в `ui.ts` — Map для оновлення UI за `id`.
 3. **GeoJSON як canonical формат.** Усі користувацькі об’єкти перетворюються в GeoJSON FeatureCollection для зберігання.
-4. **Base64 для зображень.** Прикріплені до об’єктів картинки кодуються в base64 і зберігаються в `localStorage`, що швидко вичерпує квоту сховища.
+4. **Base64 для зображень.** Прикріплені до об’єктів картинки кодуються в base64 і зберігаються в `localStorage`.
 
 ### Оптимізація продуктивності
 
 - Формальної оптимізації немає (немає `requestIdleCallback`, lazy-loading, віртуалізації списків).
-- Панель шарів може гальмувати при великій кількості об’єктів, бо список рендериться повністю.
-- `leaflet.distortableimage` — ресурсомістка бібліотека; великі зображення в base64 погіршують проблеми.
+- Панель шарів може гальмувати при великій кількості об’єктів.
+- Великі base64-зображення в `localStorage` швидко вичерпують квоту сховища.
 
 ### Асинхронні операції
 
 - `fetch('material-icons-list.json')` у `state.ts` завантажує список іконок.
 - `FileReader` використовується для читання завантажених зображень.
-- `import('./ui.js')` у `main.ts` для динамічного завантаження під час видалення overlay — цікавий патерн, але сумнівно необхідний, враховуючи що `ui` уже статично імпортується.
+- Ініціалізація історичних підкладок у `index.ts` відбувається асинхронно з очікуванням DOM.
 
 ### Валідація даних
 
-- Валідація імпорту є, але мінімальна: перевірка `Array.isArray`, `try/catch` на парсинг.
-- Немає централізованої схеми валідації (zod, yup, jsonschema).
-- `currentEditingObject` не типізований, що робить форми вразливими до runtime-помилок.
+- Валідація імпорту мінімальна: `Array.isArray`, `try/catch` на парсинг.
+- Немає централізованої схеми валідації.
 
 ### Локалізація
 
 - Інтерфейс повністю українською мовою.
-- Тексти вбудовані в HTML і TypeScript напряму; немає файлів перекладів. Переклад на інші мови потребуватиме значної переробки.
+- Тексти вбудовані в HTML і TypeScript напряму.
 
 ## 🏭 Інфраструктура розробки
 
@@ -401,48 +362,46 @@ export function addOverlay(map: L.Map, url: string) {
 | `npm run format` | Prettier write |
 | `npm run check-rules` | lint + prettier --check |
 | `npm run dev` | build + check-rules |
+| `npm run serve` | локальний HTTP-сервер на порту 8090 |
 
 ### Середовище розробки
 
-- `.cursor/rules/rule1.mdc` порожній (тільки frontmatter), тому Cursor-правила не задані.
+- `.cursor/rules/rule1.mdc` порожній.
 - `.vscode/`, `.idea/` ігноруються git.
-- `.opencode/` містить команди агента Opencode (speckit.*), але це інфраструктура агента, не проєкту.
 
 ### Pre-commit hooks / CI/CD / Docker
 
-- **Pre-commit hooks немає** (немає `.husky/`, `lint-staged` тощо).
-- **CI/CD немає**: у репозиторії немає `.github/workflows/`, `.gitlab-ci.yml` і т.д.
+- **Pre-commit hooks немає**.
+- **CI/CD немає**.
 - **Docker немає**.
 
 ### Дебаг-файли
 
-Директорія `del/` містить дебаг-скрипти (`debug-overlay.js`, `test-overlay-position.js` тощо). Згідно з `RULES.md`, вони не повинні імпортуватися продакшеном. В `index.html` підключені `overlay-position-fix.js` і `drag-save-fix.js` з кореня — це схоже на тимчасові workaround-файли, які краще перенести в `del/` або видалити.
+Директорія `del/` містить дебаг-скрипти. Згідно з `RULES.md`, вони не повинні імпортуватися продакшеном. В `index.html` підключені `overlay-position-fix.js` і `drag-save-fix.js` з кореня — це тимчасові workaround-файли.
 
 ## 📋 Висновки та рекомендації
 
 ### Сильні сторони
 
-1. **Зрозуміла модульна структура.** Кожен файл відповідає за одну область; точка входу `index.ts` дійсно тонка.
-2. **Багатий функціонал для картографії:** шари, об’єкти, імпорт/експорт GeoJSON/KMZ, вимірювання, спотворювані зображення, кастомні маркери.
+1. **Зрозуміла модульна структура.** Кожен файл відповідає за одну область.
+2. **Багатий функціонал:** шари, об’єкти, історичні підкладки, імпорт/експорт GeoJSON/KMZ, AI-асистент, вимірювання, спотворювані зображення, кастомні маркери.
 3. **Україномовний інтерфейс** — рідкість для open-source гео-інструментів.
-4. **Наявність правил розробки** (`RULES.md`) і лінтерів показує прагнення до порядку.
+4. **Наявність правил розробки** (`RULES.md`) і лінтерів.
 5. **Автономність:** працює локально без сервера й бази даних.
 
 ### Області для покращення
 
-1. **Розбіжність у документації.** `PROJECT_DOC.md` згадує Vite, `vite.config.ts`, `adapters/`, `services/`, `managers/` — але в репозиторії цього немає. Потрібно синхронізувати документацію або видалити застарілі файли.
-2. **Відсутність тестів.** Додати хоча б unit-тести на утиліти (`utils.ts`, `objects.ts`) та інтеграційні тести на серіалізацію/десеріалізацію шарів.
-3. **Слабка типізація.** ~301 `any` і відсутність `@types/leaflet` знижують надійність. План поетапної типізації: почати з `map-init.ts`, `utils.ts`, `objects.ts`.
-4. **Безпека.** Переглянути використання `innerHTML`, особливо для `description`. Впровадити санітизацію (DOMPurify) або перейти на `textContent` + Markdown-рендер.
-5. **Управління станом.** Розглянути легкий стор (Zustand / tiny-emitter / власний pub-sub) замість mutable module-level змінних.
-6. **Продуктивність.** Відмовитися від base64-зберігання великих зображень в `localStorage`; використовувати IndexedDB або посилання на файли.
-7. **Інфраструктура.** Додати `husky` + `lint-staged`, GitHub Actions для перевірки лінтера, скрипт preview-сервера.
-8. **Очищення.** Прибрати `overlay-position-fix.js` і `drag-save-fix.js` з `index.html`, якщо вони більше не потрібні; видалити порожні/застарілі `.cursor/rules`.
+1. **Типізація.** Використовувати `@types/leaflet`, зменшити кількість `any`, типізувати глобальний стан.
+2. **Безпека.** Переглянути використання `innerHTML` для `description`; впровадити санітизацію або `textContent` + Markdown-рендер.
+3. **Управління станом.** Розглянути легкий стор або pub/sub замість mutable module-level змінних.
+4. **Продуктивність.** Відмовитися від base64-зберігання великих зображень в `localStorage`; використовувати IndexedDB.
+5. **Інфраструктура.** Додати `husky` + `lint-staged`, GitHub Actions для перевірки лінтера.
+6. **Очищення.** Прибрати `overlay-position-fix.js` і `drag-save-fix.js` з `index.html`, якщо вони більше не потрібні; видалити порожні `.cursor/rules`.
 
 ### Рівень складності проєкту
 
-**Junior/Middle friendly.** Застосунок невеликий, без складних абстракцій, але потребує розуміння Leaflet API, GeoJSON і DOM-маніпуляцій. Для senior-розробника проєкт сприйматиметься як прототип/utility, що потребує технічного боргу за типізацією, тестами й архітектурою стану.
+**Junior/Middle friendly.** Застосунок невеликий, без складних абстракцій, але потребує розуміння Leaflet API, GeoJSON і DOM-маніпуляцій.
 
 ### Підсумок
 
-Lefleat — це робочий картографічний застосунок на Vanilla TypeScript + Leaflet з явним розбиттям по модулях. Він добре підходить для швидкого прототипування та особистого використання, але перед масштабуванням або публікацією потребує доробки типізації, тестів, безпеки й інфраструктури.
+Lefleat — це робочий картографічний застосунок на Vanilla TypeScript + Leaflet з явним розбиттям по модулях і свіжим світлим UI. Він добре підходить для швидкого прототипування та особистого використання, але перед масштабуванням потребує доробки типізації, тестів, безпеки й інфраструктури.
