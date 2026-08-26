@@ -7,8 +7,11 @@ import 'leaflet-distortableimage/dist/leaflet.distortableimage.css';
 import 'leaflet.polylinemeasure/Leaflet.PolylineMeasure.css';
 
 // Імпорт власних модулів (глобальні L, Sortable, JSZip тощо надані через CDN у index.html)
+import { initHistoricalOverlayUI } from './historical-overlay-ui';
 import './historical-overlay';
 import './map-init';
+
+initHistoricalOverlayUI();
 import { initDrawControl } from './draw-control';
 initDrawControl();
 import './ui';
