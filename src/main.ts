@@ -924,11 +924,8 @@ function showEditModal(layer: L.Layer) {
 }
 
 // Функція для закриття модального вікна
-export function closeEditModal() {
-  const editModal = document.getElementById('edit-object-modal');
-  if (editModal) (editModal as HTMLElement).classList.add('hidden');
-  currentEditingObject.value = null;
-}
+import { closeEditModal } from './edit-modal';
+export { closeEditModal };
 
 // Функція для збереження змін
 function saveObjectChanges() {

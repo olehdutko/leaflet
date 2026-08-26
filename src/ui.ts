@@ -1,5 +1,5 @@
 import { materialIcons, currentEditingObject } from './state';
-import { closeEditModal } from './main';
+import { closeEditModal } from './edit-modal';
 import { map } from './map-init';
 import { getColoredMarkerIcon, getObjectType, getObjectProperties } from './utils';
 import { saveLayersToStorage } from './layers';
