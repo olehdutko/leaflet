@@ -1284,7 +1284,7 @@ body {
 } 
 
 #global-object-search-wrap {
-  padding: 8px 0 8px 0;
+  padding: 8px 24px 8px 0;
 }
 #global-object-search {
   width: 95%;
@@ -1631,8 +1631,7 @@ body {
 }
 
 #global-object-search-wrap {
-  padding: 10px 12px;
-  
+  padding: 10px 24px 10px 12px;
 }
 
 #global-object-search {
@@ -2152,7 +2151,7 @@ body {
 }
 
 #global-object-search-wrap {
-  padding: 12px 14px;
+  padding: 12px 24px 12px 14px;
 }
 
 #global-object-search {
@@ -2877,8 +2876,7 @@ body.layers-collapsed #brand span {
 
 /* Remove extra separator between search and layer cards */
 #global-object-search-wrap {
-  
-  padding-bottom: 0 !important;
+  padding: 10px 24px 0 8px !important;
   margin-bottom: 6px !important;
 }
 
@@ -2887,7 +2885,7 @@ body.layers-collapsed #brand span {
 #global-object-search-wrap {
   border-bottom: none !important;
   border-top: none !important;
-  padding: 0 12px !important;
+  padding: 0 24px 0 12px !important;
   margin: 0 0 8px 0 !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -3057,7 +3055,7 @@ body.layers-collapsed #layers-panel-toggle {
 /* ===== Historical overlays ===== */
 #historical-overlays-section {
   margin: 0 0 12px 0;
-  padding: 0 12px;
+  padding: 0 24px 0 12px;
 }
 
 .historical-overlays-header {
