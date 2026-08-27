@@ -1168,18 +1168,21 @@ let searchMarker: any = null;
 })();
 
 
-document.addEventListener('DOMContentLoaded', async () => {
+// Ініціалізація після готового DOM (модуль підключений з defer, тому DOM вже готовий)
+(async function initApp() {
   // Оновлюємо title сторінки з версією
   updatePageTitle();
 
   const loadSuccess = await loadLayersFromStorage();
-  // Якщо завантаження не вдалося, створюємо початковий шар
-  if (!loadSuccess) {
+  // Якщо завантаження не вдалося або немає жодного шару, створюємо початковий шар
+  if (!loadSuccess || customLayers.length === 0) {
     addLayer();
   }
   waitForMaterialIconsAndInitAutocomplete();
   initEditModal();
-});
+})();
+
+// document.addEventListener('DOMContentLoaded', ...); більше не потрібен — модуль defer вже виконується після DOMContentLoaded
 
 // --- функція для обробки KMZ файлів ---
 async function handleKmzFile(file: File) {
