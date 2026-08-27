@@ -11,11 +11,23 @@ import { restoreHistoricalOverlays } from './historical-overlay';
 import './map-init';
 import './ui';
 import './ai-assistant';
-import { initDrawControl } from './draw-control';
+import './main';          // static: button handlers + async layer loading
+import { initDrawControl, updateDrawControlVisibility } from './draw-control';
 
 initHistoricalOverlayUI();
 restoreHistoricalOverlays();
-initDrawControl();
 
-// main.ts relies on ui.ts DOM element exports being defined
-import('./main');
+// Wait for CDN Leaflet plugins before initializing draw control
+function waitForPluginsAndInit() {
+  if (
+    typeof (window as any).L !== 'undefined' &&
+    (window as any).L.Control &&
+    typeof (window as any).L.Control.Draw === 'function'
+  ) {
+    initDrawControl();
+    updateDrawControlVisibility(); // ensure visibility reflects active layer
+  } else {
+    setTimeout(waitForPluginsAndInit, 50);
+  }
+}
+waitForPluginsAndInit();
