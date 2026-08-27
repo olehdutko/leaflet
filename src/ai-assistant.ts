@@ -1,6 +1,6 @@
 import { map } from './map-init';
 import { LefleatApi } from './api';
-import { closeEditModal } from './main';
+import { closeEditModal } from './edit-modal';
 import { updateObjectsListForLayer } from './ui';
 
 const ASSISTANT_ID = 'ai-assistant-panel';
