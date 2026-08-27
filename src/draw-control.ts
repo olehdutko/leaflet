@@ -13,11 +13,11 @@ export function initDrawControl() {
   (window as any).lefleatDrawControlInitialized = true;
 
   // Створюємо feature group для draw control (тимчасовий)
-  const drawnItems = new L.FeatureGroup();
+  const drawnItems = new (window as any).L.FeatureGroup();
   map.addLayer(drawnItems as L.Layer);
 
   // Створюємо draw control
-  drawControl = new L.Control.Draw({
+  drawControl = new (window as any).L.Control.Draw({
     position: 'topright',
     draw: {
       polygon: {
@@ -395,24 +395,23 @@ export function setDrawButtonsEnabled(enabled: boolean) {
 }
 
 export function updateDrawControlVisibility() {
-  // Завжди показуємо draw control, якщо є активний шар
-  const hasActiveLayer = !!(activeLayer && typeof L.FeatureGroup !== 'undefined' && activeLayer instanceof L.FeatureGroup);
-  if (hasActiveLayer) {
-    if (!drawControl) {
-      return; // draw control ще не ініціалізовано
-    }
-    const drawSection = document.querySelector('.leaflet-draw');
-    if (drawSection) {
-      (drawSection as HTMLElement).style.display = 'block';
-    }
-    setDrawButtonsEnabled(true);
-  } else {
-    const drawSection = document.querySelector('.leaflet-draw');
-    if (drawSection) {
-      (drawSection as HTMLElement).style.display = 'none';
-    }
-    setDrawButtonsEnabled(false);
+  if (!drawControl) return;
+
+  // Ensure the draw container is rendered and visible
+  const drawSection = document.querySelector('.leaflet-draw') as HTMLElement | null;
+  if (drawSection) {
+    drawSection.style.display = 'block';
+    drawSection.style.visibility = 'visible';
+    drawSection.style.opacity = '1';
   }
+
+  // Only allow drawing when there is an active layer
+  const hasActiveLayer = !!(
+    activeLayer &&
+    typeof L.FeatureGroup !== 'undefined' &&
+    activeLayer instanceof L.FeatureGroup
+  );
+  setDrawButtonsEnabled(hasActiveLayer);
 }
 
 export function updateDrawControlForActiveLayer() {
