@@ -924,11 +924,8 @@ function showEditModal(layer: L.Layer) {
 }
 
 // Функція для закриття модального вікна
-export function closeEditModal() {
-  const editModal = document.getElementById('edit-object-modal');
-  if (editModal) (editModal as HTMLElement).classList.add('hidden');
-  currentEditingObject.value = null;
-}
+import { closeEditModal } from './edit-modal';
+export { closeEditModal };
 
 // Функція для збереження змін
 function saveObjectChanges() {
@@ -1171,18 +1168,21 @@ let searchMarker: any = null;
 })();
 
 
-document.addEventListener('DOMContentLoaded', async () => {
+// Ініціалізація після готового DOM (модуль підключений з defer, тому DOM вже готовий)
+(async function initApp() {
   // Оновлюємо title сторінки з версією
   updatePageTitle();
 
   const loadSuccess = await loadLayersFromStorage();
-  // Якщо завантаження не вдалося, створюємо початковий шар
-  if (!loadSuccess) {
+  // Якщо завантаження не вдалося або немає жодного шару, створюємо початковий шар
+  if (!loadSuccess || customLayers.length === 0) {
     addLayer();
   }
   waitForMaterialIconsAndInitAutocomplete();
   initEditModal();
-});
+})();
+
+// document.addEventListener('DOMContentLoaded', ...); більше не потрібен — модуль defer вже виконується після DOMContentLoaded
 
 // --- функція для обробки KMZ файлів ---
 async function handleKmzFile(file: File) {
